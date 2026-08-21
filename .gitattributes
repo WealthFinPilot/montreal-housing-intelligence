@@ -1,0 +1,16 @@
+# Normalise line endings so the repo does not carry CRLF/LF churn between
+# Windows and the Linux VPS. Text files are stored LF in git, checked out
+# native on Windows.
+* text=auto
+
+*.py   text eol=lf
+*.sql  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.md   text eol=lf
+*.sh   text eol=lf
+
+# Binary: never diffed, never line-ending converted.
+*.pbix binary
+*.pdf  binary
+*.zip  binary

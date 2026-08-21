@@ -1,0 +1,81 @@
+# ---------------------------------------------------------------------------
+# Montreal Housing Intelligence -- database service
+#
+# Start with:   docker compose up -d
+# Stop with:    docker compose down          (keeps the data)
+# Wipe data:    docker compose down -v       (destroys the volume -- careful)
+#
+# This file is deliberately the ONLY thing you need besides a .env to get a
+# working database. That is acceptance criterion 1 of milestone J2.
+# ---------------------------------------------------------------------------
+
+services:
+  postgres:
+    # PostGIS ships PostgreSQL with the spatial extension already compiled in.
+    # Pinned to an exact version on purpose: "latest" would silently upgrade the
+    # database engine under our feet on some future `docker compose pull`.
+    # 17-3.5 rather than 18-3.6 because Power BI's PostgreSQL connector ships
+    # Npgsql 4.0.17, an old client driver -- no reason to pair it with a
+    # brand-new server.
+    image: postgis/postgis:17-3.5
+
+    # Explicit name so it never gets confused with the n8n stack already
+    # running on this host (root-n8n-1, n8n-postgres, redis, root-traefik-1).
+    container_name: mhi-postgres
+
+    # Comes back up on its own after a server reboot, but stays down if we
+    # deliberately stopped it.
+    restart: unless-stopped
+
+    environment:
+      # Read from .env. No default values here on purpose: if .env is missing,
+      # the container must fail loudly rather than start with a guessable
+      # password.
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is missing from .env}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is missing from .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is missing from .env}
+
+      # Force password authentication even for connections coming from inside
+      # the Docker network. Without this, the postgres image trusts them.
+      POSTGRES_HOST_AUTH_METHOD: scram-sha-256
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+
+    ports:
+      # 127.0.0.1 is the whole security model here. The database listens ONLY
+      # on the server's loopback interface: it is unreachable from the internet,
+      # even though this host has no firewall. Power BI and dbt reach it through
+      # an SSH tunnel -- see the README.
+      #
+      # Writing "5432:5432" instead would expose it to the entire internet.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+
+    volumes:
+      # Named volume: the data survives `docker compose down` and container
+      # recreation. It is destroyed only by `docker compose down -v`.
+      - pgdata:/var/lib/postgresql/data
+
+      # Everything in this folder runs ONCE, in filename order, the first time
+      # the database is created (i.e. while the volume is still empty).
+      # Mounted read-only so a container can never rewrite our schema files.
+      - ./sql/bootstrap:/docker-entrypoint-initdb.d:ro
+
+    healthcheck:
+      # `docker compose up` returns as soon as the container starts, which is
+      # BEFORE PostgreSQL is ready to accept connections. This healthcheck is
+      # what lets a script wait for "healthy" instead of sleeping blindly.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+    # 2 vCPU / 8 GB host shared with n8n, its own Postgres, Redis and Traefik.
+    # This ceiling keeps a runaway query from starving the production stack.
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+volumes:
+  pgdata:
+    name: mhi_pgdata
