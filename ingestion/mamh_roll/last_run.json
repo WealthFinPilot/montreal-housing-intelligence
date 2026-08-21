@@ -1,0 +1,76 @@
+{
+  "roll_year": 2026,
+  "residential_only": true,
+  "totals": {
+    "seen": 514741,
+    "written": 480197
+  },
+  "per_municipality": {
+    "Baie-D'Urfé": {
+      "seen": 1567,
+      "written": 1367
+    },
+    "Beaconsfield": {
+      "seen": 6907,
+      "written": 6639
+    },
+    "Côte-Saint-Luc": {
+      "seen": 8407,
+      "written": 7907
+    },
+    "Dollard-des-Ormeaux": {
+      "seen": 15258,
+      "written": 14584
+    },
+    "Dorval": {
+      "seen": 7236,
+      "written": 6292
+    },
+    "Hampstead": {
+      "seen": 1887,
+      "written": 1838
+    },
+    "Kirkland": {
+      "seen": 7082,
+      "written": 6605
+    },
+    "L'Île-Dorval": {
+      "seen": 74,
+      "written": 57
+    },
+    "Mont-Royal": {
+      "seen": 6325,
+      "written": 5924
+    },
+    "Montréal": {
+      "seen": 437192,
+      "written": 408399
+    },
+    "Montréal-Est": {
+      "seen": 1388,
+      "written": 1030
+    },
+    "Montréal-Ouest": {
+      "seen": 1657,
+      "written": 1518
+    },
+    "Pointe-Claire": {
+      "seen": 11967,
+      "written": 11118
+    },
+    "Sainte-Anne-de-Bellevue": {
+      "seen": 1687,
+      "written": 1496
+    },
+    "Senneville": {
+      "seen": 525,
+      "written": 365
+    },
+    "Westmount": {
+      "seen": 5582,
+      "written": 5058
+    }
+  },
+  "output_mb": 52.5,
+  "peak_memory_mb": 28
+}
