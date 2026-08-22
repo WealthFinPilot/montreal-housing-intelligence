@@ -1,0 +1,68 @@
+version: 2
+
+sources:
+  - name: bank_of_canada
+    description: >
+      Landing tables written by ingestion/bank_of_canada. Values are stored
+      exactly as the Valet API sent them, which means as text. Nothing in this
+      schema is ever written by dbt.
+    schema: raw
+
+    tables:
+      - name: boc_observation
+        description: >
+          One row per series and date, exactly as received. Reloading the same
+          period cannot duplicate a row: the primary key forbids it.
+
+        # Freshness is measured on first_seen_at, NOT on updated_at.
+        #
+        # updated_at moves only when the Bank of Canada revises a figure it has
+        # already published, which almost never happens: the policy rate can
+        # sit unchanged for a year. Measuring freshness there would raise a
+        # false alarm on a perfectly healthy pipeline.
+        #
+        # first_seen_at moves every time a new date arrives, so it answers the
+        # question freshness is actually asking: is the pipeline still running.
+        #
+        # Declared per table rather than for the whole source, because
+        # pipeline_run has no such column -- found the hard way on 2026-08-22.
+        loaded_at_field: first_seen_at
+        freshness:
+          # The policy rate publishes every business day. A gap over a long
+          # weekend is normal; a gap over a week is not.
+          warn_after: {count: 7, period: day}
+          error_after: {count: 30, period: day}
+
+        columns:
+          - name: series_id
+            description: Bank of Canada series identifier, for example V39079.
+          - name: observation_date
+            description: The date the value refers to, not the date we fetched it.
+          - name: value_raw
+            description: >
+              The value as sent by the API, as text. Never cast at this layer:
+              an unexpected format must fail a test downstream rather than
+              break collection or silently become a zero.
+          - name: source_url
+            description: The exact URL that produced this row.
+          - name: run_id
+            description: Which pipeline run wrote it, see raw.pipeline_run.
+          - name: first_seen_at
+            description: When we first recorded this observation. Never changes.
+          - name: updated_at
+            description: >
+              Moves only when value_raw actually changed, that is when the Bank
+              of Canada revised a published figure.
+
+      - name: pipeline_run
+        description: One row per ingestion run, with its counts and status.
+
+        # A different question from the one above: not "is the data recent" but
+        # "did anything run at all recently". A pipeline that crashes on every
+        # attempt still writes rows here, so this stays fresh while
+        # boc_observation goes stale -- and the pair of alarms tells the two
+        # failure modes apart.
+        loaded_at_field: started_at
+        freshness:
+          warn_after: {count: 7, period: day}
+          error_after: {count: 30, period: day}

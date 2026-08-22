@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# Connection settings. Contains NO secret: every sensitive value is read from
+# the environment at run time, which is why this file is safe to commit.
+#
+# The environment is loaded from .env by scripts/dbt.sh. Running dbt directly,
+# without that wrapper, will fail on a missing variable -- loudly, which is the
+# intended behaviour.
+# ---------------------------------------------------------------------------
+
+mhi:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+
+      # 127.0.0.1:15432 is the local end of the SSH tunnel. The database itself
+      # listens only on the VPS loopback and is unreachable without it.
+      host: "{{ env_var('MHI_DB_HOST', '127.0.0.1') }}"
+      port: "{{ env_var('MHI_DB_PORT', '15432') | as_number }}"
+
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      dbname: "{{ env_var('POSTGRES_DB') }}"
+
+      # Default schema for models that do not name one.
+      schema: staging
+
+      threads: 4
+      connect_timeout: 10
+      # Shows up in pg_stat_activity next to mhi_ingestion, so a slow query on
+      # the server can be traced to dbt rather than to the Python pipeline.
+      application_name: mhi_dbt

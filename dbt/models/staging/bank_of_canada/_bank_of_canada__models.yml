@@ -1,0 +1,60 @@
+version: 2
+
+models:
+  - name: stg_bank_of_canada__interest_rates
+    description: >
+      Bank of Canada interest rates as numbers, one row per series and date.
+      Two different temporal grains live here side by side: the policy rate
+      publishes every business day, the posted mortgage rate once a week. They
+      must never be averaged together without saying so.
+
+    columns:
+      - name: series_id
+        description: Bank of Canada series identifier.
+        tests:
+          - not_null
+          # This is the guard that makes the labels in the model safe to
+          # duplicate. Add a series to the ingestion catalogue without
+          # updating the model, and this test fails on the next run.
+          - accepted_values:
+              arguments:
+                values: ['V39079', 'V80691335']
+
+      - name: series_label
+        description: Human-readable name, mirroring ingestion/bank_of_canada/series.py.
+        tests:
+          - not_null
+
+      - name: frequency
+        description: Observed publication rhythm, not the announced one.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['business daily', 'weekly']
+
+      - name: is_posted_rate
+        description: >
+          True when the figure is a rate advertised by banks rather than one
+          actually contracted. A posted rate is an indicator of direction, never
+          a transaction price.
+        tests:
+          - not_null
+
+      - name: observation_date
+        description: The date the value refers to, not the date it was fetched.
+        tests:
+          - not_null
+
+      - name: rate_percent
+        description: >
+          The rate in percentage points: 2.25 means 2.25 percent. NULL is
+          impossible by construction, so a failure of the test below means the
+          source changed its format.
+        tests:
+          - not_null
+
+      - name: value_raw
+        description: The original text, kept so a failing test can be traced back.
+        tests:
+          - not_null

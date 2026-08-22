@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+# Montreal Housing Intelligence -- dbt project
+#
+# dbt does exactly one thing here: it sends SQL to PostgreSQL in dependency
+# order and checks the result. It fetches nothing and stores nothing itself.
+#
+# Run it through the wrapper, which loads .env and checks the tunnel:
+#     bash scripts/dbt.sh run
+#     bash scripts/dbt.sh test
+# ---------------------------------------------------------------------------
+
+name: 'mhi'
+version: '0.1.0'
+config-version: 2
+
+# Which connection block to use, defined in dbt/profiles.yml.
+profile: 'mhi'
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+flags:
+  # This is a personal portfolio project. No telemetry.
+  send_anonymous_usage_stats: false
+
+models:
+  mhi:
+    staging:
+      # A view, not a table: 3629 rows recomputed on read cost nothing, and a
+      # view can never hold a stale copy of the raw layer.
+      +materialized: view
+      # Lands in the schema named "staging" exactly -- see
+      # macros/generate_schema_name.sql for why that needs an override.
+      +schema: staging
