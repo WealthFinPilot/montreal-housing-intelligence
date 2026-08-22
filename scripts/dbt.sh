@@ -19,9 +19,8 @@
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
-if ! tunnel_is_up; then
-  echo "FAIL: the SSH tunnel is closed, so the database is unreachable." >&2
-  echo "      Open it with:  bash scripts/tunnel-start.sh" >&2
+if ! db_is_reachable; then
+  db_unreachable_hint
   exit 1
 fi
 

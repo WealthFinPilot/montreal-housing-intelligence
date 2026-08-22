@@ -17,7 +17,7 @@ if ! tunnel_is_up; then
 fi
 
 VPS_HOST="$(env_require VPS_HOST)"
-ssh -S "$TUNNEL_SOCKET" -O exit -l root "$VPS_HOST"
+ssh -S "$TUNNEL_SOCKET" -O exit -l "$VPS_USER" "$VPS_HOST"
 rm -f "$TUNNEL_SOCKET"
 
 # Verify rather than assume: the port must now refuse connections.

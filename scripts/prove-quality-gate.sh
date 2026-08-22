@@ -35,8 +35,8 @@ export PYTHONIOENCODING=utf-8
 LOG="$REPO_ROOT/dbt/logs/quality-gate.log"
 mkdir -p "$(dirname "$LOG")"
 
-if ! tunnel_is_up; then
-  echo "FAIL: the SSH tunnel is closed. Run: bash scripts/tunnel-start.sh" >&2
+if ! db_is_reachable; then
+  db_unreachable_hint
   exit 1
 fi
 

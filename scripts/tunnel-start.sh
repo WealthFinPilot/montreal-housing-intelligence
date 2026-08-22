@@ -41,7 +41,7 @@ echo "Opening tunnel 127.0.0.1:$TUNNEL_PORT -> VPS 127.0.0.1:$REMOTE_PORT ..."
 # -o ServerAliveInterval=30   : detect a dead link instead of freezing.
 ssh -f -N -M -S "$TUNNEL_SOCKET" \
     -L "127.0.0.1:$TUNNEL_PORT:127.0.0.1:$REMOTE_PORT" \
-    -i "$SSH_KEY" -l root \
+    -i "$SSH_KEY" -l "$VPS_USER" \
     -o BatchMode=yes \
     -o ExitOnForwardFailure=yes \
     -o ServerAliveInterval=30 \
