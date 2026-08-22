@@ -1,0 +1,31 @@
+# ---------------------------------------------------------------------------
+# Direct dependencies of Montreal Housing Intelligence.
+#
+# Only what the project imports itself. Everything these packages pull in is
+# recorded, version by version, in requirements.lock.txt.
+#
+# Install with:  bash scripts/setup-venv.sh
+#
+# Versions pinned with == on purpose. A portfolio repository that installs a
+# different set of versions six months from now is not reproducible, and
+# reproducibility is acceptance criterion 5 of milestone J2.
+# Verified installed and working on Python 3.14.6 / Windows 11 on 2026-08-22.
+# ---------------------------------------------------------------------------
+
+# PostgreSQL driver for the ingestion scripts (psycopg 3, the current
+# generation). dbt brings its own, older psycopg2-binary -- that is dbt's
+# business, not ours.
+psycopg[binary]==3.3.4
+
+# HTTP client for the Bank of Canada Valet API.
+requests==2.34.2
+
+# Reads .env so scripts never carry credentials in their source.
+python-dotenv==1.2.3
+
+# Test runner. Tests are written before the ingestion code, not after.
+pytest==9.1.1
+
+# Transformation layer: raw -> staging -> marts, with tests and documentation.
+dbt-core==1.12.3
+dbt-postgres==1.11.0
