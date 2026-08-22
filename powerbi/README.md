@@ -74,3 +74,24 @@ such a file (section 11 of the original brief).
 Import mode means the data in the report is a copy taken at load time. To
 refresh: open the tunnel, open the report, Refresh, republish from Desktop.
 There is no scheduled refresh and no gateway by design.
+
+## The .pbix file in this repository
+
+`mhi_interest_rates.pbix` is committed so a reader can open the report without
+rebuilding it. Two things to know before ever committing another one.
+
+**A .pbix carries its whole data model, compressed.** Everything loaded in
+Import mode is inside the file, including columns no visual displays. Whoever
+opens it sees all of it.
+
+**A secret scanner cannot look inside it.** Verified on 2026-08-22: extracting
+the archive and searching for a string it certainly contains found nothing,
+because the data model is stored compressed. `scripts/check-secrets.sh` now
+reports every file it could not read rather than passing over it in silence, but
+reporting is all it can do.
+
+So the rule is a decision, not a check: **a .pbix that has ever loaded listing
+data must never be committed.** This one holds Bank of Canada interest rates,
+which are public. Power BI keeps data source credentials in the local Windows
+credential store rather than in the file, so no password travels with it -- that
+is a documented product behaviour, not something this repository can verify.

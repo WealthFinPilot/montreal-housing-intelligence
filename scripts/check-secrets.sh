@@ -22,6 +22,7 @@ source "$(dirname "$0")/lib.sh"
 cd "$REPO_ROOT"
 
 FAILURES=0
+WARNINGS=0
 pass() { echo "  OK    $1"; }
 fail() { echo "  FAIL  $1"; FAILURES=$((FAILURES + 1)); }
 
@@ -103,7 +104,33 @@ else
 fi
 
 echo
-echo "== 6. Positive control: the checker must be able to find something =="
+echo "== 6. Files this scan could NOT look inside =="
+# The most dangerous failure mode of a secret scanner is silence about what it
+# could not read. A .pbix, a .zip or any compressed file stores its content
+# compressed: grep finds nothing in it, and a clean verdict above says NOTHING
+# about what is inside. Reporting them is not optional.
+UNSCANNABLE=""
+for path in "${CANDIDATES[@]}"; do
+  [ -f "$path" ] || continue
+  [ -s "$path" ] || continue
+  grep -Iq . "$path" 2>/dev/null || UNSCANNABLE="$UNSCANNABLE $path"
+done
+if [ -n "$UNSCANNABLE" ]; then
+  echo "  WARN  sections 2 to 5 did NOT look inside these files:"
+  for path in $UNSCANNABLE; do
+    echo "          $path"
+  done
+  echo "        They are binary or compressed. Verified on 2026-08-22 against a"
+  echo "        .pbix: searching its extracted content for a string it certainly"
+  echo "        contains found nothing, because the data model is compressed."
+  echo "        Whatever is inside must be a conscious decision, not an omission."
+  WARNINGS=1
+else
+  pass "every candidate file is text and was actually searched"
+fi
+
+echo
+echo "== 7. Positive control: the checker must be able to find something =="
 if [ -n "$(in_files mhi_pgdata)" ]; then
   pass "file scan detects a known-present string (mhi_pgdata)"
 else
@@ -116,8 +143,13 @@ else
 fi
 
 echo
+if [ "$FAILURES" -eq 0 ] && [ "$WARNINGS" -eq 0 ]; then
+  echo "CLEAN -- ${#CANDIDATES[@]} files checked, all of them actually searched."
+  exit 0
+fi
 if [ "$FAILURES" -eq 0 ]; then
-  echo "CLEAN -- ${#CANDIDATES[@]} files checked, nothing to fix."
+  echo "NO LEAK FOUND in the files that could be searched, but section 6 lists"
+  echo "files this scan cannot see inside. Read it before committing."
   exit 0
 fi
 echo "$FAILURES PROBLEM(S) FOUND -- do not commit until they are fixed."
