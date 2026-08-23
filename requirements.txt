@@ -17,8 +17,15 @@
 # business, not ours.
 psycopg[binary]==3.3.4
 
-# HTTP client for the Bank of Canada Valet API.
+# HTTP client for the Bank of Canada Valet API and the APCIQ PDF archive.
 requests==2.34.2
+
+# Character-level access to PDF pages, for the APCIQ Baromètre. The Baromètre
+# is a Power BI export: no table structure, only text boxes at absolute
+# positions, so the parser needs coordinates rather than extracted text. Used
+# for the exploration in J3.1 before being declared here with the code that
+# imports it.
+pdfplumber==0.11.10
 
 # Reads .env so scripts never carry credentials in their source.
 python-dotenv==1.2.3

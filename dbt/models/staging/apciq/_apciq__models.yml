@@ -1,0 +1,102 @@
+version: 2
+
+# Source and models in one file, the convention this repo already follows for
+# Données Montréal. Freshness is measured on first_seen_at, not updated_at:
+# updated_at only moves when APCIQ revises a figure, so a stable quarter would
+# look stale. The Baromètre is quarterly, so a warning at 200 days means one
+# publication has been missed.
+
+sources:
+  - name: apciq
+    schema: raw
+    description: >
+      APCIQ Baromètre résidentiel (Montréal edition), read positionally from
+      the quarterly PDF. Source : APCIQ par le système Centris. Reproduction
+      of these figures is forbidden without written consent, so nothing built
+      on this source may be published.
+    tables:
+      - name: apciq_barometer_statistic
+        description: >
+          One row per cell of Tableau 2. 855 rows per edition: 19 areas
+          x 3 property categories x 5 metrics x 3 periods.
+        loaded_at_field: first_seen_at
+        freshness:
+          warn_after: {count: 200, period: day}
+          error_after: {count: 400, period: day}
+
+models:
+  - name: stg_apciq__barometer_statistics
+    description: >
+      APCIQ figures typed and dated. Long format, one row per published cell;
+      the pivot into fact_market belongs to the mart layer. Rows with
+      period_code = 'trailing_12m' overlap between editions by construction
+      and must never be summed.
+    columns:
+      - name: geography_key
+        description: Joins marts.dim_geography. 'island:mtl' or 'apciq_sector:N'.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: property_category
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['single_family', 'condo', 'plex']
+
+      - name: metric_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - sales
+                  - active_listings
+                  - median_price
+                  - average_price
+                  - days_on_market
+
+      - name: period_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['quarter', 'trailing_12m', 'five_year']
+
+      - name: unit
+        description: >
+          What value_numeric is measured in. A long table mixes counts,
+          dollars and days in one column; this says which is which.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['count', 'cad', 'days']
+
+      - name: edition_quarter
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+                quote: false
+
+      - name: is_withheld_by_source
+        description: >
+          True where APCIQ printed '**' -- « Nombre de transactions
+          insuffisant pour produire une statistique fiable ». The market
+          exists; the statistic was judged unreliable. Not the same as a
+          missing value, and downstream models must not treat it as one.
+        tests:
+          - not_null
+
+      - name: is_nothing_to_report
+        description: >
+          True where APCIQ printed a dash. On a count row that means zero --
+          L'Île-des-Sœurs has no plex at all. On a price row it means there
+          was nothing to price.
+        tests:
+          - not_null
