@@ -38,3 +38,27 @@ models:
       # Lands in the schema named "staging" exactly -- see
       # macros/generate_schema_name.sql for why that needs an override.
       +schema: staging
+
+    marts:
+      # A table, unlike staging. Two reasons, and neither is performance at
+      # this size: Power BI imports these, and an imported view that silently
+      # changes shape between refreshes is harder to reason about than a table
+      # rebuilt on a known command. Geometry unions are also computed once here
+      # rather than on every read.
+      +materialized: table
+      +schema: marts
+
+seeds:
+  mhi:
+    +schema: marts
+    apciq_sector_composition:
+      # Types stated rather than inferred. codemamh above all must stay text:
+      # half its values are REMxx and half are five digits, and letting the
+      # loader guess would turn 66007 into a number in one file and a string in
+      # the next, breaking the join to the boundaries silently.
+      +column_types:
+        apciq_sector_number: integer
+        apciq_sector_name: text
+        component_label_source: text
+        codemamh: text
+        coverage: text

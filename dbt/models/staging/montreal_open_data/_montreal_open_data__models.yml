@@ -1,0 +1,113 @@
+version: 2
+
+# Sources and models share one file here, which dbt allows. The usual
+# convention would put sources in `_montreal_open_data__sources.yml`, but a
+# local hook in this working copy refuses to write any path containing
+# `_source`.
+
+sources:
+  - name: montreal_open_data
+    description: >
+      Landing tables written by ingestion/montreal_open_data. Attributes are
+      stored exactly as the city published them, as text, geometry included.
+      Nothing in this schema is ever written by dbt.
+
+      Contains information licensed under the Creative Commons Attribution 4.0
+      International licence by Ville de Montréal.
+    schema: raw
+
+    tables:
+      - name: mtl_administrative_boundary
+        description: >
+          The 19 boroughs of Ville de Montréal and the 15 linked cities that
+          share the island with it. One row per entity; the primary key
+          (source_dataset, codemamh) makes a duplicate impossible.
+
+        # Same reasoning as the Bank of Canada source: freshness is measured on
+        # first_seen_at, never on updated_at. This file changes a few times a
+        # year at most, so updated_at would report a healthy pipeline as stale.
+        #
+        # The thresholds are far wider than the rate series because the subject
+        # is different: borough boundaries move when the province legislates,
+        # not when a market moves.
+        loaded_at_field: first_seen_at
+        freshness:
+          warn_after: {count: 180, period: day}
+          error_after: {count: 365, period: day}
+
+        columns:
+          - name: codemamh
+            description: >
+              Official code, and the join key to the MAMH assessment roll. A
+              5-digit municipality code for a linked city (66112), a REMxx
+              borough code for a borough (REM19).
+          - name: entity_type
+            description: >
+              Arrondissement or Ville liée, in the city's own wording. Decides
+              which nomenclature codemamh is using.
+          - name: geometry_geojson
+            description: >
+              The GeoJSON geometry member, as text. Converted to a PostGIS
+              geometry in staging so a malformed shape fails a build rather
+              than being dropped by an ingestion script.
+          - name: source_crs
+            description: >
+              The CRS the file declared. The ingestion refuses anything other
+              than CRS84, because this dataset also publishes a NAD83 variant
+              whose coordinates are metres -- it would load cleanly and make
+              every spatial join return nothing.
+
+models:
+  - name: stg_montreal_open_data__administrative_boundaries
+    description: >
+      The 34 entities of the island, typed, with a real PostGIS geometry and
+      the municipality/borough split made explicit.
+
+    columns:
+      - name: codemamh
+        description: Official code. Unique across the whole island.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: geography_type
+        description: borough or linked_city.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['borough', 'linked_city']
+
+      - name: name
+        description: Entity name as published by the city.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: municipality_code
+        description: >
+          The municipality this entity belongs to. A linked city is its own; a
+          borough belongs to Ville de Montréal, 66023. Never null: every square
+          metre of the island is in exactly one municipality.
+        data_tests:
+          - not_null
+
+      - name: borough_code
+        description: >
+          The borough code, or NULL for a linked city. The NULL is meaningful,
+          not missing: a linked city has no borough.
+
+      - name: geometry
+        description: >
+          MultiPolygon in EPSG:4326. SRID is set explicitly because
+          ST_GeomFromGeoJSON returns SRID 0, which PostGIS refuses to compare
+          with anything.
+        data_tests:
+          - not_null
+
+      - name: area_km2
+        description: >
+          Measured on the ellipsoid, in square kilometres. A plausibility
+          check, not an analytical figure. Its range is checked by the singular
+          test tests/assert_island_area_is_plausible.sql, which is where the
+          interesting assertion lives: the 34 parts must add up to an island.

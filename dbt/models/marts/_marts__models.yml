@@ -1,0 +1,116 @@
+version: 2
+
+seeds:
+  - name: apciq_sector_composition
+    description: >
+      Which administrative entities make up each of the 18 APCIQ sectors on the
+      island. Transcribed from page 6 of the Baromètre résidentiel (APCIQ,
+      2026 Q2), retrieved 2026-08-23. Verified identical in the 2019 Q2 and
+      2022 Q4 editions, so the mapping needs no validity dates.
+
+      This is a geographic nomenclature, not market data: no price, volume or
+      delay is reproduced here. Source: APCIQ, by the Centris system.
+
+    columns:
+      - name: apciq_sector_number
+        description: 1 to 18 on the island. APCIQ numbers 51 sectors in total.
+        data_tests:
+          - not_null
+      - name: codemamh
+        description: >
+          The administrative entity this component corresponds to. Must exist
+          in the city boundary file -- tested by the relationship below on the
+          bridge.
+        data_tests:
+          - not_null
+      - name: coverage
+        description: >
+          full = the sector contains this entity entirely.
+          part = the sector contains only a piece of it.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['full', 'part']
+
+models:
+  - name: dim_geography
+    description: >
+      Every geographic entity a figure can be attached to: the island, its 16
+      municipalities, the 19 boroughs of Ville de Montréal, and the 18 APCIQ
+      sectors. The first three nest; the sectors do not, which is why
+      bridge_apciq_sector_geography exists beside this table.
+
+      APCIQ sector rows carry no geometry on purpose -- see the model header.
+
+    columns:
+      - name: geography_key
+        description: >
+          Readable composite key, "type:code". Chosen over a hash so a row is
+          identifiable at a glance in Power BI and in a test failure.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: geography_type
+        description: island, municipality, borough or apciq_sector.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['island', 'municipality', 'borough', 'apciq_sector']
+
+      - name: name
+        data_tests:
+          - not_null
+
+      - name: parent_geography_key
+        description: >
+          NULL only for the island. Every other entity has a parent, and that
+          parent must exist in this same table.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: area_km2
+        description: >
+          Ellipsoidal area in km². NULL for APCIQ sectors, which have no
+          geometry here.
+
+  - name: bridge_apciq_sector_geography
+    description: >
+      The many-to-many relationship between APCIQ sectors and administrative
+      entities, with the quality of each link. Read the model header before
+      using it: the duplicate rows it produces for two boroughs are the point,
+      not a defect.
+
+    columns:
+      - name: apciq_geography_key
+        description: Joins to dim_geography where geography_type = 'apciq_sector'.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: admin_geography_key
+        description: >
+          Joins to dim_geography at municipality or borough level. Never null:
+          a null would mean the seed names a codemamh the city file does not
+          have, which is a transcription error.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: coverage
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['full', 'part']

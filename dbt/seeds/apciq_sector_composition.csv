@@ -1,0 +1,37 @@
+apciq_sector_number,apciq_sector_name,component_label_source,codemamh,coverage
+1,Ouest-de-l'Île-Sud,Baie-d'Urfé,66112,full
+1,Ouest-de-l'Île-Sud,Beaconsfield,66107,full
+1,Ouest-de-l'Île-Sud,Dorval,66087,full
+1,Ouest-de-l'Île-Sud,L'Île-Dorval,66092,full
+1,Ouest-de-l'Île-Sud,Pointe-Claire,66097,full
+1,Ouest-de-l'Île-Sud,Sainte-Anne-de-Belleveue,66117,full
+1,Ouest-de-l'Île-Sud,Senneville,66127,full
+2,Ouest-de-l'Île-Nord,Kirkland,66102,full
+2,Ouest-de-l'Île-Nord,L'Île-Bizard/Sainte-Geneviève,REM32,full
+2,Ouest-de-l'Île-Nord,Pierrefonds-Roxboro,REM31,full
+2,Ouest-de-l'Île-Nord,Dollard-des-Omeaux,66142,full
+3,Lachine/Lasalle,Lachine (Montréal),REM27,full
+3,Lachine/Lasalle,Lasalle (Montréal),REM17,full
+4,Le Sud-Ouest,Le Sud-Ouest (Montréal),REM20,full
+4,Le Sud-Ouest,Verdun (Montréal),REM12,part
+5,Saint-Laurent,Saint-Laurent,REM15,full
+6,Ahuntsic-Cartierville,Ahuntsic-Cartierville (Montréal),REM23,full
+7,NDG/Montréal-Ouest,Notre-Dame-de-Grâce (Montréal),REM34,part
+7,NDG/Montréal-Ouest,Montréal-Ouest,66047,full
+8,CDN/CSL,Côte-des-Neiges,REM34,part
+8,CDN/CSL,Côte-Saint-Luc,66058,full
+9,Centre,Hampstead,66062,full
+9,Centre,Mont-Royal,66072,full
+9,Centre,Outremont (Montréal),REM05,full
+9,Centre,Westmount,66032,full
+10,L'Île-des-Soeurs,L'Île-des-Soeurs,REM12,part
+11,Ville-Marie,Ville-Marie (Montréal),REM19,full
+12,Le Plateau-Mont-Royal,Le Plateau-Mont-Royal (Montréal),REM21,full
+13,Rosemont,Rosemont/La Petite-Patrie (Montréal),REM24,full
+14,Villeray,Villeray/Saint-Michel/Parc-Extension (Montréal),REM25,full
+15,Mercier/Hochelaga/Maisonneuve,Mercier/Hochelaga-Maisonneuve (Montréal),REM22,full
+16,Anjou/Saint-Léonard,Anjou (Montréal),REM09,full
+16,Anjou/Saint-Léonard,Saint-Léonard (Montréal),REM14,full
+17,Montréal-Nord,Montréal-Nord (Montréal),REM16,full
+18,Pointe Est de l'Île,Montréal-Est,66007,full
+18,Pointe Est de l'Île,Rivière-des-Prairies/Pointe-aux-Trembles (Montréal),REM33,full
