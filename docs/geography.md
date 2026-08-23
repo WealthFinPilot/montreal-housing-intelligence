@@ -122,6 +122,48 @@ Until it is, the geometry is NULL. **A NULL that says "not established" is
 worth more than a polygon that looks authoritative and is approximate** —
 particularly on a map, where nobody questions a shape.
 
+### How it will be built, and why not by union
+
+The obvious construction is `ST_Union(neighbourhood, linked_city)`. It is the
+wrong one. The two polygons come from different files drawn twelve years apart,
+so their shared edges do not coincide exactly; a union leaves slivers of gap
+where they fall short and slivers of overlap where they cross.
+
+The construction that cannot fail is to **cut the administrative polygon using
+the neighbourhood polygon as a knife**, and never to take an outer edge from
+anywhere but the official file:
+
+```sql
+ndg_part = ST_Intersection( borough_REM34 , ndg_sociological )
+cdn_part = ST_Difference  ( borough_REM34 , ndg_sociological )
+```
+
+By construction `ndg_part ∪ cdn_part = borough_REM34` exactly. The
+sociological file supplies only the dividing line.
+
+**Measured on 2026-08-23**, comparing each borough against the union of the
+neighbourhood pieces that should fill it:
+
+| Borough | Cutting file | Admin area | Pieces | Difference |
+|---|---|---|---|---|
+| CDN–NDG (`REM34`) | quartiers sociologiques | 21.4909 km² | 21.4880 km² | **0.44 %** |
+| Verdun (`REM12`) | quartiers de référence | 22.2952 km² | 9.8467 km² | **55.9 %** |
+
+The first is digitising noise, and the cut removes it entirely.
+
+**The second is not an error, and it matters beyond this one borough:
+administrative boundaries include water.** Verdun extends to the middle of the
+St. Lawrence; the housing-reference neighbourhoods cover only inhabited land.
+The same effect is why the island measures 619 km² here rather than its land
+area. `ST_Difference` simply assigns the river to the larger piece — nobody
+sells a condo on it — but a map built without knowing this would show an
+inexplicable hole.
+
+**Sequencing.** This construction waits for J3.2. Open question 1 below —
+whether sector 4 excludes L'Île-des-Sœurs or overlaps sector 10 — decides how
+sector 4 is cut, and the Baromètre settles it arithmetically. Building the
+geometry first risks building it twice.
+
 ---
 
 ## 6. Traps found, and the guards against them
