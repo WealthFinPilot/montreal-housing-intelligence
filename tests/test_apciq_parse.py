@@ -29,9 +29,10 @@ that a human read it off the page, not that it sits in a versioned file.
 Moving it out costs nothing but a skip on a clone that has neither the PDFs
 nor the oracle -- and those tests already skip there.
 
-Note that the figures remain in the git history of commits made before
-2026-08-23. Removing them from the working tree does not remove them from
-git log -p.
+The history was rewritten on 2026-08-23 so that they are gone from every
+commit as well, not only from the tip: removing a figure from the working
+tree does not remove it from git log -p. The commits, their messages and
+their order are unchanged; only the figures inside them were replaced.
 """
 
 from __future__ import annotations

@@ -33,10 +33,12 @@ that test skips, exactly as the PDF tests already do on a fresh clone. What
 makes a value an oracle is that a human read it off the page, not that it sits
 in a tracked file.
 
-**Residual, and it needs an explicit decision**: those figures were committed
-before 2026-08-23 and remain in the git history. Removing them from the
-working tree does not remove them from `git log -p`. Clearing that means
-rewriting history, as was done for the author e-mail on 2026-08-23.
+**Nor is one in the history.** Those figures had been committed before
+2026-08-23, and removing them from the working tree would not have removed
+them from `git log -p`. The history was rewritten the same day, the way the
+author e-mail was: 22 commits, their messages and their order unchanged, with
+only the figures inside them replaced by a marker naming the licence. Verified
+by sweeping every blob of every commit, not by inspecting the tip.
 
 ---
 
