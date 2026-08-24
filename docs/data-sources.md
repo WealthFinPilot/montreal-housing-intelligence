@@ -24,7 +24,14 @@ Verification host: Windows 11, `curl 8.21.0`, `python 3.13.14`, `pdfplumber`. No
 | 8 | Données Montréal | `quartiers` — *Quartiers de référence en habitation* | `no_qr`, `nom_qr`, `no_arr`, `nom_arr`, `nom_mun`, MultiPolygon geometry | **Neighbourhood** — 91 features: 77 quarters of Ville de Montréal (with their borough) + 14 linked cities. **L'Île-Dorval is absent** | Current snapshot | Metadata modified 2026-08-19 | GeoJSON (1 135 769 B), SHP, CSV | CKAN `package_show` then `GET .../download/quartierreferencehabitation.geojson` returns **HTTP 200** (browser `User-Agent` required, see 2.5) | None | `[UNKNOWN]` | CC-BY 4.0 — [creativecommons.org/licenses/by/4.0](http://creativecommons.org/licenses/by/4.0/). **Redistribution allowed** | **1**/5 | P2 | `dim_geography` |
 | 9 | Données Montréal | `quartiers-sociologiques` — *Quartiers sociologiques* | `id`, `Q_sociologique`, `Arrondissement`, `Abreviation`, `nbr_RUI`, `Table`, MultiPolygon geometry | **Sociological neighbourhood** — 32 features, Ville de Montréal only. Names **Côte-des-Neiges** and **Notre-Dame-de-Grâce** separately | 2014 delineation | Metadata modified 2025-02-27 | GeoJSON (292 280 B), SHP, CSV | `GET .../download/quartiers_sociologiques_2014.geojson` returns **HTTP 200** | None | `[UNKNOWN]` — 2014 vintage, no update since | CC-BY 4.0 — [creativecommons.org/licenses/by/4.0](http://creativecommons.org/licenses/by/4.0/). **Redistribution allowed** | **1**/5 | P2 | `dim_geography` |
 
+| 10 | Statistics Canada | **2021 Geographic Attribute File** (92-151-X) — `2021_92-151_X.csv` | 63 columns. The ones that matter here: `CSDUID_SDRIDU` + `CSDNAME_SDRNOM` (municipality), `CTUID_SRIDU` + `CTDGUID_SRIDUGD` (census tract), `CMAUID_RMRIDU`, `DAUID_ADIDU`, `DBUID_IDIDU`, `DBPOP2021_IDPOP2021`, `DBTDWELL2021_IDTLOG2021`, `DBAREA2021_IDSUP2021` | **Dissemination block** — 498 786 rows Canada-wide, **13 844 on the Island**. Carries every coarser code on the same row | 2021 Census | 2021 | CSV in ZIP — 9 832 890 B zipped, 298 768 692 B unzipped | `POST /census-recensement/2021/geo/aip-pia/attribute-attribs/index2021-eng.cfm?Year=2021` with `year=21&lang=_e&getgeo=Continue` returns **302** to `.../files-fichiers/2021_92-151_X.zip`, which returns **HTTP 200** | None | Per census (5 years) | [Statistics Canada Open Licence](https://www.statcan.gc.ca/en/reference/licence) — not restated inside the file. **Redistribution allowed** | **2**/5 | **P1 — this is what unblocks J3.3, see 2.9** | `dim_geography` |
+| 11 | Statistics Canada | **2021 cartographic boundary file — census tracts** (`lct_000b21a_e`) | `CTUID`, `DGUID`, `CTNAME`, `LANDAREA`, `PRUID`, MultiPolygon geometry | **Census tract** — 6 247 features Canada-wide, **541 on the Island** | 2021 Census | 2021 | SHP in ZIP (13 403 271 B) — `.shp` 28 369 348 B. **CRS: NAD83 Statistics Canada Lambert, metres**, read from the `.prj`, not from memory | `POST /census-recensement/2021/geo/sip-pis/boundary-limites/index2021-eng.cfm?Year=21` with `year=21&lang=_e&type=b&bound=ct_&format=a&getgeo=Continue` returns **302** to `.../files-fichiers/lct_000b21a_e.zip`, which returns **HTTP 200** | None | Per census (5 years) | **[Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada)**, declared in the file's own metadata (`lct_000b21a_e.xml`) — "worldwide, royalty-free, perpetual, non-exclusive licence to use the Information, **including for commercial purposes**", attribution required. **Redistribution allowed** | **2**/5 | **P2 — not required to delimit the Island, see 2.9** | `dim_geography` |
+
 Automation difficulty: 1 = stable documented API, 5 = recurring manual extraction.
+
+Rows 10 and 11 were verified on 2026-08-24 while opening J3.3. Both sit behind an HTML
+`POST` form, not a plain link: the file paths below were **returned by the server** in a
+`Location` header, never guessed.
 
 Rows 8 and 9 were verified on 2026-08-23 while building the geography model.
 Neither is ingested yet. They matter because **each one resolves one of the two
@@ -147,8 +154,12 @@ outside git.
 - The full `98100058` CSV (68.7 MB uncompressed, 484 871 rows) contains **short rows**: a
   strict positional parser raises `IndexError` partway through. Parse defensively.
 - **CMA 462 is not the Island of Montréal.** It includes Laval, Longueuil, and the North and
-  South Shores. Restricting to the island requires joining CT geography to the boundary file
-  of row 5. Do not treat "Montréal CMA" as the project perimeter.
+  South Shores. Do not treat "Montréal CMA" as the project perimeter. ~~Restricting to the
+  island requires joining CT geography to the boundary file of row 5.~~ **Corrected
+  2026-08-24: that sentence was wrong, and it presupposed a CT geometry layer this project
+  did not have.** Row 5 holds boroughs and linked cities, not census tracts, and no spatial
+  join is needed in any case — the published attribute file of row 10 states the municipality
+  of every tract outright. Of the 1 004 tracts in CMA 462, **541 are on the Island**. See 2.9.
 
 ### 2.5 Données Montréal — `403 RBAC: access denied`
 
@@ -258,6 +269,73 @@ municipalities) instead.
 
 ---
 
+### 2.9 Census tract geography — verdict: the spatial join is not needed at all
+
+**The blocker, as stated when J3.3 was opened.** Section 2.4 says restricting census tracts
+to the Island requires "joining CT geography to the boundary file of row 5". Row 5 is the
+City's administrative boundary file — boroughs and linked cities, not census tracts. That
+sentence presupposed a CT geometry layer this project did not have, and no source for one
+was documented anywhere in this matrix. Two routes were probed on 2026-08-24, both starting
+`[UNKNOWN]`.
+
+**Route 2 — a published CT → municipality correspondence — exists, and it wins.**
+The 2021 **Geographic Attribute File** (row 10) carries one row per dissemination block,
+and every coarser geographic code sits on that same row: `CSDUID_SDRIDU` (municipality) and
+`CTUID_SRIDU` (census tract) side by side, with population, dwellings and land area attached.
+
+Three facts were **measured** from it, not assumed:
+
+| Question | Answer | How it was established |
+|---|---|---|
+| Is census division **2466** the Island? | **Yes — exactly.** 16 census subdivisions, matching the 16 municipalities of `_ile_municipalites.json` one for one, none missing, none extra | Grouped all 13 844 blocks whose `CSDUID` starts `2466` |
+| Does `CSDUID` join to the MAMH municipal code? | **Yes.** `CSDUID = '24' + mamh_code` holds for all 16, names matching | Same pass |
+| Do any census tracts **straddle the Island boundary**? | **None. Zero of 541.** No tract on the Island touches a second municipality either | Built CT → set of CSDs from the block file |
+
+**The straddle result was checked against a positive control**, because a clean zero is
+exactly the kind of answer that hides a broken test. Run over all of Canada, the same code
+finds **69 census tracts that do cross a CSD boundary** (1.1 % of 6 260), and 12 that cross a
+census-division boundary. The test can see the phenomenon; it simply does not occur here.
+
+**Consequence: `CSDUID LIKE '2466%'` delimits the Island.** No PostGIS, no spatial join, no
+edges that fail to coincide, no water surface, and no arbitrary rule for tracts cut in half —
+because there are none. The four PostGIS traps of `geography.md` section 6 are not paid at
+all on this axis. Route 2 was preferable in principle when J3.3 was opened; it is now
+preferable on evidence.
+
+**Route 1 — a StatCan cartographic boundary file for census tracts — also exists** (row 11),
+and all 541 Island tracts are present in it. It is kept as **P2**, because it is still needed
+for two things route 2 cannot do: drawing a map in Power BI (brief section 30, page 2), and
+the eventual CT ↔ APCIQ-sector join, which is a genuine spatial problem — **boroughs and
+APCIQ sectors are not StatCan geographies, so no attribute file will ever carry them.**
+Its CRS is NAD83 Statistics Canada Lambert in metres, not WGS84: joining it to
+`raw.mtl_administrative_boundary` (EPSG 4326) requires an explicit `ST_Transform`.
+
+**The join to the income table closes on all three files.** Of the 541 Island tracts, **541
+appear in the boundary file and 541 appear in table `98100058`** — no orphan in either
+direction. The key is the DGUID: `CTDGUID_SRIDUGD` in the attribute file is character-for-
+character the `dguid` of the income table (`2021S0507` + `CTUID`).
+
+**Eleven of the 541 tracts carry no median income for 2020**, and they are the near-empty
+ones — populations of 0, 10, 15, 21, 30. Ten are in Ville de Montréal, one is L'Île-Dorval.
+This is suppression at source, not a parsing defect. Per principle 1 of brief section 41,
+**they stay empty**: no interpolation, no borrowing from a neighbouring tract. Any indicator
+built on them must show 530 tracts with income and 11 without, rather than 541 with a
+silent gap.
+
+**A side corroboration worth recording.** The Island's census-tract land area sums to
+**498.29 km²**, against **619 km²** for the same island measured on the City's administrative
+boundary file. That is the "administrative boundaries include water" finding of
+`geography.md` section 6, arrived at from a completely independent source — the two files
+disagree by the river, exactly as they should.
+
+**What remains open after this verdict**, and it is a different problem from the one that was
+blocking: attaching income to an APCIQ sector still requires geometry, because a census tract
+nests inside a *municipality* but nothing published says which *borough* or *APCIQ sector* it
+falls in. That is a J3.4 question, and it now rests on building the sector polygons
+(`geography.md` section 5), which was already unblocked on 2026-08-23.
+
+---
+
 ## 3. Rejected sources
 
 | Source | Why |
@@ -277,5 +355,6 @@ municipalities) instead.
 | `sample_data/statcan_98100058_montreal_ct_income.csv` | 1 006 (1 004 CTs + CMA + header) | Filtered from the 484 871-row full table |
 | `sample_data/mtl_role_foncier_extrait.csv` | 10 183 | First 1.5 MB of the 76 MB roll, via HTTP Range |
 | `sample_data/mtl_limites_administratives.geojson` | 34 features | Full file, 1 258 670 B |
+| `sample_data/statcan_gaf_2021_island_ct.csv` | 541 (one per Island census tract) | Aggregated from the 13 844 Island dissemination blocks of the Geographic Attribute File (row 10). Carries the CT → municipality correspondence, the MAMH code, population, dwellings, land area, and whether the tract has a 2020 income. **This file is the evidence behind 2.9** — it lets a reader re-check the verdict without downloading 298 MB |
 
 APCIQ PDFs are deliberately **not** committed — see 2.2.
