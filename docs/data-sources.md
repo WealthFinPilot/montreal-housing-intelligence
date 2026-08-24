@@ -149,10 +149,50 @@ add one: *every downloaded PDF is archived locally on first fetch, so the histor
 survives the source changing shape.* 29 files at roughly 7 MB each is about 200 MB, kept
 outside git.
 
-### 2.4 Statistics Canada — two traps found
+### 2.4 Statistics Canada — the traps found, and the one that would have cost a day
+
+**The expensive one, found 2026-08-24: `...` prints a zero.** Table `98100058`
+never leaves a cell blank when it has nothing to publish — it prints a symbol
+in the column beside it, and the two kinds of non-value do **not** look alike:
+
+| Symbol | Meaning, verbatim from `98100058_MetaData.csv` | What the value column holds |
+|---|---|---|
+| `''` | value published | a real number — **never zero, on an income** |
+| `'x'` | "suppressed to meet the confidentiality requirements of the Statistics Act" | **empty** |
+| `'...'` | "not applicable" | **the literal `0`** |
+
+Counted over the whole Montréal CMA, per 2020 income measure: 49 641 real
+numbers, **18 404 zeros that mean nothing**, 9 340 empties.
+
+A loader that treats "empty" as "missing" therefore keeps eighteen thousand
+median household incomes of **nought dollars** per measure. They cast cleanly,
+they average quietly, and no figure downstream looks wrong enough to
+investigate.
+
+And they cannot be swept up afterwards by discarding zeros, because **a zero is
+real data on the household counts**: 19 385 of those are published as zero, a
+tract genuinely holding no household of a given size and type. Only the symbol
+separates the two cases. That is why the raw layer stores every symbol beside
+its value and the conversion keys on the symbol, never on the value looking
+empty. Same lesson as APCIQ's `-` / `**` / blank, with a nastier placeholder.
+
+**The table is not one row per geography.** It crosses 7 household sizes with
+11 household types, so every geography carries **exactly 77 rows** — 77 385 for
+CMA 462, with no geography carrying any other count. Useful as a test: a
+re-worded dimension label would insert rows rather than update them.
+
+**Six columns are named `Symbol`.** Reading the file with a dictionary reader
+keeps one of them and silently discards five, which erases exactly the
+distinction above. It has to be read positionally.
+
+
 
 - The full `98100058` CSV (68.7 MB uncompressed, 484 871 rows) contains **short rows**: a
   strict positional parser raises `IndexError` partway through. Parse defensively.
+  **Measured 2026-08-24: there are exactly two of them, and they are rows of length
+  zero — blank lines, not truncated records.** That distinction matters: a blank line
+  is skipped, whereas a genuinely truncated row would mean fields shifting into the
+  wrong columns and must abort the load. The parser treats the two differently.
 - **CMA 462 is not the Island of Montréal.** It includes Laval, Longueuil, and the North and
   South Shores. Do not treat "Montréal CMA" as the project perimeter. ~~Restricting to the
   island requires joining CT geography to the boundary file of row 5.~~ **Corrected
