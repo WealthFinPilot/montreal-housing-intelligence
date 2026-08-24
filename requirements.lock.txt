@@ -11,8 +11,8 @@ cryptography==50.0.0
 daff==1.4.2
 dbt-adapters==1.24.5
 dbt-common==1.39.0
-dbt-core==1.12.3
 dbt-core-experimental-parser==2.0.0b2
+dbt-core==1.12.3
 dbt-extractor==0.6.0
 dbt-postgres==1.11.0
 dbt-protos==1.0.565
@@ -22,8 +22,8 @@ importlib_metadata==9.0.0
 iniconfig==2.3.0
 isodate==0.7.2
 Jinja2==3.1.6
-jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
+jsonschema==4.26.0
 leather==0.4.1
 MarkupSafe==3.0.3
 mashumaro==3.17
@@ -41,14 +41,15 @@ pdfplumber==0.11.10
 pillow==12.3.0
 pluggy==1.6.0
 protobuf==6.33.6
-psycopg==3.3.4
 psycopg-binary==3.3.4
 psycopg2-binary==2.9.12
+psycopg==3.3.4
 pycparser==3.0
 pydantic==2.13.4
 pydantic_core==2.46.4
 Pygments==2.21.0
 pypdfium2==5.13.0
+pyshp==2.3.1
 pytest==9.1.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.3

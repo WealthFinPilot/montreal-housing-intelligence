@@ -197,6 +197,50 @@ touches its outer edge from the inside. `ST_Contains` excludes boundary
 contact and would reject all 19. `ST_Covers` is the correct predicate whenever
 the container was assembled from the contained.
 
+### `ST_Area` in EPSG:3347 returns metres², and they are 3.3 % too many
+
+Found on 2026-08-24, loading the census tract boundaries. This one is worse
+than the square-degrees trap above, because it produces a **plausible** number.
+
+EPSG:3347, *NAD83 / Statistics Canada Lambert*, is the projection Statistics
+Canada ships its boundary files in. It is a Lambert **conformal** conic: it
+preserves angles, not areas, and its standard parallels are 49° and 77°.
+Montréal sits at 45.5°, well south of both, where the scale factor is greater
+than one — so every area comes out inflated, by the same amount, silently.
+
+Measured over the 541 tracts of the Island, against the land area the file
+states for each one:
+
+| How the area was computed | Total | Against the published figure |
+|---|---|---|
+| `ST_Area` in EPSG:3347 | 514.69 km² | **+3.29 %** |
+| `ST_Area` on `::geography` | 499.63 km² | +0.27 % |
+| `ST_Area` in EPSG:32188 (MTM zone 8) | 499.53 km² | +0.25 % |
+| Published `LANDAREA` | 498.29 km² | — |
+
+*Guard:* compute areas geodesically by casting to `geography`, or reproject to
+a local system such as MTM zone 8. Never in 3347, whatever the file arrived
+in. The residual quarter of a percent is not projection error — it is the
+polygon holding a little water that the published **land** area excludes.
+
+### Two files can disagree about where the shore is
+
+Also 2026-08-24. Of the 541 census tract polygons, **523 are entirely covered
+by the city's administrative boundary and 18 poke out of it** — by 0.000 % to
+6.6 % of their own area, with fifteen of the eighteen under 1.6 %.
+
+This is not a tract reaching off the Island. The attribute file places all 541
+inside Island municipalities at dissemination-block level, and the decisive
+check is that **all 3 228 dissemination-area representative points fall inside
+the city boundary, without a single exception.** Two organisations digitised
+the same shoreline and did not trace it identically; the disagreement lives on
+the water's edge, where nobody lives.
+
+*Guard:* never use one file's polygon to decide membership in another file's
+geography. Membership comes from published codes — `csd_uid`, `CODEMAMH` —
+and geometry is for drawing and for measuring, not for deciding. Where a
+spatial test is unavoidable, test a representative point, not a polygon edge.
+
 ---
 
 ## 7. Measured values

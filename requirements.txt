@@ -27,6 +27,13 @@ requests==2.34.2
 # imports it.
 pdfplumber==0.11.10
 
+# Reads the Statistics Canada census tract boundary file, which is published
+# as an ESRI shapefile and nothing else -- the download form offers no GeoJSON.
+# Pure Python, no GDAL, no compiled dependency: the machine running this has
+# no dedicated GPU and no appetite for a geospatial toolchain, and the only
+# thing needed here is to turn polygons into well-known text.
+pyshp==2.3.1
+
 # Reads .env so scripts never carry credentials in their source.
 python-dotenv==1.2.3
 
