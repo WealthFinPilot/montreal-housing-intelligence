@@ -234,9 +234,17 @@ analytical figure.
    with no part of the borough counted twice.
 2. **Exact sector geometries** — see section 5. Method decided, prerequisite
    now cleared, construction not started.
-3. **Census tract to island** — CMA 462 includes Laval and both shores.
-   Restricting to the island is a spatial join against `dim_geography`, to be
-   done in J3.3.
+3. **Census tract to island** — CMA 462 includes Laval and both shores, so
+   the 1 004 tracts must be cut down to the island in J3.3.
+
+   The prerequisite is not in hand. A spatial join needs census-tract
+   POLYGONS, and no source for them is documented: row 5 of the data-source
+   matrix is the City boundary file (boroughs and municipalities), not tracts.
+   Two routes to probe before writing any ingestion code, neither assumed:
+   a Statistics Canada cartographic boundary file, whose format and URL are
+   `[UNKNOWN]`; or a published tract-to-municipality correspondence, whose
+   existence is `[UNKNOWN]`. The second would be preferable -- no PostGIS, no
+   mismatched edges, no water area.
 
 ---
 
