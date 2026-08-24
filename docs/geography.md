@@ -24,14 +24,25 @@ smoothing it, which is section 22 of the original brief.
 
 ## 2. What the model contains
 
-### `marts.dim_geography` — 54 rows
+### `marts.dim_geography` — 595 rows
 
 | `geography_type` | Rows | Geometry | Parent |
 |---|---|---|---|
 | `island` | 1 | ✅ union of the 34 | — |
 | `municipality` | 16 | ✅ | `island:mtl` |
 | `borough` | 19 | ✅ | `municipality:66023` |
-| `apciq_sector` | 18 | ❌ **NULL** | `island:mtl` |
+| `apciq_sector` | 18 | ❌ **NULL** — see section 5 | `island:mtl` |
+| `census_tract` | 541 | ✅ | `municipality:…` |
+
+Census tracts are parented to their **municipality**, not to their borough,
+because no published source says which borough a tract is in. Ville de Montréal
+therefore holds 485 tracts directly, which looks coarse and is honest. Reaching
+the borough — and the APCIQ sector — is section 7.
+
+`area_km2` carries `area_basis` beside it, because the two families do not mean
+the same thing by "area": administrative boundaries run out into the water
+(the island measures 619 km²), tract polygons stop at the shore (499 km²). Both
+are correct about different questions, and adding them is not one of them.
 
 The key is readable rather than hashed: `borough:REM19`, `municipality:66112`,
 `apciq_sector:8`. A row is identifiable at a glance in Power BI and in a
@@ -49,6 +60,13 @@ union of its 19 boroughs.
 
 One row per (sector, administrative entity) link, each marked `full` or `part`.
 36 links for 34 entities: the two extras are the two boroughs APCIQ splits.
+
+### `marts.bridge_census_tract_apciq_sector` — 543 rows
+
+One row per (tract, sector), with the share of the tract's population that the
+row accounts for. 543 rows for 541 tracts: one tract is genuinely shared, one
+more reaches into a second sector across land where nobody lives. **This is the
+table that lets a census income meet an APCIQ price** — section 7.
 
 ---
 
@@ -105,6 +123,17 @@ Sector names must never be read as geography.
 ---
 
 ## 5. Why APCIQ sectors have no geometry
+
+> **Superseded as a prerequisite, 2026-08-24.** Everything below still holds,
+> and the sectors still have no geometry. What changed is that **nothing
+> depends on it any more.** Attaching census tracts to sectors was the reason
+> this construction was scheduled, and section 7 shows the attachment is done
+> without a single polygon being cut. Should a map ever need sector outlines,
+> there is now a better construction than the one described here: **the union
+> of the census-tract polygons of each sector**. It draws from one file instead
+> of three, so no two edges have to be reconciled, and it tiles by
+> construction.
+
 
 Their true outlines are reconstructible. Two further CC-BY city datasets were
 checked on 2026-08-23:
@@ -243,7 +272,122 @@ spatial test is unavoidable, test a representative point, not a polygon edge.
 
 ---
 
-## 7. Measured values
+## 7. Attaching census tracts to APCIQ sectors
+
+This is the join the project existed without until 2026-08-24. Household income
+is published at census tract; price is published at APCIQ sector; **nothing
+published relates the two.** The relation now lives in
+`marts.bridge_census_tract_apciq_sector` — 543 rows for 541 tracts.
+
+### The rule, in one sentence
+
+Every dissemination area is placed by the representative point Statistics
+Canada publishes for it; that point falls in exactly one borough or linked
+city; `bridge_apciq_sector_geography` says which sector that entity belongs to
+— and for the only two entities APCIQ cuts in half, a second point-in-polygon
+against a neighbourhood file finishes the job.
+
+**No polygon is cut anywhere, and no membership is decided by a polygon edge.**
+
+### Why the carving of section 5 was not needed
+
+The plan recorded at the end of J3.3 was to rebuild the eighteen sector
+polygons with `ST_Intersection` / `ST_Difference` and then attach tracts to
+them. The measurements below were taken **before** any of it was written, and
+they removed the need for all of it:
+
+| Measured 2026-08-24 | Result |
+|---|---|
+| Representative points falling in exactly one of the 34 administrative entities | **3 228 / 3 228** — none outside, none in two |
+| Populated tracts falling entirely inside one entity | **532 / 534** |
+| Tracts of the two split boroughs resolving through the neighbourhood files | **62 / 62** — not one straddles a sector line |
+| Agreement between the point assignment and the share of the tract polygon, over those 62 | **≤ 1.6 points**, and ≤ 0.2 on 60 of them |
+
+Carving would have produced the same answer for 540 tracts and a worse one for
+the rest, because a cut inherits every disagreement between the files it cuts.
+Section 6 already records that 18 of the 541 tract polygons spill outside the
+city's boundaries by up to 6.6 % of their own area; one of the two tracts that
+genuinely reaches two sectors also picks up a 0.00 % sliver of a *third*
+borough, which exists only because two organisations drew the same shoreline
+differently. A point collects none of that.
+
+### The one tract that is genuinely shared
+
+`4620511.02`, on the Pierrefonds-Roxboro / Saint-Laurent line. It carries two
+rows, weighted by the population living on each side, because rounding it to
+one sector would discard 476 real residents:
+
+| Sector | By population (points) | By area (polygon) |
+|---|---|---|
+| 2 — Ouest-de-l'Île-Nord | 92.9 % | 93.2 % |
+| 5 — Saint-Laurent | 7.1 % | 6.8 % |
+
+Two independent measurements agreeing to 0.3 points is what makes the split
+credible rather than merely computed.
+
+### The one tract that only looked shared
+
+`4620195.02` appeared to be 90 % in sector 15 and 10 % in sector 16 — and it is
+**not shared at all**. The refutation comes from a number the source publishes
+about itself:
+
+- the dissemination area concerned covers **0.0427 km²**, published;
+- the entire intersection between its tract and Saint-Léonard is **0.0076 km²**;
+- so the area is **5.6 times too large to be there**. Its representative point
+  simply landed 10.9 m on the wrong side of the line.
+
+Its 541 residents were being credited to a sector they demonstrably do not live
+in. The bridge reassigns them, and the declaration lives in the seed
+`statcan_misplaced_representative_point` with the measurement attached.
+
+### The guard this produced
+
+That refutation generalises, and it is now permanent: **a dissemination area
+cannot sit in a space smaller than itself.** Statistics Canada publishes each
+area's land area, so the claim "this area is inside that entity" is checkable
+by arithmetic rather than believed.
+
+Run over all 3 228 areas of the island, the check separates two populations
+that are nowhere near each other:
+
+| Overshoot ratio | Areas | What it is |
+|---|---|---|
+| 1.000 – 1.016 | 12 | shoreline noise — the section 6 trap, again |
+| 2.87 and 5.62 | 2 | genuinely somewhere else |
+
+Three orders of magnitude sit between them, so the 1.5 threshold in
+`assert_representative_point_fits_where_it_landed` is not a tuned knob: anything
+from 1.05 to 2.8 selects the same two rows. The test fails in **both**
+directions — on an undeclared area that no longer fits, and on a declaration
+that no longer describes anything.
+
+### What remains an assumption, and it is not small
+
+**APCIQ publishes no line between its sector 7 (NDG) and its sector 8
+(Côte-des-Neiges).** There is no such line in any APCIQ document — only the two
+names, on page 6 of the Baromètre. What stands in for it is Ville de Montréal's
+2014 *sociological* neighbourhood boundary: a community-planning line, drawn by
+a different body, for a different purpose, twelve years earlier.
+
+That substitution places **40 tracts and 170 583 people**. It is a derived
+assumption, not an observation, and `assignment_method = 'neighbourhood_polygon'`
+carries it on every row it touches so that nothing downstream can present it as
+measured.
+
+Verdun does not carry the same risk: the line between Ile-des-Sœurs and the rest
+of the borough is water, so any reasonable delineation puts the same tracts on
+the same side.
+
+### And the temporal gap does not close
+
+Income is 2020. APCIQ prices run to 2026 Q2. This bridge makes them *joinable*;
+it does not make them contemporaneous. **A 2026 price-to-income ratio is a
+displayed assumption, not an observation**, and `census_year` exists downstream
+so that no model can forget it.
+
+---
+
+## 8. Measured values
 
 | Level | Count | Area (km²) |
 |---|---|---|
@@ -257,7 +401,7 @@ analytical figure.
 
 ---
 
-## 8. Open questions
+## 9. Open questions
 
 1. ~~**Does APCIQ sector 4 include L'Île-des-Sœurs?**~~ **Settled 2026-08-23:
    it does not, and the two sectors do not overlap.**
@@ -276,23 +420,31 @@ analytical figure.
    *Consequence:* the reconstruction in section 5 is no longer blocked. Verdun
    is cut in two, sector 10 taking L'Île-des-Sœurs and sector 4 the remainder,
    with no part of the borough counted twice.
-2. **Exact sector geometries** — see section 5. Method decided, prerequisite
-   now cleared, construction not started.
-3. **Census tract to island** — CMA 462 includes Laval and both shores, so
-   the 1 004 tracts must be cut down to the island in J3.3.
+2. **Exact sector geometries** — still not built, and **no longer a
+   prerequisite for anything** since 2026-08-24. Section 7 attaches tracts to
+   sectors without them. They are wanted only for a map, and if that map is
+   ever drawn the construction is now the union of each sector's tract
+   polygons — one source file, no edges to reconcile, tiling by construction —
+   rather than the three-file carving of section 5.
+3. ~~**Census tract to island**~~ **Settled 2026-08-24.** No spatial join was
+   needed at all. The Geographic Attribute File states the municipality of
+   every tract outright, and census division 2466 turns out to be exactly the
+   island: 16 subdivisions for 16 municipalities, none missing, none extra. The
+   perimeter is `csd_uid LIKE '2466%'`. Of the 1 004 tracts of CMA 462, **541**
+   are on the island.
 
-   The prerequisite is not in hand. A spatial join needs census-tract
-   POLYGONS, and no source for them is documented: row 5 of the data-source
-   matrix is the City boundary file (boroughs and municipalities), not tracts.
-   Two routes to probe before writing any ingestion code, neither assumed:
-   a Statistics Canada cartographic boundary file, whose format and URL are
-   `[UNKNOWN]`; or a published tract-to-municipality correspondence, whose
-   existence is `[UNKNOWN]`. The second would be preferable -- no PostGIS, no
-   mismatched edges, no water area.
+   The route judged preferable in principle when the question was written
+   turned out to be the one available in fact.
+4. **Which line does APCIQ draw between sectors 7 and 8?** `[UNKNOWN]`, and
+   probably unknowable from published sources — APCIQ names Notre-Dame-de-Grâce
+   and Côte-des-Neiges without ever drawing the boundary between them. Section 7
+   substitutes the city's 2014 sociological line and marks every affected row as
+   a derived assumption. Only APCIQ could close this, and only by publishing
+   something it has never published.
 
 ---
 
-## 9. Stability of the APCIQ carving
+## 10. Stability of the APCIQ carving
 
 The 18 sectors, their numbers and their order are **identical** in the
 2019 Q2, 2022 Q4 and 2026 Q2 editions of the Baromètre (pages 9 to 26 in all
