@@ -179,3 +179,84 @@ def _duplicated(values: list[str]) -> list[str]:
             twice.append(value)
         seen.add(value)
     return twice
+
+
+@dataclass(frozen=True)
+class NeighbourhoodFeature:
+    """One neighbourhood polygon, still exactly as its file spells it."""
+
+    neighbourhood_code: str
+    neighbourhood_name: str | None
+    borough_code: str | None
+    borough_name_source: str | None
+    municipality_name_source: str | None
+    properties_json: str
+    geometry_geojson: str
+
+
+def neighbourhoods_from(
+    document: dict[str, Any],
+    dataset: catalogue.NeighbourhoodDataset,
+) -> list[NeighbourhoodFeature]:
+    """Turn a neighbourhood FeatureCollection into rows, changing nothing.
+
+    Which property holds the code and which holds the name is read from the
+    catalogue rather than guessed, so a file that renames a column fails here
+    with a message naming the file, instead of loading rows keyed on None.
+    """
+    if document.get("type") != "FeatureCollection":
+        raise SourceShapeError(f"expected a FeatureCollection, got {document.get('type')!r}")
+
+    features: list[NeighbourhoodFeature] = []
+    for index, feature in enumerate(document.get("features", [])):
+        properties = feature.get("properties") or {}
+
+        code = _text(properties.get(dataset.code_property))
+        if not code:
+            raise SourceShapeError(
+                f"{dataset.key}: feature {index} has no {dataset.code_property!r}. "
+                "That property is the primary key of raw.mtl_neighbourhood and "
+                "the only thing a seed may address a polygon by; a row without "
+                "one cannot be placed."
+            )
+
+        geometry = feature.get("geometry")
+        if not geometry:
+            raise SourceShapeError(f"{dataset.key}: feature {index} ({code}) carries no geometry")
+
+        # The borough code, derived from a published code or not derived at all.
+        borough_code = None
+        if dataset.borough_code_property:
+            published = _text(properties.get(dataset.borough_code_property))
+            # A missing value is not a fault: the 14 linked-city features of the
+            # housing-reference file have no borough, because a linked city has
+            # none. Absent stays absent.
+            borough_code = f"REM{published}" if published else None
+
+        features.append(
+            NeighbourhoodFeature(
+                neighbourhood_code=code,
+                neighbourhood_name=_text(properties.get(dataset.name_property)),
+                borough_code=borough_code,
+                borough_name_source=_text(properties.get(dataset.borough_name_property))
+                if dataset.borough_name_property
+                else None,
+                municipality_name_source=_text(
+                    properties.get(dataset.municipality_name_property)
+                )
+                if dataset.municipality_name_property
+                else None,
+                properties_json=json.dumps(properties, ensure_ascii=False, sort_keys=True),
+                geometry_geojson=json.dumps(geometry, separators=(",", ":")),
+            )
+        )
+
+    duplicates = _duplicated([f.neighbourhood_code for f in features])
+    if duplicates:
+        raise SourceShapeError(
+            f"{dataset.key}: {dataset.code_property} is not unique in this file: "
+            f"{duplicates}. The raw table keys on it, and a seed addresses "
+            "polygons by it, so a duplicate would attach a sector to whichever "
+            "row happened to land last."
+        )
+    return features

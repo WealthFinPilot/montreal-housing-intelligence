@@ -108,3 +108,78 @@ def load_boundaries(
 
     inserted = sum(1 for was_inserted in outcomes if was_inserted)
     return LoadResult(inserted=inserted, updated=len(outcomes) - inserted)
+
+
+NEIGHBOURHOOD_UPSERT_SQL = """
+INSERT INTO raw.mtl_neighbourhood AS existing
+       (source_dataset, neighbourhood_code, neighbourhood_name, borough_code,
+        borough_name_source, municipality_name_source, properties_json,
+        geometry_geojson, source_crs)
+SELECT %(source_dataset)s, c, n, bc, bn, mn, p, g, %(source_crs)s
+  FROM unnest(
+           %(neighbourhood_code)s::text[],
+           %(neighbourhood_name)s::text[],
+           %(borough_code)s::text[],
+           %(borough_name_source)s::text[],
+           %(municipality_name_source)s::text[],
+           %(properties_json)s::text[],
+           %(geometry_geojson)s::text[]
+       ) AS incoming(c, n, bc, bn, mn, p, g)
+ON CONFLICT (source_dataset, neighbourhood_code) DO UPDATE
+   SET neighbourhood_name       = excluded.neighbourhood_name,
+       borough_code             = excluded.borough_code,
+       borough_name_source      = excluded.borough_name_source,
+       municipality_name_source = excluded.municipality_name_source,
+       properties_json          = excluded.properties_json,
+       geometry_geojson         = excluded.geometry_geojson,
+       source_crs               = excluded.source_crs,
+       updated_at               = now()
+ WHERE (existing.neighbourhood_name, existing.borough_code,
+        existing.borough_name_source, existing.municipality_name_source,
+        existing.properties_json, existing.geometry_geojson, existing.source_crs)
+    IS DISTINCT FROM
+       (excluded.neighbourhood_name, excluded.borough_code,
+        excluded.borough_name_source, excluded.municipality_name_source,
+        excluded.properties_json, excluded.geometry_geojson, excluded.source_crs)
+RETURNING (xmax = 0) AS was_inserted
+"""
+
+
+def load_neighbourhoods(
+    conn: psycopg.Connection,
+    features,
+    *,
+    source_dataset: str,
+    source_crs: str,
+) -> LoadResult:
+    """Insert or refresh neighbourhood rows. Does not commit.
+
+    Same contract as load_boundaries, and idempotence comes from the same
+    place: the primary key (source_dataset, neighbourhood_code) declared on the
+    table. The dataset is part of that key because the two files number their
+    neighbourhoods independently and both start at 1 -- without it, the
+    sociological neighbourhood 40 would overwrite housing-reference 40.
+    """
+    features = list(features)
+    if not features:
+        return LoadResult(0, 0)
+
+    with conn.cursor() as cur:
+        cur.execute(
+            NEIGHBOURHOOD_UPSERT_SQL,
+            {
+                "source_dataset": source_dataset,
+                "source_crs": source_crs,
+                "neighbourhood_code": [f.neighbourhood_code for f in features],
+                "neighbourhood_name": [f.neighbourhood_name for f in features],
+                "borough_code": [f.borough_code for f in features],
+                "borough_name_source": [f.borough_name_source for f in features],
+                "municipality_name_source": [f.municipality_name_source for f in features],
+                "properties_json": [f.properties_json for f in features],
+                "geometry_geojson": [f.geometry_geojson for f in features],
+            },
+        )
+        outcomes = [row[0] for row in cur.fetchall()]
+
+    inserted = sum(1 for was_inserted in outcomes if was_inserted)
+    return LoadResult(inserted=inserted, updated=len(outcomes) - inserted)

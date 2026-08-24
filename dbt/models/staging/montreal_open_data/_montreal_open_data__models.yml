@@ -57,6 +57,49 @@ sources:
               whose coordinates are metres -- it would load cleanly and make
               every spatial join return nothing.
 
+      - name: mtl_neighbourhood
+        description: >
+          The neighbourhood polygons of two Ville de Montréal datasets, kept
+          side by side and never merged: 32 sociological neighbourhoods and 91
+          housing-reference ones. Loaded in J3.4 for one job -- they are the
+          only published files that cut the two boroughs APCIQ cuts, and
+          neither can do it alone.
+
+          The primary key (source_dataset, neighbourhood_code) carries the
+          dataset because the two files number their neighbourhoods
+          independently and both start at 1.
+
+        loaded_at_field: first_seen_at
+        freshness:
+          warn_after: {count: 365, period: day}
+          error_after: {count: 1095, period: day}
+
+        columns:
+          - name: source_dataset
+            description: >
+              Which of the two files this row came from. Part of the key, and
+              part of the answer: the seed apciq_sector_neighbourhood names the
+              file that is authoritative for each borough, so a point is never
+              asked a question the wrong file would also answer.
+          - name: neighbourhood_code
+            description: >
+              The key the file publishes -- id in the sociological file, no_qr
+              in the housing-reference one. Unique within its file, checked at
+              load. A seed addresses four of these codes directly, and a test
+              asserts the name still beside each one.
+          - name: borough_code
+            description: >
+              REM code of the borough, derived from the published no_arr and
+              from nothing else. 'REM' || no_arr lands on all 19 borough codes,
+              none missing and none extra, verified 2026-08-24. NULL on every
+              sociological row: that file publishes no code, and matching its
+              borough NAME to another file's is the join this project forbids.
+          - name: properties_json
+            description: >
+              Every property of the feature, verbatim. The two files share no
+              attributes at all, and this project has already paid for an
+              attribute discarded at load time that had to be fetched again.
+
 models:
   - name: stg_montreal_open_data__administrative_boundaries
     description: >
@@ -111,3 +154,56 @@ models:
           check, not an analytical figure. Its range is checked by the singular
           test tests/assert_island_area_is_plausible.sql, which is where the
           interesting assertion lives: the 34 parts must add up to an island.
+
+  - name: stg_montreal_open_data__neighbourhoods
+    description: >
+      123 neighbourhood polygons from two Ville de Montréal files, held side by
+      side and deliberately not merged: 32 sociological neighbourhoods and 91
+      housing-reference ones.
+
+      They exist to be stood in by a representative point, and for nothing else.
+      No market figure is ever joined to a neighbourhood, and dim_geography
+      carries no neighbourhood level, because no published source keys figures
+      on one. Their borders disagree by 0.44 % on Côte-des-Neiges–Notre-Dame-de-
+      Grâce, which is why they are never unioned.
+
+    columns:
+      - name: source_dataset
+        description: Which file this polygon came from. Part of the key.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['quartiers-sociologiques', 'quartiers']
+
+      - name: neighbourhood_code
+        description: >
+          The key the file publishes: id in the sociological file, no_qr in the
+          housing-reference one. Unique within its file, which is why the
+          primary key pairs it with source_dataset.
+        data_tests:
+          - not_null
+
+      - name: neighbourhood_name
+        description: >
+          The name the file gives this polygon. Never joined on -- it is checked
+          against the seed by
+          tests/assert_neighbourhood_seed_still_names_the_same_places.sql, so a
+          renumbered file cannot silently move a sector.
+        data_tests:
+          - not_null
+
+      - name: borough_code
+        description: >
+          REM borough code, derived from the published no_arr and nothing else.
+          NULL on all 32 sociological rows: that file publishes no code, and
+          matching its borough name against another file's is the join this
+          project forbids.
+
+      - name: geometry
+        description: >
+          The polygon, in EPSG:4326. SRID set explicitly, because
+          ST_GeomFromGeoJSON returns 0 and PostGIS then refuses to compare it
+          with anything.
+        data_tests:
+          - not_null
