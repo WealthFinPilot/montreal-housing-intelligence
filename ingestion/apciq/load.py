@@ -1,5 +1,9 @@
 """Write Baromètre observations into PostgreSQL, idempotently. No PDF here.
 
+Two tables, written in the same transaction: the figures read off Tableau 2,
+and the control totals that were run on them. See load_control_totals for why
+they are never written apart.
+
 Same contract as the other loaders: this module never commits, so the tests
 can run against the real tables inside a transaction and roll it back.
 
@@ -23,7 +27,7 @@ from dataclasses import dataclass
 
 import psycopg
 
-from ingestion.apciq.parse import Observation
+from ingestion.apciq.parse import ControlTotal, Observation
 
 UPSERT_SQL = """
 INSERT INTO raw.apciq_barometer_statistic AS existing
@@ -119,6 +123,81 @@ def load_observations(
                 "source_category_label": [o.source_category_label for o in observations],
                 "source_metric_label": [o.source_metric_label for o in observations],
                 "source_page": [o.source_page for o in observations],
+            },
+        )
+        outcomes = [row[0] for row in cur.fetchall()]
+
+    inserted = sum(1 for was_inserted in outcomes if was_inserted)
+    return LoadResult(inserted=inserted, updated=len(outcomes) - inserted)
+
+
+CONTROL_UPSERT_SQL = """
+INSERT INTO raw.apciq_control_total AS existing
+       (edition_year, edition_quarter, control_code, scope, property_category,
+        metric_code, period_code, published_total, computed_total, tolerance,
+        source_page)
+SELECT %(edition_year)s, %(edition_quarter)s, cc, sc, pc, m, p, pub, comp, tol, pg
+  FROM unnest(
+           %(control_code)s::text[],
+           %(scope)s::text[],
+           %(property_category)s::text[],
+           %(metric_code)s::text[],
+           %(period_code)s::text[],
+           %(published_total)s::int[],
+           %(computed_total)s::int[],
+           %(tolerance)s::int[],
+           %(source_page)s::int[]
+       ) AS incoming(cc, sc, pc, m, p, pub, comp, tol, pg)
+ON CONFLICT (edition_year, edition_quarter, control_code, scope,
+             property_category, metric_code, period_code) DO UPDATE
+   SET published_total = excluded.published_total,
+       computed_total  = excluded.computed_total,
+       tolerance       = excluded.tolerance,
+       source_page     = excluded.source_page,
+       updated_at      = now()
+ WHERE (existing.published_total, existing.computed_total,
+        existing.tolerance, existing.source_page)
+    IS DISTINCT FROM
+       (excluded.published_total, excluded.computed_total,
+        excluded.tolerance, excluded.source_page)
+RETURNING (xmax = 0) AS was_inserted
+"""
+
+
+def load_control_totals(
+    conn: psycopg.Connection, controls: list[ControlTotal]
+) -> LoadResult:
+    """Insert or refresh one edition's control results. Does not commit.
+
+    Written with the observations, in the same transaction, on purpose: a
+    figure and the verdict on the figure must arrive together or not at all.
+    Loading one without the other would leave the database asserting something
+    it cannot back up -- either data nobody checked, or a verdict on data that
+    is not there.
+    """
+    if not controls:
+        return LoadResult(0, 0)
+
+    editions = {(c.edition_year, c.edition_quarter) for c in controls}
+    if len(editions) != 1:
+        raise ValueError(f"one edition per call, got {sorted(editions)}")
+    (year, quarter), = editions
+
+    with conn.cursor() as cur:
+        cur.execute(
+            CONTROL_UPSERT_SQL,
+            {
+                "edition_year": year,
+                "edition_quarter": quarter,
+                "control_code": [c.control_code for c in controls],
+                "scope": [c.scope for c in controls],
+                "property_category": [c.property_category for c in controls],
+                "metric_code": [c.metric_code for c in controls],
+                "period_code": [c.period_code for c in controls],
+                "published_total": [c.published_total for c in controls],
+                "computed_total": [c.computed_total for c in controls],
+                "tolerance": [c.tolerance for c in controls],
+                "source_page": [c.source_page for c in controls],
             },
         )
         outcomes = [row[0] for row in cur.fetchall()]

@@ -71,20 +71,21 @@ What the source delivers, and it is richer than the brief assumed — verified o
 
 Extraction is the real cost. `pdfplumber.extract_tables()` returns unusable fragments — the
 file is a Power BI export in which labels and values are separate objects.
-**Positional extraction works.** `extract_words()` on the Plateau page recovers clean
-horizontal bands:
+**Positional extraction works.** `extract_words()` on a sector page recovers clean horizontal
+bands, one per metric, each holding the same sequence:
 
 ```
-y= 521.5  médian **  -  <chiffre retire -- licence APCIQ>  -> Unifamiliale
-y= 956.5  médian <chiffre retire -- licence APCIQ>  -> Copropriété
-y=1391.5  médian <chiffre retire -- licence APCIQ>  -> Plex
+y=<top>  <metric label>  <quarter value>  <change>  <trailing value>  <change>  [<5-year change>]
 ```
 
-Band spacing is a constant 435 pt: the template is stable. Budget the parser accordingly, and
-assert on the band count per page rather than trusting absolute positions.
+No figure is transcribed here, or anywhere else in this repository: the licence in §2.2
+forbids reproducing the content in part, and this file is versioned.
 
-Naming is *not* perfectly regular: `202504-bar-mtl-fr.pdf` carries an `-fr` suffix that the
-other 28 files do not. The fetcher must try both forms.
+> **Superseded on 2026-08-23 — see `docs/apciq.md`.** Two claims that stood in this section
+> after the J1 survey turned out to be wrong once all 29 editions were read:
+> band spacing is **not** constant (the page size triples in 2025 Q3, and Power BI moves the
+> columns from one page to the next, so the parser calibrates on each page); and the `-fr`
+> suffix is a plain **alias**, not a second naming scheme — one URL form is enough.
 
 ### 2.2 Licence — the one real constraint
 

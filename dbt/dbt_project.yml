@@ -62,3 +62,16 @@ seeds:
         component_label_source: text
         codemamh: text
         coverage: text
+
+    apciq_known_publisher_defect:
+      # The year and quarter must be integers, because they join to integer
+      # columns coming out of the raw layer. Left to inference they would load
+      # as bigint on one machine and integer on another, and the join would
+      # still work -- until it silently did not.
+      +column_types:
+        edition_year: integer
+        edition_quarter: integer
+        control_code: text
+        metric_code: text
+        verified_on: date
+        finding: text

@@ -11,11 +11,17 @@ categories x five metrics x three periods.
                  average days on market
     periods      the quarter, the trailing 12 months, and a 5-year change
 
-Tableau 1 (Total résidentiel) is deliberately not read. It is the only place
-new listings and sales volume appear, but only for all categories combined --
-a grain that cannot enter fact_market, whose rows are quarter x geography x
+Tableau 1 (Total résidentiel) is not ingested. It is the only place new
+listings and sales volume appear, but only for all categories combined -- a
+grain that cannot enter fact_market, whose rows are quarter x geography x
 property type. Recorded as a known gap in docs/apciq.md rather than half-done.
 Tableau 3 (market conditions by price band) is likewise left for later.
+
+Two of its figures are READ, and used for nothing but control: it prints the
+quarter's sales and active listings for the same area, a few centimetres to
+the left. Comparing them with the sum of Tableau 2's three categories checks
+the reading of a page against the source itself, without leaving that page.
+See check_page_totals.
 
 THE PROBLEM: THERE IS NO TABLE IN THIS PDF
 ------------------------------------------
@@ -107,6 +113,26 @@ TABLE2_MIN_X = 0.355
 TABLE2_MIN_Y = 0.08
 TABLE2_MAX_Y = 0.70
 
+# Tableau 1, "Sommaire de l'activité Centris", sits to the LEFT of Tableau 2 on
+# the same page and reports the same quarter for the total residential market.
+# It is read for one purpose only: to check what was read from Tableau 2
+# against a figure the source printed independently a few centimetres away.
+# Its own figures are never ingested -- their grain, all categories combined,
+# cannot enter fact_market, whose rows are quarter x geography x property type.
+TABLE1_MAX_X = 0.345
+TABLE1_MIN_Y = 0.10
+TABLE1_MAX_Y = 0.31
+
+# The two Tableau 1 rows that have a counterpart in Tableau 2. "Nouvelles
+# inscriptions" and "Volume" have none. Matched on the START of the line, so
+# that "Nouvelles inscriptions" can never be taken for "Inscriptions en
+# vigueur".
+TABLE1_RULES: tuple[tuple[str, str], ...] = (
+    ("Ventes", "sales"),
+    ("Inscriptions en vigueur", "active_listings"),
+)
+TABLE1_METRICS = tuple(code for _, code in TABLE1_RULES)
+
 # No row label reaches further right than this. The leftmost figure column
 # seen on any archived edition starts at 0.542 (2021 Q4, Villeray page), so
 # 0.52 separates label from figures everywhere without touching a cell.
@@ -179,7 +205,14 @@ PERIODS: tuple[tuple[str, str | None, str], ...] = (
     ("five_year", None, "five_year_change"),
 )
 
-SECTOR_RE = re.compile(r"Secteur\s*(\d+)\s*:")
+# The separator between the sector number and its name is not stable. Every
+# archived edition writes "Secteur 3 : Lachine/Lasalle" except 2025 Q3, which
+# writes "Secteur 3 - Lachine/Lasalle" -- and only from sector 3 onward, its
+# own sectors 1 and 2 keeping the colon. Requiring the colon cost that edition
+# sixteen of its eighteen sector pages. A dash is accepted in its three usual
+# shapes, hyphen-minus, en dash and em dash, because a Power BI export chooses
+# among them without warning.
+SECTOR_RE = re.compile(r"Secteur\s*(\d+)\s*[:\-–—]")
 ISLAND_LABEL = "Île de Montréal"
 ISLAND_AREA_CODE = "island"
 SECTOR_COUNT = 18            # the island's share of the 51 metro sectors
@@ -217,6 +250,73 @@ class Observation:
     source_category_label: str
     source_metric_label: str
     source_page: int
+
+
+@dataclass(frozen=True)
+class ControlTotal:
+    """One reconciliation between a published total and the parts that make it.
+
+    Kept as data, not merely asserted. A control that only raises leaves
+    nothing behind when it passes: months later nobody can tell whether an
+    edition was checked and found sound, or never checked at all. Stored, it
+    answers both -- and it turns "the source contradicts itself here" into
+    something a model can filter on instead of a sentence in a README.
+    """
+
+    edition_year: int
+    edition_quarter: int
+    control_code: str        # 'page_table1_vs_table2' | 'sectors_vs_island'
+    scope: str               # the area the control is about
+    property_category: str   # a category code, or 'all' where the source
+                             # publishes only a combined total
+    metric_code: str
+    period_code: str
+    published_total: int     # what the source prints as the total
+    computed_total: int      # what its own parts add up to
+    tolerance: int
+    source_page: int | None
+
+    @property
+    def difference(self) -> int:
+        return self.computed_total - self.published_total
+
+    @property
+    def passed(self) -> bool:
+        return abs(self.difference) <= self.tolerance
+
+    def __str__(self) -> str:
+        verdict = "ok" if self.passed else "OFF"
+        return (
+            f"{self.control_code}/{self.scope}/{self.property_category}"
+            f"/{self.metric_code}/{self.period_code}: "
+            f"published {self.published_total}, parts {self.computed_total} "
+            f"({self.difference:+}) -- {verdict}"
+        )
+
+
+@dataclass(frozen=True)
+class EditionReading:
+    """One edition read: what it says, and what checking it said.
+
+    The two travel together on purpose. Observations without their controls
+    are figures nobody can vouch for; controls without their observations are
+    a verdict on data that is not there.
+    """
+
+    edition: Edition
+    observations: list[Observation]
+    controls: list[ControlTotal]
+
+    @property
+    def failed_controls(self) -> list[ControlTotal]:
+        return [c for c in self.controls if not c.passed]
+
+    def __str__(self) -> str:
+        failed = self.failed_controls
+        verdict = "all controls pass" if not failed else (
+            f"{len(failed)} of {len(self.controls)} controls OFF"
+        )
+        return f"{self.edition}: {len(self.observations)} observations, {verdict}"
 
 
 @dataclass(frozen=True)
@@ -383,7 +483,8 @@ def _runs_of(row_chars, width: float, left_bound: float) -> tuple[Run, ...]:
         if runs and x0 - runs[-1][1] <= threshold:
             # Put the space back. The splitter works on inked characters only,
             # so the space between thousands is not in `cells` -- but it is in
-            # the figure, and the raw layer stores a price exactly as printed.
+            # the figure, and the raw layer stores a price with its spaces
+            # and its currency sign exactly as printed.
             separator = " " if x0 - runs[-1][1] > char_width / 2 else ""
             runs[-1][1] = max(runs[-1][1], x1)
             runs[-1][2] += separator + text
@@ -443,6 +544,44 @@ def scan_page(page, page_number: int) -> list[RowScan]:
             )
         )
     return scans
+
+
+def read_tableau1(page) -> dict[str, str]:
+    """The "Total résidentiel" figure of each Tableau 1 row, for control only.
+
+    Two rows are kept, the two that Tableau 2 also reports: sales and active
+    listings. Both are printed for the edition's own quarter.
+
+    The row label is removed the way a Tableau 2 label is -- by keeping only
+    the characters a figure can contain. That matters more here than it looks.
+    "Where do the letters stop" is not a usable boundary on this table: in
+    several editions the trend arrow beside the figure is a Wingdings glyph
+    that Python reports as a letter, which pushes the supposed end of the
+    label past the figure and leaves the row looking empty. Keeping only
+    figure characters removes label and arrow in one step, whatever font the
+    arrow happens to come from.
+    """
+    height, width = page.height, page.width
+    chars = [
+        c for c in page.chars
+        if c["x1"] / width <= TABLE1_MAX_X
+        and TABLE1_MIN_Y <= c["top"] / height <= TABLE1_MAX_Y
+    ]
+
+    figures: dict[str, str] = {}
+    for _, line in _lines(chars, height):
+        text = _joined(line).strip()
+        metric = next(
+            (code for needle, code in TABLE1_RULES if text.startswith(needle)), None
+        )
+        if metric is None or metric in figures:
+            continue
+        runs = _runs_of(line, width, 0.0)
+        if runs:
+            # The value first, its year-over-year change second. Only the
+            # value is a total anything can be checked against.
+            figures[metric] = runs[0].text
+    return figures
 
 
 # --- calibration -------------------------------------------------------------
@@ -525,21 +664,43 @@ def attribute(runs: tuple[Run, ...], anchors: list[float], *, where: str) -> dic
 EXPECTED_CELLS = {(c, m) for c in CATEGORY_CODES for m in METRIC_CODES}
 
 
-def parse_pdf(path: Path | str, edition: Edition) -> list[Observation]:
-    """Every Tableau 2 observation of the island and its 18 sectors.
+def read_edition(path: Path | str, edition: Edition) -> "EditionReading":
+    """Every Tableau 2 observation of the island and its 18 sectors, controlled.
 
     855 rows on a well-formed edition: 19 areas x 3 categories x 5 metrics
     x 3 periods.
+
+    Two kinds of failure are kept apart here, because they call for opposite
+    reactions and an earlier version of this parser confused them.
+
+    A page this module CANNOT READ stops the edition: the missing-area check,
+    the missing-row check, calibration, attribution, and the Tableau 1 sales
+    control below. Loading half a page of a positional parse is worse than
+    loading nothing, because the result looks complete.
+
+    A page that reads cleanly but whose SOURCE does not add up does not stop
+    anything. It yields a failed ControlTotal, which is loaded alongside the
+    observations. The 2021 Q4 edition is the case that settled this: its sales
+    reconcile to the unit on all nineteen pages -- proving the columns are
+    read correctly -- while its active listings do not reconcile anywhere,
+    including between two tables printed side by side on the same page.
+    Refusing that edition would have thrown away 855 figures, most of them
+    sound, and left no trace of why.
     """
     expected_areas = (
         {ISLAND_AREA_CODE} | {f"sector-{n:02d}" for n in range(1, SECTOR_COUNT + 1)}
     )
     scans: list[RowScan] = []
     seen: set[str] = set()
+    tableau1: dict[int, dict[str, str]] = {}
 
     with pdfplumber.open(path) as pdf:
         for number, page in enumerate(pdf.pages, start=1):
             found = scan_page(page, number)
+            if found:
+                # Read while the page is open: reopening the PDF to fetch two
+                # figures would cost a second pass over every vector object.
+                tableau1[number] = read_tableau1(page)
             page.flush_cache()
             if not found:
                 continue
@@ -607,7 +768,27 @@ def parse_pdf(path: Path | str, edition: Edition) -> list[Observation]:
                 f"{edition}: {area} is missing {len(missing)} of the 15 rows of "
                 f"Tableau 2: {sorted(missing)}"
             )
-    return observations
+
+    controls = (check_page_totals(observations, tableau1, edition=edition)
+                + check_sector_totals(observations, edition=edition))
+
+    # The one control that is a gate rather than a verdict. Sales are counts
+    # printed twice on the same page, and this module reads both with the same
+    # column anchors: if they disagree, the anchors are wrong and every other
+    # figure on that page is suspect too. Nothing about the source can excuse
+    # it, so nothing is returned.
+    misread = [c for c in controls
+               if c.control_code == PAGE_CONTROL
+               and c.metric_code == "sales" and not c.passed]
+    if misread:
+        raise SourceLayoutError(
+            f"{edition}: Tableau 1 and Tableau 2 disagree on the quarter's "
+            f"sales, on the same page, on {len(misread)} page(s). The columns "
+            f"were not read where this edition puts them -- "
+            + "; ".join(str(c) for c in misread[:3])
+        )
+
+    return EditionReading(edition=edition, observations=observations, controls=controls)
 
 
 # --- control totals ----------------------------------------------------------
@@ -624,8 +805,10 @@ def parse_pdf(path: Path | str, edition: Edition) -> list[Observation]:
 #
 # Reading the dash as zero is an interpretation, so it is one the control
 # totals verify rather than assume: with the dash read as zero, the eighteen
-# sectors add up to the island page exactly, on every archived quarter. Were
-# the dash hiding a real figure, they would not.
+# sectors add up to the island page exactly on 28 of the 29 archived editions,
+# and the three categories add up to the sales total Tableau 1 prints on every
+# page of every edition. Were the dash hiding a real figure, neither would
+# happen -- the sums would run short wherever a dash appears.
 NO_COUNT_MARKER = "-"
 
 
@@ -643,84 +826,150 @@ def count_of(text: str | None, *, what: str) -> int:
     return value
 
 
-def check_island_totals(observations: list[Observation]) -> dict[str, tuple[int, int]]:
-    """The 18 sectors must sum to the island page, category by category.
 
-    The control that makes a positional parser believable. A parser reading
-    one column to the left produces numbers that look entirely plausible; it
-    does not produce eighteen of them that add up to a nineteenth published
-    independently on another page.
-
-    Quarterly sales are the right control: they are counts, APCIQ never
-    withholds them for being too few, and unlike active listings -- an average
-    of month-end counts -- they are additive by construction.
-
-    Returns {category: (island, sum of sectors)} and raises on any difference.
-    """
-    island: dict[str, int] = {}
-    sectors: dict[str, int] = {}
-
-    for observation in observations:
-        if observation.metric_code != "sales" or observation.period_code != "quarter":
-            continue
-        value = count_of(
-            observation.value_text,
-            what=f"{observation.area_code}/{observation.property_category} quarterly sales",
-        )
-        target = island if observation.area_code == ISLAND_AREA_CODE else sectors
-        target[observation.property_category] = (
-            target.get(observation.property_category, 0) + value
-        )
-
-    result = {c: (island.get(c, 0), sectors.get(c, 0)) for c in CATEGORY_CODES}
-    off = {c: pair for c, pair in result.items() if pair[0] != pair[1]}
-    if off:
-        detail = ", ".join(
-            f"{c}: island {i}, sectors {s} (difference {s - i:+})"
-            for c, (i, s) in off.items()
-        )
-        raise SourceLayoutError(
-            "the 18 sectors do not add up to the island page -- " + detail
-        )
-    return result
-
-
-# A second control, on a second row of the table, with a tolerance that is
-# derived rather than chosen. Active listings are « la moyenne des données
-# mensuelles pour la période visée », rounded to a whole number once per
-# sector; the island figure is rounded once for the whole island. Eighteen
-# roundings of at most half a unit each cannot drift further than nine.
-# Observed drift on the archived editions: 0 to 3.
+# Tolerances, one per control, derived rather than chosen.
 #
-# Loose, but not decorative: a column read one place over would be out by
-# hundreds, not by nine.
-LISTING_TOTAL_TOLERANCE = 9
+# Sales are counts. A sum of counts has nothing to round, so anything but an
+# exact match means a figure was read from the wrong place or the source does
+# not agree with itself. Tolerance zero.
+#
+# Active listings are « la moyenne des données mensuelles pour la période
+# visée », rounded to a whole number once per published figure. A page total
+# is three such figures against one rounded total, so it cannot drift further
+# than 2. The island total is eighteen against one, so nine. Loose, but not
+# decorative: a column read one place over would be out by hundreds.
+PAGE_TOLERANCE = {"sales": 0, "active_listings": 2}
+SECTOR_TOLERANCE = {"sales": 0, "active_listings": 9}
+
+PAGE_CONTROL = "page_table1_vs_table2"
+SECTOR_CONTROL = "sectors_vs_island"
+
+# Tableau 1 combines the three categories, so what it controls is their sum.
+COMBINED_CATEGORY = "all"
+
+# The cross-page control runs on the metrics that are counts. Prices and days
+# on market are medians and averages: eighteen of them do not add up to a
+# nineteenth, and no arithmetic on this page can check them.
+SECTOR_CONTROLLED: tuple[tuple[str, str], ...] = (
+    ("sales", "quarter"),
+    ("active_listings", "quarter"),
+    ("active_listings", "trailing_12m"),
+)
 
 
-def check_listing_totals(observations: list[Observation]) -> dict[tuple[str, str], int]:
-    """Same control as check_island_totals, on active listings. Returns drifts."""
-    island: dict[tuple[str, str], int] = {}
-    sectors: dict[tuple[str, str], int] = {}
+def check_page_totals(
+    observations: list[Observation],
+    tableau1: dict[int, dict[str, str]],
+    *,
+    edition: Edition,
+) -> list[ControlTotal]:
+    """Each page against itself: Tableau 1's total versus Tableau 2's parts.
+
+    The strongest control available here, and the only one that needs a single
+    page. Both figures are printed a few centimetres apart by the same export,
+    and both are read by this module with the same column anchors. Agreement
+    confirms the reading of that page on its own, with no reference to any
+    other page.
+
+    Disagreement is not the same verdict everywhere. When the sales row of a
+    page agrees to the unit and the listings row does not, the columns are
+    demonstrably right -- so the contradiction is the source's, not ours. That
+    distinction is exactly what a control that only raised could not make.
+
+    `tableau1` maps a page number to the figures read off Tableau 1 there.
+    """
+    parts: dict[tuple[int, str], int] = {}
+    area_of_page: dict[int, str] = {}
 
     for observation in observations:
-        if observation.metric_code != "active_listings" or observation.period_code == "five_year":
+        if observation.period_code != "quarter":
+            continue
+        if observation.metric_code not in TABLE1_METRICS:
+            continue
+        area_of_page[observation.source_page] = observation.area_code
+        key = (observation.source_page, observation.metric_code)
+        parts[key] = parts.get(key, 0) + count_of(
+            observation.value_text,
+            what=f"{edition} page {observation.source_page} "
+                 f"({observation.area_code}) {observation.metric_code}",
+        )
+
+    controls: list[ControlTotal] = []
+    for (page, metric), computed in sorted(parts.items()):
+        printed = tableau1.get(page, {}).get(metric)
+        published = as_number(printed)
+        if published is None:
+            raise SourceLayoutError(
+                f"{edition} page {page} ({area_of_page[page]}): Tableau 1 "
+                f"gives no readable {metric} total ({printed!r}). It is the "
+                f"figure that confirms this page was read from the right "
+                f"columns, and an unreadable control is not a passed control."
+            )
+        controls.append(
+            ControlTotal(
+                edition_year=edition.year,
+                edition_quarter=edition.quarter,
+                control_code=PAGE_CONTROL,
+                scope=area_of_page[page],
+                property_category=COMBINED_CATEGORY,
+                metric_code=metric,
+                period_code="quarter",
+                published_total=published,
+                computed_total=computed,
+                tolerance=PAGE_TOLERANCE[metric],
+                source_page=page,
+            )
+        )
+    return controls
+
+
+def check_sector_totals(
+    observations: list[Observation], *, edition: Edition
+) -> list[ControlTotal]:
+    """The 18 sector pages against the island page, category by category.
+
+    What this control is about is not the parser -- check_page_totals already
+    answers that -- but whether the source is coherent from one page to the
+    next.
+
+    It also settled a question the geography model had left open: whether
+    APCIQ sector 4 (Le Sud-Ouest, Verdun) overlaps sector 10 (L'Île-des-
+    Sœurs, also part of Verdun). If it did, the sectors would over-count the
+    island. They do not, on editions seven years apart -- so sector 4 excludes
+    the island, and the boundary between the two can be cut with confidence.
+    """
+    island: dict[tuple[str, str, str], int] = {}
+    sectors: dict[tuple[str, str, str], int] = {}
+
+    for observation in observations:
+        key = (observation.metric_code, observation.period_code,
+               observation.property_category)
+        if key[:2] not in SECTOR_CONTROLLED:
             continue
         value = count_of(
             observation.value_text,
-            what=f"{observation.area_code}/{observation.property_category} "
-                 f"active listings ({observation.period_code})",
+            what=f"{edition} {observation.area_code}/"
+                 f"{observation.property_category} {observation.metric_code} "
+                 f"({observation.period_code})",
         )
-        key = (observation.period_code, observation.property_category)
         target = island if observation.area_code == ISLAND_AREA_CODE else sectors
         target[key] = target.get(key, 0) + value
 
-    drift = {key: sectors.get(key, 0) - total for key, total in island.items()}
-    off = {k: d for k, d in drift.items() if abs(d) > LISTING_TOTAL_TOLERANCE}
-    if off:
-        detail = ", ".join(f"{period}/{category}: {d:+}" for (period, category), d in off.items())
-        raise SourceLayoutError(
-            "active listings of the 18 sectors miss the island page by more "
-            f"than rounding can explain (tolerance {LISTING_TOTAL_TOLERANCE}) -- "
-            + detail
+    return [
+        ControlTotal(
+            edition_year=edition.year,
+            edition_quarter=edition.quarter,
+            control_code=SECTOR_CONTROL,
+            scope=ISLAND_AREA_CODE,
+            property_category=category,
+            metric_code=metric,
+            period_code=period,
+            published_total=island[(metric, period, category)],
+            computed_total=sectors.get((metric, period, category), 0),
+            tolerance=SECTOR_TOLERANCE[metric],
+            source_page=None,
         )
-    return drift
+        for metric, period in SECTOR_CONTROLLED
+        for category in CATEGORY_CODES
+        if (metric, period, category) in island
+    ]

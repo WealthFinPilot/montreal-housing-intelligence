@@ -9,32 +9,34 @@ Two families here, on top of the two the rest of the suite already has:
                        weigh 200 MB), so these skip with an explicit message
                        when the archive is empty rather than failing.
 
-The PDF tests carry values transcribed BY EYE off the rendered pages. That is
-the point: a positional parser can only be trusted against something read
-independently of it. Two of them are negative controls -- they break the
-parser on purpose and check that it refuses rather than returning something
-plausible.
+The PDF tests are checked against values transcribed BY EYE off the rendered
+pages. That is the point: a positional parser can only be trusted against
+something read independently of it. Two of them are negative controls -- they
+break the parser on purpose and check that it refuses rather than returning
+something plausible.
 
-LICENCE -- A TRACED EXCEPTION, NOT AN OVERSIGHT
------------------------------------------------
-Four published APCIQ figures appear literally in
-test_the_figures_match_what_is_printed_on_the_page. Everywhere else this
-project keeps APCIQ figures out of versioned files, for the reason given in
-docs/data-sources.md section 2.2: the PDF forbids reproducing its content in
-part without written consent.
+NO APCIQ FIGURE APPEARS IN THIS FILE
+------------------------------------
+The eye-read values live in data/apciq/oracle-read-by-eye.json, beside the
+archived PDFs and outside git, for the reason given in docs/apciq.md section
+1: page 65 of every edition forbids reproducing its content in part without
+written consent, and a tracked test file is a reproduction.
 
-Four values out of the 24 800 an edition set contains cannot reconstruct
-anything, and removing them would leave the test comparing the parser with
-itself -- which is not a test. So they stay, as a conscious and recorded
-exception, on the same footing as the committed .pbix of J2.
+An earlier version of this file carried six of them, as a traced exception on
+the grounds that removing them would leave the test comparing the parser with
+itself. That reasoning was wrong in one step: what makes a value an oracle is
+that a human read it off the page, not that it sits in a versioned file.
+Moving it out costs nothing but a skip on a clone that has neither the PDFs
+nor the oracle -- and those tests already skip there.
 
-It is an exception for a PRIVATE repository. Settle it before the repository
-goes public, together with the wider question of what APCIQ material may be
-published at all.
+Note that the figures remain in the git history of commits made before
+2026-08-23. Removing them from the working tree does not remove them from
+git log -p.
 """
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from pathlib import Path
 
@@ -65,19 +67,52 @@ def _archived(edition: Edition) -> Path:
 # Reading one 2026-format edition costs about 30 seconds: its pages carry
 # roughly 1 470 vector objects each for the charts, and pdfminer parses all of
 # them to reach the text. Parsed once per session, then shared.
-_PARSED: dict[Edition, list[parse.Observation]] = {}
+_PARSED: dict[Edition, parse.EditionReading] = {}
+
+
+def reading(edition: Edition) -> parse.EditionReading:
+    path = _archived(edition)
+    if edition not in _PARSED:
+        _PARSED[edition] = parse.read_edition(path, edition)
+    return _PARSED[edition]
 
 
 def parsed(edition: Edition) -> list[parse.Observation]:
-    path = _archived(edition)
-    if edition not in _PARSED:
-        _PARSED[edition] = parse.parse_pdf(path, edition)
-    return _PARSED[edition]
+    return reading(edition).observations
+
+
+def controls_of(edition: Edition, control_code: str) -> list[parse.ControlTotal]:
+    return [c for c in reading(edition).controls if c.control_code == control_code]
 
 
 @pytest.fixture(scope="module")
 def observations_2026() -> list[parse.Observation]:
     return parsed(Edition(2026, 2))
+
+
+ORACLE = ARCHIVE / "oracle-read-by-eye.json"
+
+
+def eye_read_oracle() -> list[dict]:
+    """Cells a human transcribed off the rendered pages, or a skip.
+
+    Deliberately not versioned. See test_the_figures_match_what_is_printed_on
+    _the_page, and the licence note at the top of this file.
+    """
+    if not ORACLE.exists():
+        pytest.skip(
+            f"{ORACLE} is not on disk. It holds Baromètre cells transcribed "
+            f"by eye, and it is kept out of git because the licence forbids "
+            f"reproducing APCIQ content in part. Rebuild it by opening the "
+            f"PDFs and typing what is printed -- never by copying parser "
+            f"output, which would make the test agree with itself."
+        )
+    return json.loads(ORACLE.read_text(encoding="utf-8"))["cells"]
+
+
+def edition_of(label: str) -> tuple[int, int]:
+    """'2026Q2' -> (2026, 2). The form the oracle file uses."""
+    return int(label[:4]), int(label[5:])
 
 
 def one_page(edition: Edition, page_number: int):
@@ -167,6 +202,20 @@ def test_sectors_off_the_island_are_skipped():
     assert parse.area_of("Définition des secteurs") is None
 
 
+def test_a_sector_title_written_with_a_dash_is_still_read():
+    # Regression. The 2025 Q3 edition writes "Secteur 3 - Lachine/Lasalle"
+    # where every other edition writes "Secteur 3 : Lachine/Lasalle" -- and it
+    # changes its mind halfway, keeping the colon for its own sectors 1 and 2.
+    # Requiring the colon lost sixteen of the eighteen sector pages, and the
+    # edition stopped on the missing-areas check rather than loading a hole.
+    assert parse.area_of("Secteur 3 - Lachine/Lasalle") == "sector-03"
+    assert parse.area_of("Secteur 14 - Villeray") == "sector-14"
+    assert parse.area_of("Secteur 19 - Centre-Ville de Laval") is None
+    # A dash is a dash whichever of the three a Power BI export picks.
+    assert parse.area_of("Secteur 7 – NDG/Montréal Ouest") == "sector-07"
+    assert parse.area_of("Secteur 7 — NDG/Montréal Ouest") == "sector-07"
+
+
 def test_a_title_whose_ligature_is_out_of_order_is_still_read():
     # Regression. Sorting the title characters by vertical position first put
     # the "oe" ligature of L'Île-des-Soeurs ahead of the rest of the string,
@@ -219,19 +268,75 @@ def test_the_eighteen_sectors_add_up_to_the_island_page(edition):
     not, on three editions seven years apart -- so sector 4 excludes the
     island, and the two do not overlap.
     """
-    observations = parsed(edition)
-    totals = parse.check_island_totals(observations)
-    for category, (island, sectors) in totals.items():
-        assert island == sectors, category
-        assert island > 0, category
+    sector_controls = controls_of(edition, parse.SECTOR_CONTROL)
+    sales = [c for c in sector_controls if c.metric_code == "sales"]
+    assert len(sales) == 3, "one control per property category"
+    for control in sales:
+        assert control.passed, str(control)
+        assert control.tolerance == 0, "counts do not round"
+        assert control.published_total > 0
 
 
 @pytest.mark.parametrize("edition", REFERENCE_EDITIONS, ids=str)
 def test_active_listings_agree_within_what_rounding_allows(edition):
-    observations = parsed(edition)
-    drift = parse.check_listing_totals(observations)
-    assert drift, "no active-listing rows were read at all"
-    assert max(abs(d) for d in drift.values()) <= parse.LISTING_TOTAL_TOLERANCE
+    listings = [c for c in controls_of(edition, parse.SECTOR_CONTROL)
+                if c.metric_code == "active_listings"]
+    assert len(listings) == 6, "three categories x two periods"
+    for control in listings:
+        assert control.passed, str(control)
+
+
+@pytest.mark.parametrize("edition", REFERENCE_EDITIONS, ids=str)
+def test_every_page_agrees_with_the_total_printed_beside_it(edition):
+    """Tableau 1 against Tableau 2, page by page.
+
+    The control that answers "did this parser read the right columns", and the
+    only one that needs no other page. Nineteen pages, two metrics each.
+    """
+    page_controls = controls_of(edition, parse.PAGE_CONTROL)
+    assert len(page_controls) == 38, "19 pages x 2 metrics"
+    assert {c.source_page for c in page_controls} == set(range(8, 27))
+    for control in page_controls:
+        assert control.passed, str(control)
+
+
+def test_an_edition_the_source_contradicts_is_read_and_flagged():
+    """2021 Q4 -- the edition that settled how a source defect is treated.
+
+    Its sales reconcile to the unit everywhere: on each page against the total
+    APCIQ prints beside it, and across the eighteen sectors against the island
+    page. So the columns are read correctly. Its active listings reconcile
+    nowhere -- the Villeray page prints 192 in Tableau 1 and 5 + 64 + 81 = 150
+    in Tableau 2, while its sales row reads 207 against a printed 207.
+
+    The parser must therefore NOT refuse this edition. It returns all 855
+    figures, with the failed controls beside them, and the decision about what
+    to publish moves downstream where it is documented and testable.
+    """
+    edition = Edition(2021, 4)
+    result = reading(edition)
+
+    assert len(result.observations) == 855
+    failed = result.failed_controls
+    assert failed, "this edition is the reason the control exists"
+
+    # Every failure is on active listings, and none on sales. That asymmetry
+    # is the proof: same pages, same column anchors, same code.
+    assert {c.metric_code for c in failed} == {"active_listings"}
+
+    villeray = next(
+        c for c in failed
+        if c.control_code == parse.PAGE_CONTROL and c.scope == "sector-14"
+    )
+    assert (villeray.published_total, villeray.computed_total) == (192, 150)
+
+    villeray_sales = next(
+        c for c in result.controls
+        if c.control_code == parse.PAGE_CONTROL
+        and c.scope == "sector-14" and c.metric_code == "sales"
+    )
+    assert villeray_sales.passed
+    assert (villeray_sales.published_total, villeray_sales.computed_total) == (207, 207)
 
 
 def test_the_page_size_tripled_and_the_parser_did_not_notice():
@@ -248,30 +353,48 @@ def test_the_page_size_tripled_and_the_parser_did_not_notice():
     assert sizes[1][0] / sizes[0][0] > 3.5
 
 
-def test_the_figures_match_what_is_printed_on_the_page(observations_2026):
-    """Values transcribed by eye from the 2026 Q2 edition.
+def test_the_figures_match_what_is_printed_on_the_page():
+    """The parser against cells transcribed BY EYE off the rendered pages.
 
-    Page 8 (Île de Montréal) and page 9 (Secteur 1). Read off the rendered
-    page, not produced by this parser -- otherwise the test would only prove
-    the parser agrees with itself.
+    The only test here that judges the parser from outside itself. Everything
+    else checks internal consistency -- the columns line up, the totals
+    reconcile, the grid is complete -- and a positional parser reading one
+    column to the left satisfies every one of those while returning the wrong
+    figure for each cell.
+
+    The expected values are NOT in this file, and not anywhere in git. They
+    live beside the archived PDFs, under data/apciq/, for the same reason the
+    PDFs do: page 65 forbids reproducing APCIQ content in part, and a
+    versioned test file is a reproduction. Absent, this test skips -- exactly
+    as the PDF tests already do on a fresh clone.
+
+    Keeping the oracle out of the repository does not weaken it. What makes it
+    an oracle is that a human read the page, not that the value sits in a
+    tracked file.
     """
-    single = cell(observations_2026, "island", "single_family", "median_price", "quarter")
-    assert (single.value_text, single.change_percent_text) == ("<chiffre retire 2026-08-23 -- licence APCIQ>", "<chiffre retire 2026-08-23 -- licence APCIQ>")
+    expected = eye_read_oracle()
+    checked = 0
 
-    trailing = cell(observations_2026, "island", "single_family", "median_price", "trailing_12m")
-    assert (trailing.value_text, trailing.change_percent_text) == ("<chiffre retire 2026-08-23 -- licence APCIQ>", "<chiffre retire 2026-08-23 -- licence APCIQ>")
+    for expectation in expected:
+        edition = Edition(*edition_of(expectation["edition"]))
+        row = cell(
+            parsed(edition),
+            expectation["area_code"],
+            expectation["property_category"],
+            expectation["metric_code"],
+            expectation["period_code"],
+        )
+        where = (f"{expectation['edition']} page {expectation['page']}, "
+                 f"{expectation['area_code']}/{expectation['property_category']}/"
+                 f"{expectation['metric_code']}/{expectation['period_code']}")
+        assert row.value_text == expectation["value_text"], where
+        assert row.change_percent_text == expectation["change_percent_text"], where
+        assert row.source_page == expectation["page"], where
+        checked += 1
 
-    five = cell(observations_2026, "island", "single_family", "median_price", "five_year")
-    assert (five.value_text, five.change_percent_text) == (None, "<chiffre retire 2026-08-23 -- licence APCIQ>")
-
-    condo = cell(observations_2026, "island", "condo", "median_price", "quarter")
-    assert (condo.value_text, condo.change_percent_text) == ("<chiffre retire 2026-08-23 -- licence APCIQ>", "<chiffre retire 2026-08-23 -- licence APCIQ>")
-
-    days = cell(observations_2026, "island", "single_family", "days_on_market", "trailing_12m")
-    assert (days.value_text, days.change_percent_text) == ("<chiffre retire 2026-08-23 -- licence APCIQ>", "<chiffre retire 2026-08-23 -- licence APCIQ>")
-
-    sales = cell(observations_2026, "sector-01", "single_family", "sales", "quarter")
-    assert (sales.value_text, sales.change_percent_text) == ("<chiffre retire 2026-08-23 -- licence APCIQ>", "<chiffre retire 2026-08-23 -- licence APCIQ>")
+    # An oracle file emptied by accident would make this test pass while
+    # checking nothing at all -- the very failure mode it exists to prevent.
+    assert checked >= 5, f"only {checked} cell(s) in the oracle file"
 
 
 def test_the_source_labels_are_kept_verbatim(observations_2026):
@@ -351,4 +474,26 @@ def test_a_page_whose_columns_cannot_be_located_is_refused(monkeypatch):
     """
     monkeypatch.setattr(parse, "MIN_ROWS_FOR_CALIBRATION", 99)
     with pytest.raises(parse.SourceLayoutError, match="not enough to locate the columns"):
-        parse.parse_pdf(_archived(Edition(2026, 2)), Edition(2026, 2))
+        parse.read_edition(_archived(Edition(2026, 2)), Edition(2026, 2))
+
+
+def test_a_page_read_from_the_wrong_columns_stops_the_edition(monkeypatch):
+    """The one control that is a gate rather than a verdict.
+
+    Everything else a control finds is recorded and loaded. Sales disagreeing
+    with the total printed beside them, on the same page, cannot be: it means
+    the columns are not where this edition puts them, and every other figure
+    on that page is then suspect. Forced here by making Tableau 1 report one
+    sale too many.
+    """
+    real = parse.read_tableau1
+
+    def one_sale_short(page):
+        figures = dict(real(page))
+        if "sales" in figures:
+            figures["sales"] = str(parse.as_number(figures["sales"]) + 1)
+        return figures
+
+    monkeypatch.setattr(parse, "read_tableau1", one_sale_short)
+    with pytest.raises(parse.SourceLayoutError, match="disagree on the quarter"):
+        parse.read_edition(_archived(Edition(2022, 4)), Edition(2022, 4))

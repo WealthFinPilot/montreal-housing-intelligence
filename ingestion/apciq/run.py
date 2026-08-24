@@ -16,8 +16,13 @@ WHAT THIS GUARANTEES
   series survives the source reorganising.
 * A gap inside the series is refused. A missing quarter at the END is normal --
   APCIQ publishes a few weeks after the quarter closes.
-* Two independent control totals run on every edition before a single row is
-  written, and a failure stops the whole load. See parse.check_island_totals.
+* 47 control totals run on every edition, and their verdicts are LOADED, not
+  just printed -- see sql/bootstrap/06_apciq_control_total.sql.
+* What stops the load is an edition this code cannot read. An edition it reads
+  correctly whose own figures do not add up is loaded, with the failed control
+  beside it. Four of the 29 archived editions are in that case, and refusing
+  them would have destroyed 3 420 figures -- most of them sound -- along with
+  the only evidence of the defect.
 * Everything lands in one transaction, or nothing does.
 * A second run over unchanged PDFs reports 0 inserted and 0 updated, counted
   by the database rather than by this script.
@@ -96,19 +101,20 @@ def _archive(chosen: list[editions.Edition], *, force: bool) -> list[download.Ar
     return entries
 
 
-def _read(entry: download.ArchiveEntry) -> list[parse.Observation]:
-    """Parse one archived edition and put it through both control totals."""
+def _read(entry: download.ArchiveEntry) -> parse.EditionReading:
+    """Read one archived edition and report what its controls said.
+
+    A failed control is printed in full rather than summarised. It is the one
+    thing in this output somebody has to act on -- and the difference between
+    a sector total that misses by a fraction of a percent and one that
+    misses by nearly half is the whole point.
+    """
     assert entry.path is not None
-    observations = parse.parse_pdf(entry.path, entry.edition)
-    parse.check_island_totals(observations)
-    drift = parse.check_listing_totals(observations)
-    worst = max((abs(d) for d in drift.values()), default=0)
-    print(
-        f"  {entry.edition}: {len(observations)} observations, "
-        f"sector sales match the island page exactly, "
-        f"active listings within {worst} (rounding)"
-    )
-    return observations
+    reading = parse.read_edition(entry.path, entry.edition)
+    print(f"  {reading}")
+    for control in reading.failed_controls:
+        print(f"      {control}")
+    return reading
 
 
 def main(argv=None) -> int:
@@ -122,35 +128,51 @@ def main(argv=None) -> int:
     print("\nArchive:")
     entries = [e for e in _archive(chosen, force=args.force) if e.path is not None]
 
-    print("\nParse and control:")
+    print("\nRead and control:")
     parsed = [(entry, _read(entry)) for entry in entries]
-    total_rows = sum(len(observations) for _, observations in parsed)
+    total_rows = sum(len(reading.observations) for _, reading in parsed)
+    total_controls = sum(len(reading.controls) for _, reading in parsed)
+    off = [(entry.edition, control)
+           for entry, reading in parsed
+           for control in reading.failed_controls]
+
+    print(f"\n{total_controls} controls run over {len(parsed)} editions, "
+          f"{len(off)} of them OFF"
+          + (f" -- on {len({e for e, _ in off})} edition(s): "
+             f"{', '.join(str(e) for e in sorted({e for e, _ in off}))}"
+             if off else ""))
 
     if args.dry_run:
-        print(f"\nDRY RUN -- nothing written. Would load {total_rows} rows "
-              f"from {len(parsed)} editions.")
+        print(f"\nDRY RUN -- nothing written. Would load {total_rows} figures "
+              f"and {total_controls} control results from {len(parsed)} editions.")
         return 0
 
     print(f"\nTarget   : {db.describe_target()}")
     started = time.monotonic()
     result = load.LoadResult(0, 0)
+    controls = load.LoadResult(0, 0)
 
     with db.connect() as conn:
         run_id = pipeline_log.start_run(conn, PIPELINE_NAME)
         # Committed on its own so a crash later still leaves evidence.
         conn.commit()
         try:
-            for entry, observations in parsed:
+            for entry, reading in parsed:
+                # The figures and the verdict on the figures, in one
+                # transaction. Either both are in the database or neither is.
                 result = result + load.load_observations(
-                    conn, observations, source_pdf=entry.edition.filename
+                    conn, reading.observations, source_pdf=entry.edition.filename
+                )
+                controls = controls + load.load_control_totals(
+                    conn, reading.controls
                 )
             pipeline_log.finish_run(
                 conn,
                 run_id,
                 status="success",
-                rows_received=total_rows,
-                rows_inserted=result.inserted,
-                rows_updated=result.updated,
+                rows_received=total_rows + total_controls,
+                rows_inserted=result.inserted + controls.inserted,
+                rows_updated=result.updated + controls.updated,
             )
             conn.commit()
         except Exception as exc:
@@ -162,7 +184,12 @@ def main(argv=None) -> int:
             print(f"\nFAILED: {type(exc).__name__}: {exc}", file=sys.stderr)
             return 1
 
-    print(f"\nOK -- {result} in {time.monotonic() - started:.1f} s")
+    print(f"\nOK -- figures: {result}; controls: {controls} "
+          f"-- in {time.monotonic() - started:.1f} s")
+    if off:
+        print(f"     {len(off)} control(s) OFF are now in "
+              f"raw.apciq_control_total. Nothing downstream may present those "
+              f"edition/metric pairs without saying so.")
     print(f"     {editions.ATTRIBUTION}")
     return 0
 

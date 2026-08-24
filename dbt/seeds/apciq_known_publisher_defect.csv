@@ -1,0 +1,9 @@
+edition_year,edition_quarter,control_code,metric_code,verified_on,finding
+2021,4,page_table1_vs_table2,active_listings,2026-08-23,Tableau 2 categories fall short of the Tableau 1 total on all 19 pages while sales match to the unit on those same pages
+2021,4,sectors_vs_island,active_listings,2026-08-23,the 18 sector pages reach 54 percent of the island page on listings while their sales reach exactly 100 percent
+2022,1,page_table1_vs_table2,active_listings,2026-08-23,same signature as 2021 Q4
+2022,1,sectors_vs_island,active_listings,2026-08-23,same signature as 2021 Q4
+2022,2,page_table1_vs_table2,active_listings,2026-08-23,same signature as 2021 Q4
+2022,2,sectors_vs_island,active_listings,2026-08-23,same signature as 2021 Q4
+2023,4,sectors_vs_island,sales,2026-08-23,sectors exceed the island by 0.3 percent on quarterly sales while every page agrees with itself
+2023,4,sectors_vs_island,active_listings,2026-08-23,sectors exceed the island by 4.3 percent on active listings while every page agrees with itself

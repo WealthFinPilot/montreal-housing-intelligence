@@ -34,10 +34,18 @@
     L'Île-des-Sœurs has no plex at all, so its plex count rows carry a dash
     quarter after quarter while its plex price rows carry '**'. Reading the
     dash as zero is an interpretation, and it is one the data verifies rather
-    than one this model assumes: with the dash read as zero, the eighteen
-    sectors add up to the island page exactly on every archived quarter. The
-    test assert_apciq_sectors_add_up_to_the_island re-checks it in SQL on every
-    dbt run.
+    than one this model assumes: with the dash read as zero, the three
+    categories of every page add up to the sales total APCIQ prints beside
+    them, on all 551 pages of the archive. Were the dash hiding a real figure,
+    the sums would run short wherever one appears.
+
+    WHAT THE CONTROLS SAY ABOUT THESE ROWS
+
+    stg_apciq__control_totals carries the verdict of every reconciliation run
+    while reading each edition, and four of the 29 editions do not reconcile.
+    A figure from those editions is not wrong -- it is a figure the source
+    does not corroborate. Join on edition and metric before presenting active
+    listings for 2021 Q4, 2022 Q1 or 2022 Q2.
 
     A dash on a PRICE row would mean no transaction to price, not a price of
     zero, so prices and delays keep their NULL.
@@ -155,8 +163,15 @@ typed as (
             downstream model can honour, rather than a silence it has to guess
             at.
         */
-        value_text = '**' as is_withheld_by_source,
-        value_text = '-'  as is_nothing_to_report,
+        /*
+            coalesce, and it is not decoration. In SQL, NULL = '**' is NULL,
+            not false -- so a cell where APCIQ printed nothing at all would
+            answer "unknown" to "did APCIQ withhold this", and 8 294 rows of
+            the archive are in that state. The question has an answer, and it
+            is no. The fourth state stays readable as value_text is null.
+        */
+        coalesce(value_text = '**', false) as is_withheld_by_source,
+        coalesce(value_text = '-', false)  as is_nothing_to_report,
 
         -- Kept for audit. Any figure can be checked against its page.
         value_text,

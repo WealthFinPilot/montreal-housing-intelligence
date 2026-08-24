@@ -24,6 +24,16 @@ sources:
           warn_after: {count: 200, period: day}
           error_after: {count: 400, period: day}
 
+      - name: apciq_control_total
+        description: >
+          The verdict of every reconciliation run while reading an edition:
+          47 rows per edition. Loaded in the same transaction as the figures
+          it judges, so the database can never hold one without the other.
+        loaded_at_field: first_seen_at
+        freshness:
+          warn_after: {count: 200, period: day}
+          error_after: {count: 400, period: day}
+
 models:
   - name: stg_apciq__barometer_statistics
     description: >
@@ -98,5 +108,103 @@ models:
           True where APCIQ printed a dash. On a count row that means zero --
           L'Île-des-Sœurs has no plex at all. On a price row it means there
           was nothing to price.
+        tests:
+          - not_null
+
+  - name: stg_apciq__control_totals
+    description: >
+      One row per control run on an APCIQ edition: what the source printed as
+      a total, what its own parts add up to, and whether the two reconcile
+      within what rounding can explain. The model that lets a query answer
+      "does the source corroborate this figure", instead of that answer living
+      in a commit message.
+    columns:
+      - name: control_code
+        description: >
+          page_table1_vs_table2 asks whether WE read a page correctly, by
+          comparing two totals printed side by side on it. sectors_vs_island
+          asks whether APCIQ is coherent from one page to the next. They are
+          not interchangeable: when the first passes on sales and fails on
+          listings for the same page, the columns are demonstrably right and
+          the contradiction belongs to the publisher.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['page_table1_vs_table2', 'sectors_vs_island']
+
+      - name: metric_code
+        description: >
+          Only counts can be reconciled by addition. Prices and days on market
+          are medians and averages -- eighteen of them do not add up to a
+          nineteenth -- so no control exists for them and none is implied.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['sales', 'active_listings']
+
+      - name: property_category
+        description: >
+          'all' on the on-page control, because Tableau 1 publishes only a
+          combined total.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['single_family', 'condo', 'plex', 'all']
+
+      - name: is_reconciled
+        description: >
+          False does not mean the figure is wrong. It means the source does
+          not corroborate it -- a weaker and more honest claim. What it must
+          never be is invisible downstream.
+        tests:
+          - not_null
+
+      - name: tolerance
+        description: >
+          Zero on sales: a sum of counts has nothing to round. On active
+          listings it absorbs rounding and nothing else, since each figure is
+          an average rounded once -- at most 2 for three categories against
+          one page total, at most 9 for eighteen sectors against the island.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 2, 9]
+                quote: false
+
+      - name: published_total
+        tests:
+          - not_null
+
+      - name: computed_total
+        tests:
+          - not_null
+
+seeds:
+  - name: apciq_known_publisher_defect
+    description: >
+      The APCIQ defects investigated, verified and accepted, one row per
+      edition x control x metric. Not a list of things to ignore: it is what
+      makes a NEW defect visible, since
+      assert_apciq_controls_hold_or_are_accounted_for fails both on a failure
+      nobody declared and on a declaration that no longer matches anything.
+    columns:
+      - name: edition_year
+        tests:
+          - not_null
+      - name: control_code
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['page_table1_vs_table2', 'sectors_vs_island']
+      - name: metric_code
+        tests:
+          - not_null
+      - name: finding
+        description: What was actually observed, in one line, at the date verified.
         tests:
           - not_null
