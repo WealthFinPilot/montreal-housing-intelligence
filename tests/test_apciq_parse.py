@@ -14,6 +14,23 @@ the point: a positional parser can only be trusted against something read
 independently of it. Two of them are negative controls -- they break the
 parser on purpose and check that it refuses rather than returning something
 plausible.
+
+LICENCE -- A TRACED EXCEPTION, NOT AN OVERSIGHT
+-----------------------------------------------
+Four published APCIQ figures appear literally in
+test_the_figures_match_what_is_printed_on_the_page. Everywhere else this
+project keeps APCIQ figures out of versioned files, for the reason given in
+docs/data-sources.md section 2.2: the PDF forbids reproducing its content in
+part without written consent.
+
+Four values out of the 24 800 an edition set contains cannot reconstruct
+anything, and removing them would leave the test comparing the parser with
+itself -- which is not a test. So they stay, as a conscious and recorded
+exception, on the same footing as the committed .pbix of J2.
+
+It is an exception for a PRIVATE repository. Settle it before the repository
+goes public, together with the wider question of what APCIQ material may be
+published at all.
 """
 
 from __future__ import annotations
