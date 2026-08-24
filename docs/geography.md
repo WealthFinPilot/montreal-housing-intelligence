@@ -159,10 +159,10 @@ area. `ST_Difference` simply assigns the river to the larger piece — nobody
 sells a condo on it — but a map built without knowing this would show an
 inexplicable hole.
 
-**Sequencing.** This construction waits for J3.2. Open question 1 below —
-whether sector 4 excludes L'Île-des-Sœurs or overlaps sector 10 — decides how
-sector 4 is cut, and the Baromètre settles it arithmetically. Building the
-geometry first risks building it twice.
+**Sequencing.** This construction was waiting on open question 1 below —
+whether sector 4 excludes L'Île-des-Sœurs or overlaps sector 10 — because the
+answer decides how sector 4 is cut. **The Baromètre settled it on 2026-08-23:
+no overlap.** The construction is unblocked.
 
 ---
 
@@ -215,13 +215,25 @@ analytical figure.
 
 ## 8. Open questions
 
-1. **Does APCIQ sector 4 include L'Île-des-Sœurs?** Page 6 of the Baromètre
-   describes sector 4 as "Le Sud-Ouest (Montréal), Verdun (Montréal)" while
-   sector 10 *is* L'Île-des-Sœurs, part of Verdun. Either sector 4 excludes it,
-   or the two overlap. **Settled arithmetically in J3.2**: page 8 reports an
-   Island of Montréal total, and the 18 sectors either sum to it or they do
-   not.
-2. **Exact sector geometries** — see section 5. Identified, scoped, not started.
+1. ~~**Does APCIQ sector 4 include L'Île-des-Sœurs?**~~ **Settled 2026-08-23:
+   it does not, and the two sectors do not overlap.**
+
+   Page 6 of the Baromètre describes sector 4 as "Le Sud-Ouest (Montréal),
+   Verdun (Montréal)" while sector 10 *is* L'Île-des-Sœurs, part of Verdun.
+   Either sector 4 excluded it, or the two double-counted it.
+
+   The arithmetic answers without ambiguity. Page 8 of every edition reports
+   an Island of Montréal total, published independently of the sector pages.
+   Summing the 18 sector pages gives **exactly** that total, on all three
+   property categories, in 2019 Q2, 2019 Q3, 2022 Q4 and 2026 Q2 — twelve
+   independent control sums, every one of them off by zero. An overlap would
+   make the sectors exceed the island.
+
+   *Consequence:* the reconstruction in section 5 is no longer blocked. Verdun
+   is cut in two, sector 10 taking L'Île-des-Sœurs and sector 4 the remainder,
+   with no part of the borough counted twice.
+2. **Exact sector geometries** — see section 5. Method decided, prerequisite
+   now cleared, construction not started.
 3. **Census tract to island** — CMA 462 includes Laval and both shores.
    Restricting to the island is a spatial join against `dim_geography`, to be
    done in J3.3.

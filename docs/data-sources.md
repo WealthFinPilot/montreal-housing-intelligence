@@ -106,6 +106,32 @@ paid product, is not** — and no bulk redistribution of APCIQ figures should sh
 **Consequence for the repo:** APCIQ-derived figures stay out of any published dataset.
 Publish the parser, the schema and the aggregated analysis — not the extracted table.
 
+#### Correction, 2026-08-23: the PDF itself is stricter than the website
+
+Read on page 65 of every edition, verbatim:
+
+> « Toute reproduction de l'information qui s'y retrouve, en tout ou en partie,
+> directement ou indirectement, est strictement interdite sans l'autorisation préalable
+> écrite du titulaire du droit d'auteur. »
+
+That is not the same permission as the website's terms quoted above. The site allows
+non-commercial use with attribution; the document forbids reproduction of its content,
+in part and indirectly, without written consent. Where two statements from one publisher
+disagree, the project follows the stricter one.
+
+**What this changes.** Nothing about ingesting, storing or analysing the figures in a
+private database — that is use, not reproduction. It changes what may leave it:
+
+- no APCIQ figure in a versioned file, an exported dataset or a sample;
+- **no APCIQ figure in a Power BI report published to the web.** "Publish to web"
+  exposes the entire semantic model, hidden columns included (already recorded as a
+  governance risk for listings in section 11 of the brief — it applies here too);
+- a public dashboard built on this source needs either written consent, or figures
+  aggregated far enough that the source table cannot be reconstructed from them.
+
+**Open for decision** — which of those two routes the J5 dashboard takes. Raised
+2026-08-23, not settled.
+
 ### 2.3 The `fact_market` dependency is single-sourced
 
 APCIQ remains the only verified source of realised-market statistics. Principle 41.6 of the
