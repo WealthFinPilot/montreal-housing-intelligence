@@ -39,6 +39,26 @@
 -- blank. Collapsing them into NULL at load time would destroy the distinction
 -- between "the state knows and may not say" and "there is nothing to know".
 -- The symbol column is therefore kept beside every value column.
+--
+-- AND THE TWO NON-VALUES DO NOT LOOK ALIKE
+--
+-- This is the part that would cost a day. 'x' leaves the value cell empty.
+-- '...' does not: it prints the DIGIT ZERO. Measured over the Montréal
+-- metropolitan area on 2026-08-24, per 2020 income measure:
+--
+--     symbol ''     -> a real number, never zero    49 641 cells
+--     symbol '...'  -> the literal '0'              18 404 cells
+--     symbol 'x'    -> empty                         9 340 cells
+--
+-- So a loader that decided "empty means missing" would keep 18 404 median
+-- household incomes of nought dollars per measure. They cast cleanly, they
+-- average quietly, and nothing downstream looks wrong enough to investigate.
+--
+-- Nor can they be swept up afterwards by discarding zeros, because a zero is
+-- REAL DATA on the household counts: 19 385 of those are published as zero,
+-- since a tract genuinely can hold no household of a given size and type.
+-- Only the symbol separates the two, which is the whole argument for keeping
+-- it.
 -- ---------------------------------------------------------------------------
 
 

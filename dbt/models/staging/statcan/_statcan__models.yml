@@ -1,0 +1,227 @@
+version: 2
+
+# Sources and models share one file, as they do for Données Montréal: a local
+# hook in this working copy refuses to write any path containing `_source`.
+
+sources:
+  - name: statcan
+    description: >
+      Landing tables written by ingestion/statcan. Every field is stored as the
+      source printed it, as text, symbols included. Nothing in this schema is
+      ever written by dbt.
+
+      Source: Statistics Canada, 2021 Census of Population. The census tables
+      are under the Statistics Canada Open Licence and the boundary file under
+      the Open Government Licence - Canada. Both permit redistribution, which
+      is why these figures may appear in a versioned file and in a published
+      report -- the opposite of the APCIQ rule.
+    schema: raw
+
+    # Freshness thresholds are measured in years here, not days, and that is
+    # not carelessness. A census is taken every five years; these files do not
+    # change in between. Borrowing the 180/365 day thresholds used for the
+    # city's boundary file would report a perfectly current source as stale
+    # roughly four years out of every five.
+    tables:
+      - name: statcan_geographic_attribute
+        description: >
+          One row per dissemination block of census division 2466 -- which is
+          exactly the Island of Montréal, its 16 municipalities and nothing
+          else. 13 844 rows. Carries every coarser geographic code, plus
+          population, dwellings and the representative point of the
+          dissemination area.
+        loaded_at_field: first_seen_at
+        freshness:
+          warn_after: {count: 730, period: day}
+          error_after: {count: 2200, period: day}
+        columns:
+          - name: db_uid
+            description: Dissemination block identifier. Unique nationally.
+          - name: csd_uid
+            description: >
+              Census subdivision, i.e. municipality. Equals '24' || the MAMH
+              municipal code, verified for all 16 Island municipalities by
+              name on 2026-08-24.
+          - name: ct_uid
+            description: >
+              Census tract. Nests entirely inside one municipality here -- zero
+              of 541 straddle a boundary, checked against a positive control.
+
+      - name: statcan_income_statistic
+        description: >
+          Table 98100058, household income statistics, for census metropolitan
+          area 462. NOT one row per geography: 7 household sizes crossed with
+          11 household types gives exactly 77 rows each, 77 385 in total.
+          Deliberately wider than the Island so that comparing the Island with
+          the rest of its metropolitan area does not require a second download.
+        loaded_at_field: first_seen_at
+        freshness:
+          warn_after: {count: 730, period: day}
+          error_after: {count: 2200, period: day}
+        columns:
+          - name: dguid
+            description: >
+              Geographic identifier, character for character the ct_dguid of
+              the attribute file. This is what joins income to geography.
+          - name: median_total_income_2020_symbol
+            description: >
+              Verbatim from the legend inside the source archive: '' the value
+              is published, 'x' suppressed under the Statistics Act, '...' not
+              applicable. Three different claims, never collapsed into NULL.
+
+      - name: statcan_census_tract_boundary
+        description: >
+          Census tract polygons for the 541 tracts of the Island, as well-known
+          text in the projection the source shipped. Not needed to delimit the
+          Island -- published codes do that -- but needed to draw a map and,
+          later, to attach tracts to APCIQ sectors.
+        loaded_at_field: first_seen_at
+        freshness:
+          warn_after: {count: 730, period: day}
+          error_after: {count: 2200, period: day}
+        columns:
+          - name: source_srid
+            description: >
+              3347, NAD83 / Statistics Canada Lambert, in metres. Stored rather
+              than assumed, and proven rather than recognised by name: the
+              attribute file publishes the same point in Lambert and in
+              latitude/longitude, and reprojecting one lands on the other
+              within 5 cm.
+
+models:
+  - name: stg_statcan__census_tracts
+    description: >
+      The 541 census tracts of the Island, one row each, with the municipality
+      they belong to, their population and dwelling counts, and a geometry in
+      EPSG:4326.
+
+    columns:
+      - name: ct_uid
+        description: Census tract identifier. One row per tract.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: municipality_code
+        description: >
+          MAMH municipal code of the municipality containing this tract,
+          derived from the published census subdivision code. Joins straight to
+          dim_geography and to the assessment roll.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['66007', '66023', '66032', '66047', '66058', '66062',
+                         '66072', '66087', '66092', '66097', '66102', '66107',
+                         '66112', '66117', '66127', '66142']
+
+      - name: municipality_count
+        description: >
+          How many municipalities this tract's blocks fall in. Always 1 -- see
+          tests/assert_census_tract_nests_in_one_municipality.sql, which is
+          where the interesting assertion lives.
+        data_tests:
+          - not_null
+
+      - name: population_2021
+        description: >
+          Summed from the tract's dissemination blocks. Zero is a real value
+          here: seven Island tracts have no population at all.
+        data_tests:
+          - not_null
+
+      - name: dwellings_2021
+        description: Total private dwellings, summed from the blocks.
+        data_tests:
+          - not_null
+
+      - name: geometry
+        description: >
+          Polygon in EPSG:4326, reprojected from the EPSG:3347 the source ships.
+          For drawing and measuring only. Membership of a municipality comes
+          from published codes, never from this column: two files do not agree
+          on where the shoreline is, and 18 tracts poke out of the city's
+          boundary by up to 6.6 % of their own area while every inhabited point
+          stays inside it.
+        data_tests:
+          - not_null
+
+      - name: area_km2
+        description: >
+          Measured on the ellipsoid, in square kilometres. Never with ST_Area
+          on the source projection, which overstates by 3.3 % -- guarded by
+          tests/assert_census_tract_area_is_measured_correctly.sql.
+
+      - name: block_count
+        description: Dissemination blocks rolled up into this tract.
+        data_tests:
+          - not_null
+
+  - name: stg_statcan__household_income
+    description: >
+      Household income for the Island's census tracts, at the grain the source
+      publishes: tract x household size x household type, 41 657 rows. Census
+      figures for income years 2020 and 2015, in 2020 constant dollars -- they
+      do not move with the market.
+
+    columns:
+      - name: ct_uid
+        description: Census tract. Every row belongs to a tract of the Island.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_statcan__census_tracts')
+                field: ct_uid
+
+      - name: census_year
+        description: The census, not the income year. 2021.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [2021]
+                quote: false
+
+      - name: household_size
+        description: One of 7 published members, "Total" included.
+        data_tests:
+          - not_null
+
+      - name: household_type
+        description: One of 11 published members, "Total" included.
+        data_tests:
+          - not_null
+
+      - name: median_total_income_2020
+        description: >
+          Median household total income for income year 2020, 2020 constant
+          dollars. NULL wherever the source did not publish one, with the
+          reason in the status column beside it. Never interpolated.
+
+      - name: median_total_income_2020_status
+        description: >
+          published, suppressed or not_applicable. `unknown_symbol` is
+          deliberately absent from the accepted values: a symbol this project
+          has never seen must fail the build, not pass through.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'suppressed', 'not_applicable']
+
+      - name: median_aftertax_income_2020_status
+        description: Same three values, for after-tax income.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'suppressed', 'not_applicable']
+
+      - name: households_2021_status
+        description: Same three values, for the household count.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'suppressed', 'not_applicable']

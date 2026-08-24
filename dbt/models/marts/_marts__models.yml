@@ -53,12 +53,38 @@ models:
           - unique
 
       - name: geography_type
-        description: island, municipality, borough or apciq_sector.
+        description: >
+          island, municipality, borough, census_tract or apciq_sector.
+
+          They do not form one clean tree. The first three nest; census tracts
+          nest inside a municipality but not inside a borough, because nothing
+          published says which borough a tract is in; and APCIQ sectors cut
+          across boroughs entirely, which is why a bridge table exists.
         data_tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['island', 'municipality', 'borough', 'apciq_sector']
+                values: ['island', 'municipality', 'borough', 'census_tract',
+                         'apciq_sector']
+
+      - name: area_basis
+        description: >
+          What area_km2 measures, because the two families of rows do not mean
+          the same thing by it.
+
+          boundary_including_water -- the administrative outline, which runs
+          into the river. The island is 619 km² this way.
+
+          land_only -- the cartographic outline, clipped to the shoreline. The
+          same island is 499 km² this way.
+
+          NULL where area_km2 is null, i.e. the APCIQ sectors, whose geometry
+          has not been built. Both figures are right about different questions,
+          and adding them together is not one of those questions.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['boundary_including_water', 'land_only']
 
       - name: name
         data_tests:

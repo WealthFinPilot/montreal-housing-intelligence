@@ -130,12 +130,80 @@ apciq_sectors as (
         cast(null as numeric)                     as area_km2
     from sectors
 
+),
+
+census_tracts as (
+
+    /*
+        The 541 census tracts of the Island, parented to their municipality.
+
+        WHY NOT TO THE BOROUGH, WHICH WOULD BE FINER
+
+        Because no published source says which borough a tract is in. A tract
+        nests inside a municipality -- measured, zero exceptions, and guarded
+        by a test -- but boroughs are a municipal creation and Statistics
+        Canada does not carry them. Ville de Montréal therefore holds 485
+        tracts directly, which looks coarse and is honest. Attaching them to
+        boroughs and to APCIQ sectors is a spatial problem, and it is J3.4.
+
+        This is the level at which household income exists, so it is the level
+        fact_affordability will need in J4.
+    */
+
+    select
+        'census_tract:' || ct_uid                 as geography_key,
+        'census_tract'                            as geography_type,
+        ct_uid                                    as geography_code,
+        'CT ' || ct_name                          as name,
+        'municipality:' || municipality_code      as parent_geography_key,
+        geometry,
+        area_km2
+    from {{ ref('stg_statcan__census_tracts') }}
+
+),
+
+administrative as (
+
+    select * from island
+    union all
+    select * from municipalities
+    union all
+    select * from boroughs
+    union all
+    select * from apciq_sectors
+
 )
 
-select * from island
+/*
+    WHY area_km2 CARRIES A SECOND COLUMN SAYING WHAT IT MEASURES
+
+    The two families of rows below do not mean the same thing by "area", and
+    summing them together would produce a number with no referent.
+
+    The city's administrative boundaries run out into the water -- Verdun is
+    22.30 km² officially against 9.85 km² for its three neighbourhoods, because
+    the borough reaches the middle of the river. The island measures 619 km²
+    that way.
+
+    The census tract polygons are cartographic boundaries, clipped to the
+    shoreline. The same island measures 499 km² that way, which is its land
+    area, and the two figures are both correct about different questions.
+
+    Rather than pick one and leave the reader to discover the discrepancy in a
+    dashboard, every row states which it is.
+*/
+
+select
+    *,
+    case
+        when area_km2 is null then null
+        else 'boundary_including_water'
+    end                                           as area_basis
+from administrative
+
 union all
-select * from municipalities
-union all
-select * from boroughs
-union all
-select * from apciq_sectors
+
+select
+    *,
+    'land_only'                                   as area_basis
+from census_tracts
