@@ -33,6 +33,95 @@ seeds:
               arguments:
                 values: ['full', 'part']
 
+  - name: apciq_sector_neighbourhood
+    description: >
+      Which APCIQ sector each of five neighbourhood polygons belongs to. Five
+      rows, and no more, because only two of the 34 administrative entities are
+      cut by APCIQ and this seed exists solely to cut them.
+
+      It also names WHICH FILE is authoritative for each borough. Both
+      neighbourhood files cover the whole city, so a point in Côte-des-Neiges
+      also sits inside a housing-reference polygon; without borough_codemamh
+      here, the wrong file would answer.
+
+    columns:
+      - name: source_dataset
+        description: The file that is authoritative for this borough.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['quartiers-sociologiques', 'quartiers']
+      - name: neighbourhood_code
+        description: >
+          The published code of the polygon. Checked against the name beside it
+          by tests/assert_neighbourhood_seed_still_names_the_same_places.sql.
+        data_tests:
+          - not_null
+      - name: borough_codemamh
+        description: >
+          The entity being cut. Only REM34 and REM12 appear, and they are the
+          only two entities APCIQ splits.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['REM34', 'REM12']
+      - name: apciq_sector_number
+        description: 7, 8, 4 or 10 -- the four sectors involved in the two cuts.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [7, 8, 4, 10]
+                quote: false
+
+  - name: statcan_misplaced_representative_point
+    description: >
+      Dissemination areas whose published representative point cannot be where
+      it landed, with the measurement that proves it.
+
+      A declaration, not an exclusion list. Each row states the land area of the
+      area itself, the room its assignment actually offers, and the ratio
+      between them; tests/assert_representative_point_fits_where_it_landed.sql
+      fails both on an undeclared area that no longer fits AND on a declaration
+      that no longer describes anything. The second direction is the point: a
+      derogation nobody re-examines is how a workaround becomes permanent.
+
+      Two rows on the Island, out of 3 228 areas, resolved differently on
+      purpose -- see the resolution column.
+
+    columns:
+      - name: da_uid
+        description: The dissemination area concerned.
+        data_tests:
+          - not_null
+          - unique
+      - name: resolution
+        description: >
+          reassign -- the area holds residents who are being credited to a
+          sector they demonstrably do not live in, so the bridge moves it.
+
+          leave_in_place -- the area straddles the boundary just as genuinely
+          but holds NO residents, so moving it would change no number while
+          erasing a true geographic fact. It keeps a row of weight zero.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['reassign', 'leave_in_place']
+      - name: size_ratio
+        description: >
+          The land area of the area divided by the room its assignment offers.
+          Above 1 means it does not fit. 2.87 and 5.62 here, against a maximum
+          of 1.016 for the twelve areas that merely brush a disputed shoreline.
+        data_tests:
+          - not_null
+      - name: finding
+        description: What was measured, in words, so a reader need not re-derive it.
+        data_tests:
+          - not_null
+
 models:
   - name: dim_geography
     description: >
@@ -140,3 +229,117 @@ models:
           - accepted_values:
               arguments:
                 values: ['full', 'part']
+
+  - name: bridge_census_tract_apciq_sector
+    description: >
+      Which APCIQ sector each census tract belongs to, and in what proportion.
+      This is the join the project was missing: income exists at census tract,
+      price exists at APCIQ sector, and nothing published relates the two.
+
+      543 rows for 541 tracts. One tract is genuinely shared between two sectors
+      and appears twice with population weights; one more reaches into a second
+      sector across land where nobody lives and carries a row of weight zero.
+
+      HOW A TRACT REACHES A SECTOR
+
+      Every dissemination area is placed by its published representative point,
+      that point falls in one borough or linked city, and
+      bridge_apciq_sector_geography says which sector that entity belongs to.
+      For the two entities APCIQ cuts in half, a second point-in-polygon against
+      a neighbourhood file finishes the job. No polygon is ever cut, and no
+      membership is ever decided by a polygon edge.
+
+      WHAT IS ASSUMED RATHER THAN OBSERVED
+
+      APCIQ publishes no line between its sector 7 (NDG) and its sector 8
+      (Côte-des-Neiges) -- only the two names. The 2014 sociological boundary of
+      Ville de Montréal stands in for it, over 40 tracts and 170 583 people.
+      assignment_method carries that distinction on every row.
+
+    columns:
+      - name: census_tract_geography_key
+        description: Joins to dim_geography.geography_key at census_tract level.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: apciq_geography_key
+        description: Joins to dim_geography.geography_key at apciq_sector level.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: ct_uid
+        description: >
+          Census tract identifier. NOT unique here: a shared tract carries one
+          row per sector, deliberately, so a consumer sees the ambiguity instead
+          of a single wrong number.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_statcan__census_tracts')
+                field: ct_uid
+
+      - name: apciq_sector_number
+        description: 1 to 18. All eighteen are reached.
+        data_tests:
+          - not_null
+
+      - name: population_weight
+        description: >
+          The share of the tract this row accounts for. Sums to exactly 1 per
+          tract -- asserted by
+          tests/assert_tract_weights_account_for_the_whole_tract.sql.
+        data_tests:
+          - not_null
+
+      - name: weight_basis
+        description: >
+          population -- the normal case.
+
+          dissemination_area_count -- the 7 tracts with no residents at all,
+          which have no population to weight. Each holds one area, so each gets
+          a single row at 1.0.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['population', 'dissemination_area_count']
+
+      - name: assignment_method
+        description: >
+          borough_code -- the published code of the entity settled the sector on
+          its own. An observation.
+
+          neighbourhood_polygon -- a neighbourhood boundary stood in for a line
+          APCIQ does not publish. A DERIVED assumption, and the only reason this
+          column exists.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['borough_code', 'neighbourhood_polygon']
+
+      - name: tract_is_shared
+        description: >
+          True where the RESIDENTS of the tract are split across two sectors.
+          Counted on rows carrying population, not on rows that merely exist, so
+          a reach into empty land is not dressed up as an ambiguity households
+          face.
+        data_tests:
+          - not_null
+
+      - name: includes_corrected_point
+        description: >
+          True where a declared misplacement moved the area of this row off the
+          side its point had landed on. One tract carries it -- see the seed
+          statcan_misplaced_representative_point.
+        data_tests:
+          - not_null

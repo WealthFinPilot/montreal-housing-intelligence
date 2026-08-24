@@ -225,3 +225,68 @@ models:
           - accepted_values:
               arguments:
                 values: ['published', 'suppressed', 'not_applicable']
+
+  - name: stg_statcan__dissemination_areas
+    description: >
+      The 3 228 dissemination areas of the Island, one row each, carrying the
+      representative point Statistics Canada publishes for them and the
+      population attached to it.
+
+      This is the grain that makes an APCIQ sector reachable. A sector is not a
+      Statistics Canada geography, so no attribute file will ever name one; the
+      only sound substitute is a published point falling inside a published
+      polygon, and this model supplies the points.
+
+    columns:
+      - name: da_uid
+        description: Dissemination area identifier. One row per area.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: ct_uid
+        description: >
+          The census tract this area belongs to, as published. An area nests
+          inside its tract by construction, which census_tract_count checks.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_statcan__census_tracts')
+                field: ct_uid
+
+      - name: census_tract_count
+        description: >
+          How many tracts this area's blocks fall in. Always 1 -- an area is
+          built inside a tract. A 2 here would mean max(ct_uid) above is
+          silently picking one of two.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1]
+                quote: false
+
+      - name: land_area_km2
+        description: >
+          The area's own land area, as Statistics Canada publishes it. Not
+          decoration: it is what makes the representative point falsifiable, by
+          way of tests/assert_representative_point_fits_where_it_landed.sql.
+          An area cannot sit in a space smaller than itself.
+        data_tests:
+          - not_null
+
+      - name: representative_point
+        description: >
+          The published representative point, as a PostGIS point in EPSG:4326.
+          Built from the latitude and longitude the file carries rather than
+          from the Lambert pair beside it -- both are published and agree to
+          5 cm, and 4326 is the one system every geometry in this project uses.
+        data_tests:
+          - not_null
+
+      - name: population_2021
+        description: >
+          2021 census population, summed from the area's blocks. The weight
+          that splits a tract's income between two sectors. 9 of the 3 228 areas
+          hold none, and that is data rather than a gap.

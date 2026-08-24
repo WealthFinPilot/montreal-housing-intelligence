@@ -75,3 +75,33 @@ seeds:
         metric_code: text
         verified_on: date
         finding: text
+
+    apciq_sector_neighbourhood:
+      # neighbourhood_code must stay text. The sociological file numbers 1..32
+      # and the housing-reference one uses '60A', '60B', '60C' -- inference
+      # would load one as integer and the other as text, and the join to
+      # raw.mtl_neighbourhood would then fail on exactly the rows that matter.
+      +column_types:
+        source_dataset: text
+        neighbourhood_code: text
+        neighbourhood_name_source: text
+        borough_codemamh: text
+        apciq_sector_number: integer
+
+    statcan_misplaced_representative_point:
+      # The areas are numeric, not float: they are compared against a measured
+      # PostGIS area and the comparison must be exact about what it stated, not
+      # about what a binary float rounded it to.
+      +column_types:
+        da_uid: text
+        ct_uid: text
+        point_falls_in_codemamh: text
+        tract_mostly_in_codemamh: text
+        tract_share_of_majority_pct: numeric
+        da_land_area_km2: numeric
+        room_in_assignment_km2: numeric
+        size_ratio: numeric
+        population_2021: integer
+        resolution: text
+        verified_on: date
+        finding: text
