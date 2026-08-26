@@ -18,7 +18,7 @@ models:
           # updating the model, and this test fails on the next run.
           - accepted_values:
               arguments:
-                values: ['V39079', 'V80691335']
+                values: ['V39079', 'V80691335', 'FVI_MTG_RATE_5Y_FIX']
 
       - name: series_label
         description: Human-readable name, mirroring ingestion/bank_of_canada/series.py.
@@ -38,6 +38,16 @@ models:
           True when the figure is a rate advertised by banks rather than one
           actually contracted. A posted rate is an indicator of direction, never
           a transaction price.
+        tests:
+          - not_null
+
+      - name: is_contracted_rate
+        description: >
+          True for FVI_MTG_RATE_5Y_FIX, the 5-year fixed rate actually
+          contracted on a high-ratio mortgage. The two flags are never true on
+          the same row, and never both false on a mortgage series: a model that
+          reaches for "the mortgage rate" without stating which one is reaching
+          for a number 1.8 points wide.
         tests:
           - not_null
 

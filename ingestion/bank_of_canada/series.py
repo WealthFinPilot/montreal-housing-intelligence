@@ -8,6 +8,12 @@ Verification trail, 2026-08-22:
   GET https://www.bankofcanada.ca/valet/groups/ATABLE_POLICY_INSTRUMENT/json -> 200
   GET https://www.bankofcanada.ca/valet/groups/CHARTERED_BANK_INTEREST/json  -> 200
   GET https://www.bankofcanada.ca/valet/series/V39079/json                   -> 200
+
+Verification trail, 2026-08-26:
+  GET https://www.bankofcanada.ca/valet/lists/series/json                    -> 200
+  GET https://www.bankofcanada.ca/valet/series/FVI_MTG_RATE_5Y_FIX/json      -> 200
+  GET https://www.bankofcanada.ca/valet/observations/FVI_MTG_RATE_5Y_FIX/json-> 200
+      648 observations, 2014-01-07 to 2026-06-02
 """
 
 from __future__ import annotations
@@ -55,6 +61,28 @@ SERIES: tuple[Series, ...] = (
             "two points are ordinary. Treat it exactly like asking_price versus "
             "sale_price: an indicator of direction, never a transaction price. Any "
             "affordability figure derived from it is an assumption, not an observation."
+        ),
+    ),
+    Series(
+        series_id="FVI_MTG_RATE_5Y_FIX",
+        label="5-year fixed interest rate for a high-ratio mortgage",
+        frequency="weekly",
+        purpose=(
+            "The rate borrowers ACTUALLY CONTRACT on a high-ratio mortgage, which is "
+            "the scenario fact_mortgage_scenario models: a buyer putting down the legal "
+            "minimum is by definition high-ratio. Added on 2026-08-26, when the "
+            "affordability model showed how much the posted rate distorts the answer -- "
+            "on 2026 Q2 the posted 5-year stood at 6.09 % against 4.29 % here, and the "
+            "gap flows through the qualifying rate into every income figure."
+        ),
+        caveat=(
+            "The Bank of Canada gives it a one-line description and no methodology on "
+            "the series endpoint itself, so what population of loans it averages is not "
+            "stated there. It remains a CONTRACTED rate on the class of loan modelled "
+            "here, which the posted series is not. It also starts in 2014 and ended on "
+            "2026-06-02 at retrieval, so it is weekly like the posted series but its "
+            "last observation can trail: rate_observation_count in the mart is what "
+            "makes a thin quarter visible instead of silently averaging two points."
         ),
     ),
 )

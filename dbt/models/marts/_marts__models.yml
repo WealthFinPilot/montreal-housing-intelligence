@@ -701,3 +701,183 @@ models:
           - accepted_values:
               arguments:
                 values: ['corroborated', 'not_reconciled_across_pages', 'not_controlled_at_ingestion']
+
+  - name: dim_household_profile
+    description: >
+      The three household profiles the affordability model reports on, declared
+      rather than derived. The census publishes 77 size x type combinations per
+      tract; these three are the ones a first-time buyer can be, and all three
+      are published for 530 of the island's 541 tracts.
+    columns:
+      - name: household_profile_code
+        description: Stable code used as the grain key downstream.
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values: ['total', 'one_person', 'couple']
+
+      - name: household_size_label
+        description: >
+          The size label exactly as Statistics Canada prints it. Compared
+          against the source by
+          assert_household_profiles_still_match_the_source.sql, so a relabelled
+          dimension in a future census fails the build instead of silently
+          producing three empty profiles.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: household_type_label
+        description: The type label, verbatim, en dash included.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: fact_mortgage_scenario
+    description: >
+      What it costs to buy the median property, before asking who is buying.
+      One row per quarter x geography x property type, 1 653 of them, the same
+      grain as fact_market. Every figure is DERIVED from two observed inputs
+      (the APCIQ price and the Bank of Canada contracted rate) and from
+      published rules held in three seeds.
+    columns:
+      - name: mortgage_scenario_key
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('fact_market')
+                field: market_key
+
+      - name: median_price
+        description: >
+          Carried from fact_market unchanged. Null on the 430 sector-quarter
+          combinations APCIQ withheld.
+
+      - name: contract_rate_percent
+        description: >
+          The quarterly mean of FVI_MTG_RATE_5Y_FIX, the 5-year fixed rate
+          actually CONTRACTED on a high-ratio mortgage. Never the posted rate.
+        data_tests:
+          - not_null
+
+      - name: posted_rate_percent
+        description: >
+          The quarterly mean of V80691335, the ADVERTISED 5-year rate, carried
+          only so the gap between the two is a column rather than a caveat.
+        data_tests:
+          - not_null
+
+      - name: rate_basis
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['contracted_high_ratio_5y_fixed']
+
+      - name: qualifying_rate_percent
+        description: >
+          The greater of the contract rate plus two points and 5.25 per cent,
+          as CMHC states it. Computed on the contract rate, never on the posted
+          one, which would apply the buffer twice.
+        data_tests:
+          - not_null
+
+      - name: income_required_basis
+        description: >
+          Says what the required income does and does not include. It is a
+          LOWER BOUND: gross debt service also counts property tax, heating and
+          half of any condo fees, none of which this project holds.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['mortgage_payment_only_at_gds_39']
+
+      - name: insurance_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['insured', 'uninsured', 'not_insurable', 'no_price_published']
+
+  - name: fact_affordability
+    description: >
+      Can this household buy in this tract, and how far off is it. One row per
+      quarter x census tract x property type x household profile. The sector
+      price is carried DOWN to each tract; tract incomes are never averaged up
+      into a sector income, which would be a median of medians.
+    columns:
+      - name: affordability_key
+        data_tests:
+          - not_null
+          - unique
+
+      - name: ct_uid
+        data_tests:
+          - not_null
+
+      - name: property_type_code
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_property_type')
+                field: property_type_code
+
+      - name: household_profile_code
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_household_profile')
+                field: household_profile_code
+
+      - name: census_tract_geography_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: price_basis
+        description: >
+          The single assumption this table rests on, carried on every row so a
+          reader who rejects it can filter the whole table out at once.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['apciq_sector_price_applied_to_tract']
+
+      - name: income_year
+        description: >
+          2020 on every row. The price runs to 2026, and
+          price_year_minus_income_year states the gap rather than hiding it.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [2020]
+
+      - name: household_income_status
+        description: >
+          published, suppressed or not_applicable. Null only where the profile
+          row is absent from the census file altogether.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['published', 'suppressed', 'not_applicable']
+
+      - name: assignment_method
+        description: >
+          How the tract was placed in its APCIQ sector. neighbourhood_polygon
+          marks the 40 tracts placed by the City's 2014 sociological line
+          between Cote-des-Neiges and NDG, which APCIQ does not publish -- the
+          largest single assumption in the geography.
+        data_tests:
+          - not_null

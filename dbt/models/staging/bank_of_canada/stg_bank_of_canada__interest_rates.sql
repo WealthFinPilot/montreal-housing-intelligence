@@ -86,15 +86,17 @@ labelled as (
             go unnoticed.
         */
         case series_id
-            when 'V39079'    then 'Target for the overnight rate'
-            when 'V80691335' then 'Conventional mortgage: 5-year (posted)'
+            when 'V39079'              then 'Target for the overnight rate'
+            when 'V80691335'           then 'Conventional mortgage: 5-year (posted)'
+            when 'FVI_MTG_RATE_5Y_FIX' then '5-year fixed, high-ratio mortgage (contracted)'
         end as series_label,
 
         -- The observed publication rhythm of each series. Two different grains
         -- live in this table and must never be averaged together blindly.
         case series_id
-            when 'V39079'    then 'business daily'
-            when 'V80691335' then 'weekly'
+            when 'V39079'              then 'business daily'
+            when 'V80691335'           then 'weekly'
+            when 'FVI_MTG_RATE_5Y_FIX' then 'weekly'
         end as frequency,
 
         /*
@@ -105,6 +107,16 @@ labelled as (
             accident.
         */
         series_id = 'V80691335' as is_posted_rate,
+
+        /*
+            The counterpart flag, added on 2026-08-26. FVI_MTG_RATE_5Y_FIX is a
+            CONTRACTED rate on a high-ratio mortgage -- the very loan a buyer
+            putting down the legal minimum takes out. On 2026 Q2 it stood 1.80
+            points below the posted series, and that gap runs through the
+            qualifying rate into every income figure downstream, so which of
+            the two a model picked must never be guessable from the number.
+        */
+        series_id = 'FVI_MTG_RATE_5Y_FIX' as is_contracted_rate,
 
         observation_date,
         rate_percent,

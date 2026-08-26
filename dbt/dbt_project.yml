@@ -88,6 +88,63 @@ seeds:
         borough_codemamh: text
         apciq_sector_number: integer
 
+    mortgage_down_payment_bracket:
+      # Every money column is numeric and never float. These figures decide a
+      # down payment to the dollar, and a binary float would make the boundary
+      # at exactly $500,000 fall on whichever side the rounding chose.
+      # price_to_cad and tranche_to_cad are deliberately empty on the top
+      # bracket: it has no ceiling, and writing one would invent a limit the
+      # source does not state.
+      +column_types:
+        rule_id: text
+        price_from_cad: numeric
+        price_to_cad: numeric
+        tranche_from_cad: numeric
+        tranche_to_cad: numeric
+        down_payment_rate: numeric
+        source_url: text
+        retrieved_on: date
+        published_wording: text
+
+    mortgage_insurance_premium_band:
+      # value_basis is the column that keeps this seed honest. The 25-year
+      # bands are published band by band. The 30-year ones are not: CMHC
+      # publishes only the range 3.00% to 4.70% for Home Start, so the two
+      # endpoints are 'published_range_endpoint' and the two middle bands are
+      # 'derived_from_endpoint_surcharge' -- both endpoints sit exactly 0.20
+      # above their 25-year band, and the same 0.20 is carried to the middle
+      # two. That is a derived value, and section 41.2 of the brief requires
+      # it to say so rather than pass for an observation.
+      +column_types:
+        amortization_years: integer
+        ltv_from: numeric
+        ltv_to: numeric
+        down_payment_kind: text
+        premium_rate: numeric
+        value_basis: text
+        source_url: text
+        retrieved_on: date
+
+    mortgage_underwriting_parameter:
+      # parameter_value stays numeric across rows that mean percent, dollars,
+      # years and one boolean. The unit column is what tells them apart, and
+      # any model reading this seed must filter on parameter_name and read
+      # unit -- never assume the scale.
+      # value_basis separates a published requirement from a stated assumption.
+      # Eleven rows are 'published'. One is 'market_convention': the Interest
+      # Act permits a rate stated yearly OR half-yearly, so half-yearly
+      # compounding is market practice rather than law, and every payment in
+      # fact_mortgage_scenario depends on it.
+      +column_types:
+        parameter_name: text
+        parameter_value: numeric
+        unit: text
+        applies_to: text
+        value_basis: text
+        source_url: text
+        retrieved_on: date
+        published_wording: text
+
     statcan_misplaced_representative_point:
       # The areas are numeric, not float: they are compared against a measured
       # PostGIS area and the comparison must be exact about what it stated, not

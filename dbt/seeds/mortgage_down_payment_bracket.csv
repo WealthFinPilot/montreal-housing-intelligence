@@ -1,0 +1,5 @@
+rule_id,price_from_cad,price_to_cad,tranche_from_cad,tranche_to_cad,down_payment_rate,source_url,retrieved_on,published_wording
+up_to_500k,0,500000,0,500000,0.05,https://www.canada.ca/en/financial-consumer-agency/services/mortgages/down-payment.html,2026-08-26,"$500,000 or less -- 5% of the purchase price"
+500k_to_1_5m_first_tranche,500000,1500000,0,500000,0.05,https://www.canada.ca/en/financial-consumer-agency/services/mortgages/down-payment.html,2026-08-26,"$500,000 to $1.5 million -- 5% of the first $500,000 of the purchase price"
+500k_to_1_5m_second_tranche,500000,1500000,500000,1500000,0.10,https://www.canada.ca/en/financial-consumer-agency/services/mortgages/down-payment.html,2026-08-26,"$500,000 to $1.5 million -- 10% for the portion of the purchase price above $500,000"
+1_5m_and_over,1500000,,0,,0.20,https://www.canada.ca/en/financial-consumer-agency/services/mortgages/down-payment.html,2026-08-26,"$1.5 million or more -- 20% of the purchase price"
