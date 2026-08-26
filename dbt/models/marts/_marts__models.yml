@@ -343,3 +343,361 @@ models:
           statcan_misplaced_representative_point.
         data_tests:
           - not_null
+
+  - name: dim_property_type
+    description: >
+      The three property categories APCIQ reports on: single-family, condo,
+      plex. Declared rather than derived from the fact, so that the
+      relationship test between the two proves something -- and checked against
+      the printed labels by assert_property_types_still_match_the_source.sql.
+
+      These are APCIQ's categories, not a classification of this project's own.
+      A plex here is a building of 2 to 5 dwellings, as the source label says.
+
+    columns:
+      - name: property_type_code
+        description: The join key. single_family, condo or plex.
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values: ['single_family', 'condo', 'plex']
+      - name: source_label_fr
+        description: >
+          The label as APCIQ prints it in Tableau 2. Kept so a figure stays
+          traceable to its page, and compared against the source by a test --
+          the wording of these rows has changed before.
+        data_tests:
+          - not_null
+          - unique
+      - name: sort_order
+        description: The order the categories appear in on the page.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_date
+    description: >
+      One row per day from 2015-01-01 to 31 December of the current year. One
+      date table for the whole model: the market facts join on their quarter,
+      the Bank of Canada observations on their own date. Two date tables in one
+      Power BI model is how a report ends up with two slicers that disagree.
+
+      Contiguity is required for Power BI to accept it as a date table, and is
+      tested by assert_dim_date_has_no_gap.sql, which also checks that no fact
+      falls outside the range.
+
+    columns:
+      - name: date_key
+        description: The day. Join key for every fact in the project.
+        data_tests:
+          - not_null
+          - unique
+      - name: quarter_start_date
+        description: >
+          First day of the quarter this day belongs to. This is what
+          fact_market joins on.
+        data_tests:
+          - not_null
+      - name: quarter_label
+        description: '"2026 Q2" -- spelled the way APCIQ editions are labelled.'
+        data_tests:
+          - not_null
+      - name: calendar_year
+        data_tests:
+          - not_null
+
+  - name: fact_market
+    description: >
+      The realised market, one row per quarter x geography x property type.
+      1 653 rows: 29 quarters x 19 geographies x 3 categories, a full grid
+      because the source prints a full grid.
+
+      READ THE HEADER OF fact_market.sql BEFORE USING IT. Three things it
+      records that a naive aggregation gets wrong: active listings never add up
+      across time, the island row is a total and not a nineteenth sector, and
+      the figures are the vintage APCIQ first published -- summing four
+      quarters does not reproduce its own 12-month figure.
+
+      Source: APCIQ, by the Centris system. These figures may not be
+      redistributed.
+
+    columns:
+      - name: market_key
+        description: >
+          quarter, geography and category in one column, so that the grain can
+          be asserted with a built-in test rather than by adding a package for
+          one assertion. Power BI does not use it -- its relationships are
+          single-column and it joins on the three keys separately.
+        data_tests:
+          - not_null
+          - unique
+      - name: quarter_start_date
+        description: First day of the quarter the figures describe.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: geography_key
+        description: The island or one of the 18 APCIQ sectors.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+      - name: property_type_code
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_property_type')
+                field: property_type_code
+      - name: is_island_aggregate
+        description: >
+          True on the island row, which is the total of the other eighteen.
+          Summing across the table without filtering on this counts the island
+          twice.
+        data_tests:
+          - not_null
+      - name: sales_count
+        description: >
+          Sales concluded in the quarter, counted at the acceptance of the
+          promise to purchase and not at the notarial deed. Adds up across
+          geographies and across time.
+      - name: active_listings
+        description: >
+          « La moyenne des données mensuelles pour la période visée » -- an
+          average of month-end counts. ADDS UP ACROSS GEOGRAPHIES AND NEVER
+          ACROSS TIME. A measure that sums four quarters of this is wrong.
+      - name: median_price
+        description: >
+          « Valeur médiane des ventes effectuées ». A SALE price: not an asking
+          price, not a municipal assessment. Medians do not aggregate -- the
+          island figure is published, never computed from the sectors.
+      - name: days_on_market
+        description: Average days on market, as published.
+      - name: median_price_change_pct_yoy
+        description: >
+          Year over year, « par rapport au même trimestre de l'année
+          précédente », as APCIQ prints it. Published rather than recomputed:
+          our own arithmetic would use first-vintage figures and would not
+          agree.
+
+      - name: sales_value_status
+        description: >
+          Why the figure is what it is, and there are four answers.
+
+          published -- a figure.
+
+          withheld -- APCIQ printed two asterisks: « Nombre de transactions
+          insuffisant pour produire une statistique fiable ». The market
+          exists, the statistic is not reliable enough to print.
+
+          nothing_to_report -- a dash. There is none of this here, as with plex
+          on L'Île-des-Sœurs, which has none at all.
+
+          not_printed -- nothing appeared on the page. Seen only on
+          days-on-market rows of the 2019 template.
+
+          A withheld price and an absent price are different facts about the
+          market, and a dashboard showing both as a blank has lost the
+          difference.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'withheld', 'nothing_to_report', 'not_printed']
+
+      - name: active_listings_value_status
+        description: See sales_value_status for the four states.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'withheld', 'nothing_to_report', 'not_printed']
+
+      - name: median_price_value_status
+        description: >
+          See sales_value_status. This is where withheld actually bites: 430 of
+          the 1 653 quarterly median prices are withheld, 251 of them on plex.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'withheld', 'nothing_to_report', 'not_printed']
+
+      - name: average_price_value_status
+        description: See sales_value_status for the four states.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'withheld', 'nothing_to_report', 'not_printed']
+
+      - name: days_on_market_value_status
+        description: >
+          See sales_value_status. The only column where not_printed occurs --
+          25 cells of the 2019-era template.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'withheld', 'nothing_to_report', 'not_printed']
+
+      - name: sales_corroboration
+        description: >
+          What the two J3.2 controls say about this row. corroborated -- both
+          reconciled. contradicted_on_its_page -- the page disagrees with
+          itself, so its reading is not settled. not_reconciled_across_pages --
+          the page is coherent but the 18 sectors do not match the island for
+          this edition and category.
+
+          not_null is deliberate: a NULL here would mean a control that used to
+          run has vanished, and accepted_values would let it through.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['corroborated', 'contradicted_on_its_page', 'not_reconciled_across_pages']
+
+      - name: active_listings_corroboration
+        description: >
+          As sales_corroboration. This is the column that carries the three
+          quarters with no usable inventory -- 2021 Q4, 2022 Q1, 2022 Q2 -- and
+          it carries them rather than hiding them.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['corroborated', 'contradicted_on_its_page', 'not_reconciled_across_pages']
+
+      - name: source_page
+        description: The page of the edition every figure on this row was read from.
+        data_tests:
+          - not_null
+
+  - name: fact_market_trailing_12m
+    description: >
+      The same market over the twelve months ending with each quarter. 1 653
+      rows again, and a SEPARATE TABLE from fact_market on purpose: consecutive
+      rows overlap by nine months, so summing four of them counts most sales
+      four times. Two tables make that impossible rather than detectable.
+
+      It is not a rolling sum of fact_market and cannot be derived from it. A
+      twelve-month median is not the average of four quarterly medians, and on
+      the counts APCIQ's own 12-month total sits below the sum of its four
+      quarters -- 78 times out of 78 on the island. It also carries 341 median
+      prices that the quarterly table withholds, almost all of them plex and
+      small sectors.
+
+      Source: APCIQ, by the Centris system. These figures may not be
+      redistributed.
+
+    columns:
+      - name: trailing_key
+        data_tests:
+          - not_null
+          - unique
+      - name: period_end_date
+        description: >
+          Last day of the twelve-month window, which is also the last day of
+          the edition's own quarter. This is the date to plot on.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: period_start_date
+        description: >
+          First day of the window -- nine months before the previous row's end.
+          That overlap is the whole reason this table is separate.
+        data_tests:
+          - not_null
+      - name: geography_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+      - name: property_type_code
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_property_type')
+                field: property_type_code
+      - name: is_island_aggregate
+        data_tests:
+          - not_null
+
+      - name: sales_value_status
+        description: The four states, as in fact_market.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'withheld', 'nothing_to_report', 'not_printed']
+
+      - name: active_listings_value_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'withheld', 'nothing_to_report', 'not_printed']
+
+      - name: median_price_value_status
+        description: >
+          The reason this table exists. 341 of the 430 prices withheld on the
+          quarterly table are published here, the twelve-month sample being
+          four times larger.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'withheld', 'nothing_to_report', 'not_printed']
+
+      - name: average_price_value_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'withheld', 'nothing_to_report', 'not_printed']
+
+      - name: days_on_market_value_status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['published', 'withheld', 'nothing_to_report', 'not_printed']
+
+      - name: sales_corroboration
+        description: >
+          As in fact_market, plus a fourth verdict this period needs:
+          not_controlled_at_ingestion, where the parser recorded no verdict at
+          all. It is not a synonym for "fine" -- the check was never run, which
+          is a different statement from "the check ran and passed". Every row
+          of this column is in that state, because SECTOR_CONTROLLED in
+          parse.py never covered 12-month sales, and
+          assert_trailing_sales_reconcile_to_the_island.sql is what covers it
+          in the meantime.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['corroborated', 'not_reconciled_across_pages', 'not_controlled_at_ingestion']
+
+      - name: active_listings_corroboration
+        description: >
+          This one does have stored verdicts: ('active_listings',
+          'trailing_12m') is in SECTOR_CONTROLLED.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['corroborated', 'not_reconciled_across_pages', 'not_controlled_at_ingestion']
