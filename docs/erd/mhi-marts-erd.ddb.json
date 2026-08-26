@@ -1,0 +1,1240 @@
+{
+  "tables": [
+    {
+      "name": "dim_date",
+      "comment": "",
+      "color": "#175e7a",
+      "fields": [
+        {
+          "id": "i3jNeYrjCV9mP6H8GlB4P",
+          "name": "date_key",
+          "type": "DATE",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": true,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "j2rKrfSJKF4VYM9hYCdOC",
+          "name": "calendar_year",
+          "type": "INTEGER",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "J3HsPmouFj5mhbVH_oPPg",
+          "name": "quarter_start_date",
+          "type": "DATE",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "nx1L2__3Cjl-g8hN6-9rk",
+          "name": "quarter_label",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        }
+      ],
+      "indices": [],
+      "uniqueConstraints": [],
+      "id": "bm4FFYhHLzclWJt5YzTe6",
+      "x": 975.4496967500354,
+      "y": 157.4757723568085,
+      "hidden": false
+    },
+    {
+      "name": "dim_geography",
+      "comment": "",
+      "color": "#175e7a",
+      "fields": [
+        {
+          "id": "ZHoKPQJ-d8aSTPlfNolYX",
+          "name": "geography_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": true,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "LTD0I1ykG1Ii3F0mtVlUj",
+          "name": "geography_type",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "ldKroU4AVtu2eCVRvnSI-",
+          "name": "name",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "u25hBvdYQEOBWnF1y2TEn",
+          "name": "parent_geography_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": false,
+          "primary": false,
+          "default": "",
+          "check": ""
+        }
+      ],
+      "indices": [],
+      "uniqueConstraints": [],
+      "id": "-w68Q_PK2CzzB4DVLwxun",
+      "x": 187.84787442025618,
+      "y": 594.9140271933759,
+      "hidden": false
+    },
+    {
+      "name": "dim_property_type",
+      "comment": "",
+      "color": "#175e7a",
+      "fields": [
+        {
+          "id": "tJjCGVhSqhT92IgO8N-Nu",
+          "name": "property_type_code",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": true,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "Tz__nxvqRUbCdlXUEl0Nv",
+          "name": "sort_order",
+          "type": "INTEGER",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "dU7QvUZZ04UQMXkRlxroo",
+          "name": "source_label_fr",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        }
+      ],
+      "indices": [],
+      "uniqueConstraints": [
+        {
+          "name": "dim_property_type_unique_0",
+          "fields": [
+            "source_label_fr"
+          ],
+          "id": 0
+        },
+        {
+          "name": "dim_property_type_unique_1",
+          "fields": [
+            "sort_order"
+          ],
+          "id": 1
+        }
+      ],
+      "id": "ibZZZ-VuyMlDwfEbLSuGQ",
+      "x": 920.038860088714,
+      "y": 631.9105041425717
+    },
+    {
+      "name": "dim_household_profile",
+      "comment": "",
+      "color": "#175e7a",
+      "fields": [
+        {
+          "id": "3WACE62JiYl25vFxbBlcx",
+          "name": "household_profile_code",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": true,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "_1IxE-bZ5Cvxq0vtVGYkk",
+          "name": "household_size_label",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "b-p7pfpIwx6vubdF5J8Iu",
+          "name": "household_type_label",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        }
+      ],
+      "indices": [],
+      "uniqueConstraints": [
+        {
+          "name": "dim_household_profile_unique_0",
+          "fields": [
+            "household_size_label"
+          ],
+          "id": 0
+        },
+        {
+          "name": "dim_household_profile_unique_1",
+          "fields": [
+            "household_type_label"
+          ],
+          "id": 1
+        }
+      ],
+      "id": "dI0Q_22mvytKOUAgPlY2t",
+      "x": 912.3140945240145,
+      "y": 1479.4180298635404
+    },
+    {
+      "name": "bridge_apciq_sector_geography",
+      "comment": "",
+      "color": "#175e7a",
+      "fields": [
+        {
+          "id": "J94N_77V1VEwArC7oNBMO",
+          "name": "apciq_geography_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "EXu63ivfAbgdPLpaXmoJ-",
+          "name": "admin_geography_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "rFoQAxaXSw9kwSmXN82xY",
+          "name": "coverage",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        }
+      ],
+      "indices": [],
+      "uniqueConstraints": [],
+      "id": "BFvvT9DQBK5OGKpqUwr5t",
+      "x": -167.53112604206194,
+      "y": 315.973315794246
+    },
+    {
+      "name": "bridge_census_tract_apciq_sector",
+      "comment": "",
+      "color": "#175e7a",
+      "fields": [
+        {
+          "id": "Dj2boiKu6yY4zkhCvqPz3",
+          "name": "census_tract_geography_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "EpHqdZxDH-d2ZibHfm1kG",
+          "name": "ct_uid",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "1n7WmTWALO9jHOx34IOhq",
+          "name": "apciq_geography_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "lD8pweJCh3-d86NAi1ihg",
+          "name": "apciq_sector_number",
+          "type": "INTEGER",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "-BDfTX6ghuuEzvrfXWi_S",
+          "name": "population_weight",
+          "type": "NUMERIC",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "XpLM9AckbiJmN11pHfyW3",
+          "name": "weight_basis",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "MhKd_JKTXjctmz3LMl75b",
+          "name": "assignment_method",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "UgssoM_qk3tIsz33JKEaN",
+          "name": "tract_is_shared",
+          "type": "BOOLEAN",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "6lSYHgXSi0p5cqkxXLBQp",
+          "name": "includes_corrected_point",
+          "type": "BOOLEAN",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        }
+      ],
+      "indices": [],
+      "uniqueConstraints": [],
+      "id": "SHZ-IgQxs9I305-ef1i50",
+      "x": -174.99966743927808,
+      "y": 921.9750019850554
+    },
+    {
+      "name": "fact_market",
+      "comment": "",
+      "color": "#175e7a",
+      "fields": [
+        {
+          "id": "r1wRg47oojCq2_0sSybLf",
+          "name": "market_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": true,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "VCVZTCr9bB_xVeRfiECi5",
+          "name": "quarter_start_date",
+          "type": "DATE",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "sNAmuuoEBtYCfuMOTtgKv",
+          "name": "geography_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "xiqDiLBUxxQGKjmaFrGqH",
+          "name": "property_type_code",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "pQaoQR9DgSRjQB8JDYgcA",
+          "name": "is_island_aggregate",
+          "type": "BOOLEAN",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "kWujR90uXDpkW54-hhAAP",
+          "name": "sales_value_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "8UqH09SoxnucJ_LCbKJpr",
+          "name": "active_listings_value_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "OG6PddXWnOqpUHM3w03-E",
+          "name": "median_price_value_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "njqLSZWLqG_Fz5fdsoXZR",
+          "name": "average_price_value_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "8pCkdl9dG42MZnz9BxdPb",
+          "name": "days_on_market_value_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "HAV9xw3MpvzeR0BV7bVbt",
+          "name": "sales_corroboration",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "zdlvRdakqZsWHF0bmjz9i",
+          "name": "active_listings_corroboration",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "m9QZdul8JSW1LB8h7cvYm",
+          "name": "source_page",
+          "type": "INTEGER",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        }
+      ],
+      "indices": [],
+      "uniqueConstraints": [],
+      "id": "a8N9jwS3ZHrv1BwHah8Ub",
+      "x": 562.065877136841,
+      "y": -50.243138966607745,
+      "collapsed": false,
+      "locked": false
+    },
+    {
+      "name": "fact_market_trailing_12m",
+      "comment": "",
+      "color": "#175e7a",
+      "fields": [
+        {
+          "id": "NpmM6lYlzit5u5K3PRcGu",
+          "name": "trailing_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": true,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "hAePdaMiHwsa3JR_lz73g",
+          "name": "period_start_date",
+          "type": "DATE",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "-8nyXeBUfzXho19N9TZSy",
+          "name": "period_end_date",
+          "type": "DATE",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "84tfMrl7B-2x2HNCEPSeY",
+          "name": "geography_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "qQzHxsMTIthnC7eVUpmPK",
+          "name": "property_type_code",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "AVjnGkqO2zSTny9IVmt9h",
+          "name": "is_island_aggregate",
+          "type": "BOOLEAN",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "db05_k8ofrhybhv-c3WJl",
+          "name": "sales_value_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "rlAhAG2RsSskgeEswnAab",
+          "name": "active_listings_value_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "SYznDzcb5aRxEQ5c4QG4N",
+          "name": "median_price_value_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "Apy7BKwlE2bRTMOI8IHfk",
+          "name": "average_price_value_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "N65sjBaSxkB-0Jg63xjdQ",
+          "name": "days_on_market_value_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "EnyaItKsqTuPm7QhTVJzQ",
+          "name": "sales_corroboration",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "ISiqqvUfQAgvQQ_3J55Of",
+          "name": "active_listings_corroboration",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        }
+      ],
+      "indices": [],
+      "uniqueConstraints": [],
+      "id": "-QkT2ek0ZNu8Tgdx3F7AU",
+      "x": 559.485839507199,
+      "y": 481.957738021864,
+      "collapsed": false
+    },
+    {
+      "name": "fact_mortgage_scenario",
+      "comment": "",
+      "color": "#175e7a",
+      "fields": [
+        {
+          "id": "xBhEGqBVAG-gc-FBJK6EG",
+          "name": "mortgage_scenario_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": true,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "slYjmkdxQtP_iwFDAUE8N",
+          "name": "contract_rate_percent",
+          "type": "NUMERIC",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "hKfq3SHbRKrYbfAX4sp9E",
+          "name": "posted_rate_percent",
+          "type": "NUMERIC",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "t5CNO1EnT6NeLZIHQgDvX",
+          "name": "rate_basis",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "pAPY9EAZJF9DOThil9kAC",
+          "name": "qualifying_rate_percent",
+          "type": "NUMERIC",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "UavvZDYv3h6dTcf6R6h8o",
+          "name": "income_required_basis",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "bLQhmaMPlq_TZgbnOStQj",
+          "name": "insurance_status",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        }
+      ],
+      "indices": [],
+      "uniqueConstraints": [],
+      "id": "Pkek5Kzwz3aP9SinjHQA1",
+      "x": 554.9047264763133,
+      "y": 1016.2773020327272
+    },
+    {
+      "name": "fact_affordability",
+      "comment": "",
+      "color": "#175e7a",
+      "fields": [
+        {
+          "id": "WgFbnMa_cnZS9syto24ab",
+          "name": "affordability_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": true,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "-1fcqI0KU4Sevr-PhUUe5",
+          "name": "census_tract_geography_key",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "AuVPqrX2Lb2asHCz4t0QW",
+          "name": "ct_uid",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "wsqgz7jKlOAZG_MhRmPry",
+          "name": "property_type_code",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "2Fjpozqhjc2t2xI_6Ozwn",
+          "name": "household_profile_code",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "n-uxNBoL84xqKMfS0_r-W",
+          "name": "assignment_method",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "LwEwfDbmzXOWSqVIxeetR",
+          "name": "price_basis",
+          "type": "TEXT",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        },
+        {
+          "id": "0RJGD2DExLYsRm4S3Sbcy",
+          "name": "income_year",
+          "type": "INTEGER",
+          "comment": "",
+          "unique": false,
+          "increment": false,
+          "notNull": true,
+          "primary": false,
+          "default": "",
+          "check": ""
+        }
+      ],
+      "indices": [],
+      "uniqueConstraints": [],
+      "id": "zWlpaJ9qy38M6euMsHFUh",
+      "x": 555.5325538425263,
+      "y": 1332.3207639779423,
+      "hidden": false
+    }
+  ],
+  "relationships": [
+    {
+      "name": "fk_dim_geography_parent_geography_key_dim_geography",
+      "startTableId": "-w68Q_PK2CzzB4DVLwxun",
+      "startFieldId": "u25hBvdYQEOBWnF1y2TEn",
+      "endTableId": "-w68Q_PK2CzzB4DVLwxun",
+      "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX",
+      "fields": [
+        {
+          "startFieldId": "u25hBvdYQEOBWnF1y2TEn",
+          "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 0,
+      "manyLabel": ""
+    },
+    {
+      "name": "fk_bridge_apciq_sector_geography_apciq_geography_key_dim_geography",
+      "startTableId": "BFvvT9DQBK5OGKpqUwr5t",
+      "startFieldId": "J94N_77V1VEwArC7oNBMO",
+      "endTableId": "-w68Q_PK2CzzB4DVLwxun",
+      "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX",
+      "fields": [
+        {
+          "startFieldId": "J94N_77V1VEwArC7oNBMO",
+          "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 1
+    },
+    {
+      "name": "fk_bridge_apciq_sector_geography_admin_geography_key_dim_geography",
+      "startTableId": "BFvvT9DQBK5OGKpqUwr5t",
+      "startFieldId": "EXu63ivfAbgdPLpaXmoJ-",
+      "endTableId": "-w68Q_PK2CzzB4DVLwxun",
+      "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX",
+      "fields": [
+        {
+          "startFieldId": "EXu63ivfAbgdPLpaXmoJ-",
+          "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 2
+    },
+    {
+      "name": "fk_bridge_census_tract_apciq_sector_census_tract_geography_key_dim_geography",
+      "startTableId": "SHZ-IgQxs9I305-ef1i50",
+      "startFieldId": "Dj2boiKu6yY4zkhCvqPz3",
+      "endTableId": "-w68Q_PK2CzzB4DVLwxun",
+      "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX",
+      "fields": [
+        {
+          "startFieldId": "Dj2boiKu6yY4zkhCvqPz3",
+          "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 3
+    },
+    {
+      "name": "fk_bridge_census_tract_apciq_sector_apciq_geography_key_dim_geography",
+      "startTableId": "SHZ-IgQxs9I305-ef1i50",
+      "startFieldId": "1n7WmTWALO9jHOx34IOhq",
+      "endTableId": "-w68Q_PK2CzzB4DVLwxun",
+      "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX",
+      "fields": [
+        {
+          "startFieldId": "1n7WmTWALO9jHOx34IOhq",
+          "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 4
+    },
+    {
+      "name": "fk_fact_market_quarter_start_date_dim_date",
+      "startTableId": "a8N9jwS3ZHrv1BwHah8Ub",
+      "startFieldId": "VCVZTCr9bB_xVeRfiECi5",
+      "endTableId": "bm4FFYhHLzclWJt5YzTe6",
+      "endFieldId": "i3jNeYrjCV9mP6H8GlB4P",
+      "fields": [
+        {
+          "startFieldId": "VCVZTCr9bB_xVeRfiECi5",
+          "endFieldId": "i3jNeYrjCV9mP6H8GlB4P"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 5
+    },
+    {
+      "name": "fk_fact_market_geography_key_dim_geography",
+      "startTableId": "a8N9jwS3ZHrv1BwHah8Ub",
+      "startFieldId": "sNAmuuoEBtYCfuMOTtgKv",
+      "endTableId": "-w68Q_PK2CzzB4DVLwxun",
+      "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX",
+      "fields": [
+        {
+          "startFieldId": "sNAmuuoEBtYCfuMOTtgKv",
+          "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 6
+    },
+    {
+      "name": "fk_fact_market_property_type_code_dim_property_type",
+      "startTableId": "a8N9jwS3ZHrv1BwHah8Ub",
+      "startFieldId": "xiqDiLBUxxQGKjmaFrGqH",
+      "endTableId": "ibZZZ-VuyMlDwfEbLSuGQ",
+      "endFieldId": "tJjCGVhSqhT92IgO8N-Nu",
+      "fields": [
+        {
+          "startFieldId": "xiqDiLBUxxQGKjmaFrGqH",
+          "endFieldId": "tJjCGVhSqhT92IgO8N-Nu"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 7
+    },
+    {
+      "name": "fk_fact_market_trailing_12m_period_end_date_dim_date",
+      "startTableId": "-QkT2ek0ZNu8Tgdx3F7AU",
+      "startFieldId": "-8nyXeBUfzXho19N9TZSy",
+      "endTableId": "bm4FFYhHLzclWJt5YzTe6",
+      "endFieldId": "i3jNeYrjCV9mP6H8GlB4P",
+      "fields": [
+        {
+          "startFieldId": "-8nyXeBUfzXho19N9TZSy",
+          "endFieldId": "i3jNeYrjCV9mP6H8GlB4P"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 8
+    },
+    {
+      "name": "fk_fact_market_trailing_12m_geography_key_dim_geography",
+      "startTableId": "-QkT2ek0ZNu8Tgdx3F7AU",
+      "startFieldId": "84tfMrl7B-2x2HNCEPSeY",
+      "endTableId": "-w68Q_PK2CzzB4DVLwxun",
+      "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX",
+      "fields": [
+        {
+          "startFieldId": "84tfMrl7B-2x2HNCEPSeY",
+          "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 9
+    },
+    {
+      "name": "fk_fact_market_trailing_12m_property_type_code_dim_property_type",
+      "startTableId": "-QkT2ek0ZNu8Tgdx3F7AU",
+      "startFieldId": "qQzHxsMTIthnC7eVUpmPK",
+      "endTableId": "ibZZZ-VuyMlDwfEbLSuGQ",
+      "endFieldId": "tJjCGVhSqhT92IgO8N-Nu",
+      "fields": [
+        {
+          "startFieldId": "qQzHxsMTIthnC7eVUpmPK",
+          "endFieldId": "tJjCGVhSqhT92IgO8N-Nu"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 10
+    },
+    {
+      "name": "fk_fact_mortgage_scenario_mortgage_scenario_key_fact_market",
+      "startTableId": "Pkek5Kzwz3aP9SinjHQA1",
+      "startFieldId": "xBhEGqBVAG-gc-FBJK6EG",
+      "endTableId": "a8N9jwS3ZHrv1BwHah8Ub",
+      "endFieldId": "r1wRg47oojCq2_0sSybLf",
+      "fields": [
+        {
+          "startFieldId": "xBhEGqBVAG-gc-FBJK6EG",
+          "endFieldId": "r1wRg47oojCq2_0sSybLf"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "one_to_one",
+      "id": 11
+    },
+    {
+      "name": "fk_fact_affordability_property_type_code_dim_property_type",
+      "startTableId": "zWlpaJ9qy38M6euMsHFUh",
+      "startFieldId": "wsqgz7jKlOAZG_MhRmPry",
+      "endTableId": "ibZZZ-VuyMlDwfEbLSuGQ",
+      "endFieldId": "tJjCGVhSqhT92IgO8N-Nu",
+      "fields": [
+        {
+          "startFieldId": "wsqgz7jKlOAZG_MhRmPry",
+          "endFieldId": "tJjCGVhSqhT92IgO8N-Nu"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 12
+    },
+    {
+      "name": "fk_fact_affordability_household_profile_code_dim_household_profile",
+      "startTableId": "zWlpaJ9qy38M6euMsHFUh",
+      "startFieldId": "2Fjpozqhjc2t2xI_6Ozwn",
+      "endTableId": "dI0Q_22mvytKOUAgPlY2t",
+      "endFieldId": "3WACE62JiYl25vFxbBlcx",
+      "fields": [
+        {
+          "startFieldId": "2Fjpozqhjc2t2xI_6Ozwn",
+          "endFieldId": "3WACE62JiYl25vFxbBlcx"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 13
+    },
+    {
+      "name": "fk_fact_affordability_census_tract_geography_key_dim_geography",
+      "startTableId": "zWlpaJ9qy38M6euMsHFUh",
+      "startFieldId": "-1fcqI0KU4Sevr-PhUUe5",
+      "endTableId": "-w68Q_PK2CzzB4DVLwxun",
+      "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX",
+      "fields": [
+        {
+          "startFieldId": "-1fcqI0KU4Sevr-PhUUe5",
+          "endFieldId": "ZHoKPQJ-d8aSTPlfNolYX"
+        }
+      ],
+      "updateConstraint": "No action",
+      "deleteConstraint": "No action",
+      "cardinality": "many_to_one",
+      "id": 14
+    }
+  ],
+  "notes": [
+    {
+      "id": 0,
+      "x": 60.98037790872252,
+      "y": 1131.7950026663993,
+      "title": "note",
+      "content": "Only edges asserted by a dbt test are drawn. Both fact tables inherit their date and geography from fact_market, where the test lives. ",
+      "locked": false,
+      "color": "#fcf7ac",
+      "height": 114,
+      "width": 392.26381641155393
+    }
+  ],
+  "subjectAreas": [],
+  "database": "postgresql",
+  "types": [],
+  "enums": [],
+  "title": "mhi-marts-erd"
+}
