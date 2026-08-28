@@ -65,3 +65,30 @@ desktop.ini
 .DS_Store
 .vscode/
 .idea/
+
+# ---------------------------------------------------------------------------
+# Power BI
+#
+# A Power BI Project (.pbip) splits into a DEFINITION -- tables, relationships,
+# DAX measures, pages, visuals, all plain text -- and a DATA CACHE. Only the
+# definition belongs here. The cache is a full copy of every row loaded in
+# Import mode, and this model loads APCIQ figures, whose licence (page 65 of
+# every edition) forbids reproduction "en tout ou en partie, directement ou
+# indirectement".
+#
+# Microsoft's own default .gitignore for PBIP excludes exactly these two files.
+# Power BI Desktop writes that file ONLY if no .gitignore exists in the folder
+# or in the parent repository -- this repository has one, so Desktop will write
+# nothing and these lines are the only thing standing between the cache and a
+# commit. Verified on learn.microsoft.com, page dated 2026-08-18.
+# ---------------------------------------------------------------------------
+**/.pbi/cache.abf
+**/.pbi/localSettings.json
+
+# A .pbix, unlike a .pbip, carries its data inside the file with no way to
+# separate it, and compressed, so no secret scanner can look in (demonstrated
+# by a failed positive control on 2026-08-22). Ignored by default so that
+# committing one has to be a decision. The exception below is the J2 report,
+# committed knowingly: it holds Bank of Canada rates, which are public.
+*.pbix
+!powerbi/mhi_interest_rates.pbix

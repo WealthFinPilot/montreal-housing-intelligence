@@ -881,3 +881,114 @@ models:
           largest single assumption in the geography.
         data_tests:
           - not_null
+
+  - name: dim_interest_rate_series
+    description: >
+      The three Bank of Canada series this project reads. Declared rather than
+      derived from the fact, so that the relationship test between the two
+      proves something -- and checked against staging, in both directions and
+      including the translation of the booleans into rate_kind, by
+      assert_interest_rate_series_still_match_the_source.sql.
+
+      It exists so that the consumption layer can put the kind of rate on an
+      axis. Staging states it as two booleans never true together, which is the
+      right shape for a test and an unusable shape for a slicer: the policy
+      rate is the combination (false, false), which no reader can guess.
+
+    columns:
+      - name: series_id
+        description: The join key, as the Valet API names the series.
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values: ['V39079', 'FVI_MTG_RATE_5Y_FIX', 'V80691335']
+      - name: rate_kind
+        description: >
+          policy, contracted or posted. The distinction the whole affordability
+          model rests on: a posted rate is advertised and nobody pays it, a
+          contracted rate is signed. They stood 1.84 points apart in 2026 Q2,
+          which moves the required income by about 15 %.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['policy', 'contracted', 'posted']
+      - name: series_label
+        description: >
+          The label the Bank of Canada publishes. Compared against staging by
+          a test -- the source rewords its titles.
+        data_tests:
+          - not_null
+          - unique
+      - name: frequency
+        description: business daily or weekly. Compared against staging.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['business daily', 'weekly']
+      - name: is_mortgage_rate
+        description: >
+          True for the two mortgage series, false for the policy rate. Lets a
+          visual separate the two families without spelling out three ids.
+        data_tests:
+          - not_null
+      - name: sort_order
+        description: Policy rate first, then contracted, then posted.
+        data_tests:
+          - not_null
+          - unique
+
+  - name: fact_interest_rate
+    description: >
+      One row per series per observation date -- the macro context of the
+      market, at the grain it is published.
+
+      Deliberately thin: it adds no arithmetic to staging. It exists so the
+      consumption layer reads marts rather than reaching into staging, and so
+      the aggregation to a quarter stays a measure instead of becoming a
+      column that bakes one choice in.
+
+      rate_percent MUST NEVER BE SUMMED. A rate is intensive; Tuesday plus
+      Wednesday has no referent. Every visual over this table averages, and a
+      weekly series averaged over a quarter is the mean of about 13
+      observations where the daily one is the mean of about 65. That is what
+      the publishers publish, and no chart should imply it away.
+
+      This table does not feed fact_mortgage_scenario and is not derived from
+      it. That table prices a loan at a stated quarter; this one shows the
+      series moving. They are expected to agree in shape.
+
+    columns:
+      - name: interest_rate_key
+        description: series_id and observation date. The grain, stated.
+        data_tests:
+          - not_null
+          - unique
+      - name: series_id
+        description: Which series. Must exist in the declared dimension.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_interest_rate_series')
+                field: series_id
+      - name: observation_date
+        description: >
+          The day the figure refers to. Joins dim_date, the single date table
+          of the model.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: rate_percent
+        description: >
+          Percent per year, as published. Never null: staging drops the days a
+          series published nothing rather than carrying the previous value
+          forward.
+        data_tests:
+          - not_null
