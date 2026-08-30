@@ -192,9 +192,16 @@ that window starts in 2025 Q3. Joined on its edition quarter, filtering
 reader means.
 
 The consequence has to stay visible: with 2026 Q2 selected, a quarterly figure
-and a 12-month figure on the same page describe different spans of time. The
-`Trailing window` measure in [report-design.md](report-design.md) prints the
-real dates, and it belongs on any page showing both.
+and a 12-month figure on the same page describe different spans of time.
+
+**None of the four pages shows both, and that is why no measure guards it.** An
+earlier version of this paragraph pointed at a `Trailing window` measure in
+[report-design.md](report-design.md); it was never written, because no page
+needed it. The table is imported all the same — it carries 341 of the 430 median
+prices the quarterly table withholds, so it is what a fifth page would be built
+on. **The measure is the first thing that page owes**, before its first visual:
+a card printing `MIN ( period_start_date )` and `MAX ( period_end_date )`, so
+the span is on screen rather than in this file.
 
 ### The relationship that is real in the database and absent here
 

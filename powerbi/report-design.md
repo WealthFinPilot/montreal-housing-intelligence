@@ -340,30 +340,187 @@ which is the practice page 2 paid for.
 
 | Element | Field or measure |
 |---|---|
-| Slicer | `dim_date[calendar_year]` |
-| Line | `Rate (mean of period)` by `dim_date[date_key]`, legend `dim_interest_rate_series[rate_kind]` |
+| Slicer | `dim_date[calendar_year]`, multi-select, nothing selected when saving |
 | KPI | `Posted minus contract (points)` |
-| Combo | `Sales (sectors)` as columns by quarter, `Contract rate (mean)` as line |
+| Card | `Rate freshness warning` |
+| Line | `Rate (mean of period)` by `dim_date[date_key]`, **continuous** axis, legend `dim_interest_rate_series[rate_kind]` |
+| Combo | `Sales (sectors)` as columns by `dim_date[quarter_label]`, `Contract rate (mean)` as line — visual filter `Sales (sectors) is not blank` |
 | Card | `Rate grain warning` |
-| Table | `dim_interest_rate_series[series_label]`, `rate_kind`, `frequency`, `what_it_is` |
+| Table — series | `series_label`, `rate_kind`, `frequency`, `Observations`, `First observation`, `Last observation`, `what_it_is` |
+| Table — quarters | `dim_date[quarter_label]`, `Posted rate (mean)`, `Contract rate (mean)`, `Posted minus contract (points)` |
 
-The last table is the page. Three series that all look like "the interest rate"
-on a chart are three different things, and the posted one — the one most
+The series table is the page. Three series that all look like "the interest
+rate" on a chart are three different things, and the posted one — the one most
 reports would have used — stood **1.84 points above** the contracted one in
 2026 Q2, which moves the required income by about 15 %.
 
 **The combo chart mixes a daily/weekly series with a quarterly one.** That is
-section 22 of the brief in one visual. `Rate grain warning` states the number of
-observations behind each average, so the chart cannot imply the weekly series
-was observed as often as the daily one.
+section 22 of the brief in one visual. `Rate grain warning` names each series
+and the number of observations behind its average, so the chart cannot imply the
+weekly series was observed as often as the daily one.
 
-**The three series do not end on the same day, and the last quarter is where it
-shows.** Measured on 2026 Q2: the policy rate has 64 observations spanning the
-whole quarter, the posted rate 13 ending 24 June, the contracted rate only 9
-ending 2 June. The contracted series is published with a lag, so the most recent
-quarterly average rests on nine weeks where the others rest on thirteen. Show
-`first_obs` and `last_obs` per series in the table, and treat the newest point
-of any rate line as provisional rather than as a shorter quarter.
+#### The contracted series stopped publishing on 2026-06-02, and calling that a lag was wrong
+
+**This paragraph replaces one written on 2026-08-27 that explained the gap as a
+publication lag.** That explanation fitted one quarter and no others, and it was
+never measured — the same fault the trailing-12-month finding of J3.5 avoided by
+refusing to explain what the source does not state.
+
+Measured on 2026-08-30, on the loaded table and then against the live Valet API:
+
+| Series | Last observation | Days behind the newest the model holds |
+|---|---|---|
+| Policy (`V39079`) | 2026-08-25 | 1 |
+| Posted (`V80691335`) | 2026-08-26 | 0 |
+| Contracted (`FVI_MTG_RATE_5Y_FIX`) | **2026-06-02** | **85** |
+
+There was no lag before that. Over its whole history the contracted series runs
+at a cadence of **exactly 7 days, minimum gap 7, maximum gap 7, not one gap
+above 7** — 596 observations since 2015-01-06 — and it landed on or near the
+quarter end every quarter through 2026 Q1 (13 observations, last 2026-03-31).
+Then it stops. 2026 Q2 holds 9 of its 13 weeks; **2026 Q3 holds none at all**,
+while the posted series holds 9 and the policy rate 40.
+
+`GET https://www.bankofcanada.ca/valet/observations/FVI_MTG_RATE_5Y_FIX/json?recent=3`
+→ 200, newest observation 2026-06-02, on 2026-08-30. So this is the source, not
+the ingestion: the API answers, the series exists, and it has published nothing
+for twelve weeks. `GET /valet/series/FVI_MTG_RATE_5Y_FIX/json` → 200 returns a
+label and a one-line description and **says nothing about a discontinuation**.
+
+Whether the series is suspended, retired, or merely very late is **`[INCONNU]`**
+and must not be guessed on the page. What is certain is the consequence, and it
+is not confined to page 4: this is the rate `fact_mortgage_scenario` prices
+with. Every quarter it prices today is covered, because APCIQ's newest edition
+is 2026 Q2. **The next APCIQ edition would arrive with no contract rate at all.**
+
+That is why `Rate freshness warning` exists and why it names any series more than
+three weeks behind the rest rather than naming this one. It is a card, not a dbt
+test: a source that stops publishing is a publisher defect, and J3.2 settled that
+a publisher defect earns a verdict on screen, never a build that refuses to run.
+The dbt `freshness` declarations answer a different question — when *we* last
+loaded — and would stay green here. Detecting it automatically belongs to the
+n8n orchestration of J4.3.
+
+#### The KPI reads whatever the slicer holds, and the quarter table is where the headline can be found
+
+`Posted minus contract (points)` has no quarter of its own. Measured on
+2026-08-30, the same card reads three different figures depending on the slicer:
+
+| Slicer | Reads |
+|---|---|
+| nothing selected (2015 → 2026) | 2.11 points |
+| `calendar_year` = 2026 | 1.93 points |
+| 2026 Q2 alone | 1.84 points |
+
+None is wrong and none is the headline. The headline is the third, and a year
+slicer cannot produce it — hence the quarter table, whose 2026 Q2 row carries
+the 1.84 in a place a reader can point at. **A card whose value moves with a
+slicer needs somewhere on the page where the number the text quotes is legible.**
+
+#### The line chart needs a continuous axis, and that is not a cosmetic setting
+
+Checked against learn.microsoft.com on 2026-08-30, page dated 2026-02-17
+(*High-density line sampling in Power BI*):
+
+* the sampling algorithm **is available for line and area charts with a
+  continuous x-axis** and is On by default;
+* a **categorical** axis shows a missing value as a break in the line. Both
+  mortgage series publish once a week against a date dimension that carries
+  every day, so on a categorical axis they would be six gaps in seven — a
+  dotted mess that says nothing about frequency and looks like missing data;
+* **3 500 points is the maximum displayed on most visuals, across all series
+  together.** This chart asks for 4 229, so binning is certain. Binning keeps
+  each bin's minimum and maximum, so peaks and troughs survive;
+* a consequence to recognise rather than debug: **hovering a date can show a
+  tooltip for one series and nothing for another**, because each series is
+  binned independently. Read exact values from the tables, shape from the line;
+* if a data source is too large the algorithm **drops legend series in
+  alphabetical order**. Three series and 4 229 points are far from that, but
+  the order here would be contracted, policy, posted — the posted one falls
+  first, and it is the one the page exists to contrast.
+
+#### Two more things the combo chart does differently
+
+**Its line does not sample.** Same source: *a combo chart uses the same
+strategies as a column chart, and the line in a combo chart does not use the
+high-density algorithm that the line chart uses.* At 29 quarters that costs
+nothing — it is written down so nobody transplants a conclusion from one chart
+to the other.
+
+**Its axis is shorter than the page.** `fact_market` covers 29 quarters,
+2019 Q2 → 2026 Q2; `dim_date` runs from 2015-01-01 because the Bank of Canada
+series do. Without the visual filter, seventeen quarters would carry a rate line
+and no columns. Same treatment as the page 1 slicer: filter the **visual**,
+never narrow `dim_date`, which page 4 is precisely the page that needs wide.
+
+`quarter_label` is written `2015 Q1`, so its alphabetical order is its
+chronological order and it needs no *Sort by column*. That holds for the page 1
+and page 2 axes too.
+
+#### Interactions
+
+Simpler than page 1 — there are no mutually exclusive zones here — but the
+default is still wrong in one direction that matters.
+
+| Source clicked | KPI | Freshness card | Line | Combo | Grain card | Series table | Quarter table |
+|---|---|---|---|---|---|---|---|
+| Year slicer | Filter | — | Filter | Filter | Filter | Filter | Filter |
+| Line | **None** | — | — | **None** | **None** | **None** | **None** |
+| Combo | **None** | — | **None** | — | **None** | **None** | **None** |
+| Series table | **None** | — | **None** | **None** | **None** | — | **None** |
+| Quarter table | **None** | — | **None** | **None** | **None** | **None** | — |
+
+One rule: **the slicer drives, nothing else does.** A click on the line chart
+selects a single day, and a single day propagates through `dim_date` to
+`fact_market`, whose rows are keyed on a quarter *start* date — so it empties
+the combo chart on every day of the quarter but one. A click on a combo column
+selects one quarter and collapses the eleven-year line to it. Neither is a
+question anyone wanted to ask.
+
+`Rate freshness warning` takes no column from the row: it removes `dim_date`
+itself, so it is indifferent to every source and there is nothing to set.
+
+#### The figures this page has to reproduce
+
+Measured against the database on 2026-08-30. Every figure here is a Bank of
+Canada one, so unlike pages 1 to 3 they can all be written down.
+
+With **nothing selected in the year slicer**:
+
+| Measure | Expected |
+|---|---|
+| `Rate observations`, series table | 3 025 policy · 596 contracted · 608 posted |
+| `First rate observation` | 2015-01-01 · 2015-01-06 · 2015-01-07 |
+| `Last rate observation` | 2026-08-25 · **2026-06-02** · 2026-08-26 |
+| `Posted minus contract (points)` | 2.11 |
+| `Rate freshness warning` | fires, naming the contracted series at 2026-06-02 |
+| `Rate grain warning` | fires, naming all three series with the counts above |
+
+With **`calendar_year` = 2026**:
+
+| Measure | Expected |
+|---|---|
+| `Rate observations` | 168 policy · 22 contracted · 34 posted |
+| `Posted minus contract (points)` | 1.93 |
+| Quarter table, 2026 Q1 | posted 6.09 · contracted 4.10 · gap 2.00 · 13 contract observations |
+| Quarter table, **2026 Q2** | posted 6.09 · contracted 4.25 · **gap 1.84** · 9 contract observations |
+| Quarter table, **2026 Q3** | posted 6.09 · contracted **blank** · gap **blank** · 0 contract observations |
+| `Rate freshness warning` | fires, unchanged — the year slicer must not silence it |
+
+**The 2026 Q3 row is the one to check first.** A gap reading 6.09 there instead
+of blank is the unguarded subtraction, and it is the only figure on this page
+that a wrong measure returns *confidently*. Everything else either matches or
+goes blank.
+
+The combo chart must start at **2019 Q2** and end at 2026 Q2 — 29 columns. Thirty
+or more means the visual filter on `Sales (sectors)` is missing and the empty
+quarters of `dim_date` are showing.
+
+`scripts/report_oracle.py` prints all of it under *PAGE 4*; two of its three
+tables there were added on 2026-08-30 with this page. The one element of this
+page it does **not** cover is the combo chart's sales column, which is an APCIQ
+figure: its check is the *PAGE 1 — Sectors minus island* table, the same measure
+read the same way.
 
 ---
 
@@ -414,7 +571,7 @@ four pages. Ordering inside a folder of five or six measures is not worth a
 rename on every visual that will ever be built.
 
 What the folders give without the code: five groups instead of one flat list of
-twenty-six, and a name that reads the same in the model and on the page.
+thirty-six, and a name that reads the same in the model and on the page.
 
 ### 3.2 Index
 
@@ -447,7 +604,11 @@ step with it.
 | Rates | `Contract rate (mean)` | `_Measures` | `Rate (mean of period)`, `dim_interest_rate_series` | Decimal, 2 dec. | 4 |
 | Rates | `Posted rate (mean)` | `_Measures` | `Rate (mean of period)`, `dim_interest_rate_series` | Decimal, 2 dec. | 4 |
 | Rates | `Posted minus contract (points)` | `_Measures` | the two rate means | Decimal, 2 dec. | 4 |
-| Rates | `Rate grain warning` | `_Measures` | `fact_interest_rate` | Text | 4 |
+| Rates | `Rate observations` | `_Measures` | `fact_interest_rate` | Whole number, thousands sep. | 4 |
+| Rates | `First rate observation` | `_Measures` | `fact_interest_rate` | Custom `yyyy-mm-dd` | 4 |
+| Rates | `Last rate observation` | `_Measures` | `fact_interest_rate` | Custom `yyyy-mm-dd` | 4 |
+| Rates | `Rate grain warning` | `_Measures` | `fact_interest_rate`, `dim_interest_rate_series` | Text | 4 |
+| Rates | `Rate freshness warning` | `_Measures` | `fact_interest_rate`, `dim_interest_rate_series` | Text | 4 |
 | First-time buyer | `Sectors priced` | `_Measures` | `fact_affordability` | Whole number | 3 |
 | First-time buyer | `Sectors within reach of this income` | `_Measures` | `fact_affordability`, `Income input` | Whole number | 3 |
 | First-time buyer | `Sectors borderline` | `_Measures` | `fact_affordability`, `Income input` | Whole number | 3 |
@@ -470,8 +631,9 @@ explanation, so build in this order:
 | 3 | `Tracts evaluated`, `Tracts affordable` | `Share of tracts affordable` divides one by the other |
 | 4 | the rest of the Affordability group | independent |
 | 5 | `Rate (mean of period)` | the two rate means wrap it in `CALCULATE` |
-| 6 | `Contract rate (mean)`, `Posted rate (mean)` | `Posted minus contract (points)` subtracts one from the other |
-| 7 | `Posted minus contract (points)`, `Rate grain warning` | independent |
+| 6 | `Contract rate (mean)`, `Posted rate (mean)` | `Posted minus contract (points)` reads both, and tests both for blank |
+| 7 | `Posted minus contract (points)` | needs the two above |
+| 7b | `Rate observations`, `First rate observation`, `Last rate observation`, `Rate grain warning`, `Rate freshness warning` | independent |
 | 8 | **the `Income input` parameter (section 5)** | three First-time buyer measures read `'Income input'[Income input Value]` |
 | 9 | the First-time buyer group, `Verdict for this income` before `Sector bar colour` | the colour measure reads the verdict rather than repeating its comparison |
 | 10 | the three Grain guards | independent; they only need `fact_affordability`, `dim_property_type` and the `Census Tract` table |
@@ -484,7 +646,9 @@ or something is wrong upstream of the visual:
 |---|---|---|
 | Market | `Sectors minus island (sales)` across every quarter | zero everywhere except 2023 Q4, where it is about 0.3 % — reproduced on 2026-08-28 |
 | Affordability | `Share of tracts affordable`, condominium, couple, by quarter | 93.2 % in 2019 Q2 falling to 35.0 % in 2026 Q2, with the break at 2022 Q2 |
-| Rates | `Posted minus contract (points)`, 2026 Q2 | about 1.84 points |
+| Rates | `Posted minus contract (points)`, on the quarter table's 2026 Q2 row | 1.84 points — and 1.93 with the year slicer on 2026, 2.11 with nothing selected. All three are the same measure; see page 4 |
+| Rates | `Rate freshness warning`, no slicer | names the contracted series, last 2026-06-02, against observations held to 2026-08-26 |
+| Rates | `Rate grain warning`, `calendar_year` = 2026 | three series named, the contracted one at 22 observations against 34 posted and 168 policy — measured 2026-08-30 |
 | First-time buyer | page 3 at 95 000 $, condominium, couple, 2026 Q2 | 6 within reach, 1 borderline, 10 out of reach, 1 with no published price — and `Sectors priced` reads 17 |
 
 These are the same figures section 1 and section 2 of this file quote. A visual
@@ -854,22 +1018,138 @@ The third value of `rate_kind` is `policy`, and no measure filters on it: the
 policy rate belongs on the line chart through the legend, not in a KPI that
 would invite subtracting it from a mortgage rate.
 
+Both are written as `CALCULATE ( …, column = value )`, which **replaces** any
+filter already on `rate_kind` rather than intersecting with it. That is
+deliberate: click *posted* in the line chart legend and `Contract rate (mean)`
+still returns the contracted mean, so the KPI keeps comparing the two things it
+exists to compare. The consequence is the rule for the line chart — put
+`Rate (mean of period)` on it and let the legend do the splitting. The two
+kind-specific measures would draw the same two flat lines whatever is selected.
+
 ```dax
 Posted minus contract (points) =
-[Posted rate (mean)] - [Contract rate (mean)]
+VAR Posted = [Posted rate (mean)]
+VAR Contract = [Contract rate (mean)]
+RETURN
+    IF ( NOT ISBLANK ( Posted ) && NOT ISBLANK ( Contract ), Posted - Contract )
+```
+
+⚠️ **The guard is not defensive habit — without it this measure is wrong today,
+on a period the model already holds.** `[Posted rate (mean)] - [Contract rate
+(mean)]` written plainly returns **6.09** for 2026 Q3, where the posted series
+has nine observations and the contracted one has none: DAX reads the blank as
+zero in the subtraction and the card announces a six-point gap that nobody
+measured. That is the **third** appearance of blank-as-zero in this report,
+after `Sectors within reach of this income` on page 1 and the same mechanism on
+page 3. Take it as settled: **in this model, any measure that subtracts or
+compares two measures gets an explicit `ISBLANK` test.**
+
+```dax
+Rate observations =
+COUNTROWS ( fact_interest_rate )
 ```
 
 ```dax
+First rate observation =
+MIN ( fact_interest_rate[observation_date] )
+```
+
+```dax
+Last rate observation =
+MAX ( fact_interest_rate[observation_date] )
+```
+
+The three carry `rate` in their names although the display folder already says
+`Rates`, because unlike every other measure here they would return a plausible
+number beside a market or affordability visual — `COUNTROWS` of a fact table has
+no way of refusing. Long headers in the series table are the cost, and the file
+has already ruled out *Rename for this visual* as a way to pay it.
+
+They answer **within the current selection**, which is what a table under a year
+slicer should do. `Rate freshness warning` below is the one that deliberately
+does not, and the contrast is the point: one reports what you are looking at,
+the other reports the state of the source whatever you are looking at.
+
+```dax
 Rate grain warning =
-VAR Observations = COUNTROWS ( fact_interest_rate )
-VAR Series = DISTINCTCOUNT ( fact_interest_rate[series_id] )
+VAR SeriesInScope = DISTINCTCOUNT ( fact_interest_rate[series_id] )
+VAR PerSeries =
+    CONCATENATEX (
+        dim_interest_rate_series,
+        dim_interest_rate_series[series_label] & " — "
+            & COALESCE ( CALCULATE ( COUNTROWS ( fact_interest_rate ) ), 0 ),
+        "; ",
+        dim_interest_rate_series[sort_order], ASC
+    )
 RETURN
     IF (
-        Series > 1,
-        "Averages over " & Observations & " observations across " & Series
-            & " series of different frequency: the policy rate publishes every business day, both mortgage rates weekly."
+        SeriesInScope > 1,
+        "Averages over observations of unequal frequency. Observations behind each — "
+            & PerSeries
+            & ". The policy rate publishes every business day, both mortgage rates weekly."
     )
 ```
+
+**The first version counted rows and series and reported neither per series**,
+while section 2 of this file claimed it stated "the number of observations
+behind each average". The sentence was right about what the page needs; the
+measure did something else. Iterating `dim_interest_rate_series` directly gives
+the row context every column of the dimension, so `sort_order` is available to
+order the sentence and `CALCULATE ( COUNTROWS ( … ) )` transitions that row into
+a filter on the fact.
+
+`COALESCE ( …, 0 )` is what makes it print `— 0` instead of dropping the series
+from the sentence, and on 2026 Q3 that zero is the whole news. A count that
+disappears when it reaches zero is the same failure as a bar that vanishes when
+APCIQ withholds a median.
+
+```dax
+Rate freshness warning =
+VAR NewestHeld =
+    CALCULATE (
+        MAX ( fact_interest_rate[observation_date] ),
+        ALL ( fact_interest_rate ),
+        ALL ( dim_date ),
+        ALL ( dim_interest_rate_series )
+    )
+VAR PerSeries =
+    ADDCOLUMNS (
+        ALL ( dim_interest_rate_series ),
+        "@Last", CALCULATE ( MAX ( fact_interest_rate[observation_date] ), ALL ( dim_date ) )
+    )
+VAR Stale = FILTER ( PerSeries, NewestHeld - [@Last] > 21 )
+RETURN
+    IF (
+        COUNTROWS ( Stale ) > 0,
+        "Published nothing for more than three weeks — "
+            & CONCATENATEX (
+                Stale,
+                dim_interest_rate_series[series_label] & ", last "
+                    & IF ( ISBLANK ( [@Last] ), "never", FORMAT ( [@Last], "yyyy-mm-dd" ) ),
+                "; ",
+                dim_interest_rate_series[sort_order], ASC
+            )
+            & ". The model holds observations to " & FORMAT ( NewestHeld, "yyyy-mm-dd" )
+            & ". Any rate figure for a later period rests on the series that did publish."
+    )
+```
+
+**Three weeks is a constant, and it is a measured one rather than a chosen one.**
+Over their whole history both weekly series run at a gap of exactly seven days —
+minimum 7, maximum 7, not one gap above 7, across 596 and 608 observations. The
+incident this card was written for sits at **85 days**. Twelve times the largest
+gap the source has ever produced separates the two populations, so **every
+threshold from 8 to 84 days selects the same series**, and the day that gap
+closes the constant deserves the argument it is not getting now. Same shape as
+the 1.5 area ratio of J3.4, which sat in a fossé of three orders of magnitude.
+
+It removes `dim_date` on purpose, twice: once for the reference date and once
+per series. A freshness card that a year slicer could silence is not a control.
+
+`ISBLANK ( [@Last] )` covers a series present in the dimension with no
+observation at all. It cannot happen while the dimension is built from what was
+loaded — which is exactly why it stays: if it ever prints `last never`, the
+model and the ingestion have come apart.
 
 ### E. First-time buyer — on `fact_affordability` and `Income input`
 

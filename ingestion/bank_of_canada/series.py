@@ -82,7 +82,18 @@ SERIES: tuple[Series, ...] = (
             "here, which the posted series is not. It also starts in 2014 and ended on "
             "2026-06-02 at retrieval, so it is weekly like the posted series but its "
             "last observation can trail: rate_observation_count in the mart is what "
-            "makes a thin quarter visible instead of silently averaging two points."
+            "makes a thin quarter visible instead of silently averaging two points. "
+            "AND ON 2026-08-30 IT HAD NOT PUBLISHED SINCE 2026-06-02 -- twelve weeks, "
+            "on a series whose gap between observations is exactly 7 days over its "
+            "whole history, min 7 and max 7, while the other two series were current "
+            "to 2026-08-25 and 2026-08-26. Re-checked live that day: "
+            "/valet/observations/FVI_MTG_RATE_5Y_FIX/json?recent=3 -> 200, newest "
+            "2026-06-02, and /valet/series/FVI_MTG_RATE_5Y_FIX/json -> 200 says "
+            "nothing about a discontinuation. Suspended, retired or very late is "
+            "UNKNOWN and must not be guessed. What is certain: this is the rate "
+            "fact_mortgage_scenario prices with, every quarter it prices today is "
+            "covered because APCIQ stops at 2026 Q2, and the next APCIQ edition would "
+            "arrive with no contract rate at all. Check it before adding an edition."
         ),
     ),
 )

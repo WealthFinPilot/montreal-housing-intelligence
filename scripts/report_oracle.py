@@ -314,6 +314,67 @@ def main() -> int:
 
         table(
             cur,
+            "PAGE 4 -- Is every series still publishing?",
+            "What Rate freshness warning must say, and the reason it exists. Both\n"
+            "weekly series ran at a gap of exactly seven days -- min 7, max 7, no\n"
+            "gap above 7 -- over their whole history, so anything in days_behind\n"
+            "beyond a couple of weeks is the source having stopped, not a rhythm.\n"
+            "Checked against the live Valet API on 2026-08-30: the contracted\n"
+            "series answers 200 and has published nothing since 2026-06-02.\n"
+            "This column is NOT dbt source freshness, which measures when we last\n"
+            "loaded and stays green while a publisher goes silent.",
+            """
+            with last_obs as (
+              select series_id, max(observation_date) as last_obs,
+                     min(observation_date) as first_obs, count(*) as observations
+              from marts.fact_interest_rate group by 1
+            ), cadence as (
+              select series_id, max(gap) as max_gap_days from (
+                select series_id,
+                       observation_date - lag(observation_date)
+                         over (partition by series_id order by observation_date) as gap
+                from marts.fact_interest_rate) g
+              where gap is not null group by 1
+            )
+            select s.rate_kind, s.frequency, l.observations, l.first_obs, l.last_obs,
+                   c.max_gap_days,
+                   (select max(last_obs) from last_obs) - l.last_obs as days_behind
+            from last_obs l
+            join cadence c using (series_id)
+            join marts.dim_interest_rate_series s using (series_id)
+            order by s.sort_order
+            """,
+        )
+
+        table(
+            cur,
+            f"PAGE 4 -- The quarter table for {year}",
+            "The row the headline is read off. A year slicer cannot produce a\n"
+            "single quarter, so the KPI card averages whatever is selected and\n"
+            "this table is where the quoted figure is legible.\n"
+            "A quarter with posted observations and no contracted ones must show\n"
+            "a BLANK gap, never the posted rate on its own: that is the\n"
+            "blank-as-zero fault the DAX measure guards against with ISBLANK.",
+            """
+            select d.quarter_label,
+                   round(avg(r.rate_percent) filter (where s.rate_kind = 'posted'), 3)     as posted,
+                   round(avg(r.rate_percent) filter (where s.rate_kind = 'contracted'), 3) as contracted,
+                   round(avg(r.rate_percent) filter (where s.rate_kind = 'posted'), 3)
+                     - round(avg(r.rate_percent) filter (where s.rate_kind = 'contracted'), 3) as gap_points,
+                   count(*) filter (where s.rate_kind = 'contracted')                      as contract_obs,
+                   count(*) filter (where s.rate_kind = 'posted')                          as posted_obs
+            from marts.fact_interest_rate r
+            join marts.dim_interest_rate_series s using (series_id)
+            join marts.dim_date d on d.date_key = r.observation_date
+            where d.calendar_year = %s
+            group by d.quarter_label
+            order by d.quarter_label
+            """,
+            (year,),
+        )
+
+        table(
+            cur,
             "PAGE 4 -- Posted minus contract, as the report must show it",
             "The single number that justifies the whole rate model. Reading a\n"
             "posted rate as a contracted one moves the required income by about\n"
