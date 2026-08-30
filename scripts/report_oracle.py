@@ -34,6 +34,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
+# Sector names carry accents, and a Windows console defaults to cp1252, which
+# turns them into replacement characters. This is a report meant to be read
+# beside Power BI, so the names have to be readable.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+
 from src.db import connect  # noqa: E402
 
 
@@ -182,23 +188,105 @@ def main() -> int:
 
         table(
             cur,
-            f"PAGE 3 -- Tracts within reach of {args.income:,} $ (condo, couple)",
-            "Compare with the what-if slicer set to the same income. The two must\n"
-            "agree exactly; if the Power BI figure is larger, the measure is\n"
-            "counting tracts with no published price.",
+            f"PAGE 3 -- The table, sector by sector, at {args.income:,} $ (condo, couple)",
+            "Page 3 is at the SECTOR, not the tract: the required income depends on\n"
+            "the price alone, so every tract of a sector returns the same verdict.\n"
+            "verdict applies the 10 % display band, exactly as the DAX measure does\n"
+            "-- a card testing required <= income and a table testing\n"
+            "required * 1.10 <= income disagree in 44 of the 87 quarter x type\n"
+            "slices, by up to five sectors. tracts_priced is coverage only.",
             """
-            select g.name as sector,
-                   count(*) filter (where a.income_required_lower_bound is not null) as tracts_priced,
-                   count(*) filter (where a.income_required_lower_bound <= %s)       as within_reach
-            from marts.fact_affordability a
-            join marts.dim_geography g on g.geography_key = a.apciq_geography_key
-            where a.property_type_code = 'condo'
-              and a.household_profile_code = 'couple'
-              and a.edition_year = %s and a.edition_quarter = %s
-            group by g.name, a.apciq_sector_number
-            order by a.apciq_sector_number
+            with per_sector as (
+              select g.name                              as sector,
+                     a.apciq_sector_number,
+                     avg(a.income_required_lower_bound)   as required,
+                     count(distinct a.ct_uid)             as tracts,
+                     count(distinct a.ct_uid) filter (where a.median_price is not null) as tracts_priced
+              from marts.fact_affordability a
+              join marts.dim_geography g on g.geography_key = a.apciq_geography_key
+              where a.property_type_code = 'condo'
+                and a.household_profile_code = 'couple'
+                and a.edition_year = %s and a.edition_quarter = %s
+              group by g.name, a.apciq_sector_number
+            )
+            select sector,
+                   round(required)                       as income_required,
+                   case when required is null then 'No published price'
+                        when %s >= required * 1.10 then 'Within reach'
+                        when %s >= required        then 'Borderline'
+                        else 'Out of reach' end          as verdict,
+                   tracts_priced,
+                   tracts
+            from per_sector
+            order by apciq_sector_number
             """,
-            (args.income, year, quarter),
+            (year, quarter, args.income, args.income),
+        )
+
+        table(
+            cur,
+            f"PAGE 3 -- KPI row, which must add up to eighteen",
+            "within_reach + borderline + out_of_reach + no_price = 18. Four counts,\n"
+            "one definition each. If Power BI shows a blank rather than a zero in\n"
+            "any of them, the measure is missing its IF ( ISBLANK ( .. ), 0, .. ) --\n"
+            "COUNTROWS and DISTINCTCOUNT both return blank over an empty set, and\n"
+            "no sector is within reach at the low end of the slicer.",
+            """
+            with per_sector as (
+              select a.apciq_sector_number, avg(a.income_required_lower_bound) as required
+              from marts.fact_affordability a
+              where a.property_type_code = 'condo'
+                and a.household_profile_code = 'couple'
+                and a.edition_year = %s and a.edition_quarter = %s
+              group by a.apciq_sector_number
+            )
+            select count(*) filter (where required is not null)                        as sectors_priced,
+                   count(*) filter (where required is not null and %s >= required * 1.10) as within_reach,
+                   count(*) filter (where required is not null and %s >= required
+                                      and %s < required * 1.10)                        as borderline,
+                   count(*) filter (where required is not null and %s < required)      as out_of_reach,
+                   count(*) filter (where required is null)                            as no_price,
+                   count(*)                                                            as sectors_total
+            from per_sector
+            """,
+            (year, quarter, args.income, args.income, args.income, args.income),
+        )
+
+        table(
+            cur,
+            "PAGE 3 -- The shortcut the KPI denominator rests on",
+            "Sectors priced and Tracts priced count a PUBLISHED price\n"
+            "(median_price), while the verdict rests on a DERIVED one\n"
+            "(income_required_lower_bound). That reads as one number only while the\n"
+            "two absences coincide. Every column below must be zero, on every row.\n"
+            "The day a price falls outside the insurable range and carries no\n"
+            "required income, the sector belongs in the denominator and not in the\n"
+            "numerator -- and this is where that shows up first.",
+            """
+            with rows_ as (
+              select property_type_code,
+                     count(*) filter (where median_price is not null
+                                        and income_required_lower_bound is null) as priced_but_no_required,
+                     count(*) filter (where median_price is null
+                                        and income_required_lower_bound is not null) as required_but_no_price
+              from marts.fact_affordability
+              group by property_type_code
+            ), per_sector as (
+              select property_type_code,
+                     count(distinct income_required_lower_bound) as n_required
+              from marts.fact_affordability
+              group by property_type_code, apciq_sector_number, edition_year,
+                       edition_quarter, household_profile_code
+            ), spread as (
+              select property_type_code,
+                     count(*) filter (where n_required > 1) as sectors_with_two_required
+              from per_sector group by property_type_code
+            )
+            select r.property_type_code, r.priced_but_no_required,
+                   r.required_but_no_price, s.sectors_with_two_required
+            from rows_ r join spread s using (property_type_code)
+            order by 1
+            """,
         )
 
         table(

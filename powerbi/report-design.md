@@ -224,23 +224,53 @@ the model is built at the tract at all. Page 3 compares the required income to
 required income depends only on the price, and the price is the sector's, every
 tract of a sector returns the identical verdict.
 
-Measured on 2026 Q2, condominium, couple, at 95 000 $: **every one of the
-eighteen sectors is either all of its tracts or none of them.** A table of 541
-rows here would show 541 copies of eighteen answers and imply a precision that
-does not exist. So the page is built on the sector, and the tract count appears
-only as coverage.
+**This is structural, not an observation about one quarter.** Measured on
+2026-08-30 across the whole table: of the 4 698 combinations of sector ×
+quarter × property type × household profile, **not one holds two different
+required incomes**. The verdict is therefore constant inside a sector by
+construction, whatever the slicers are set to. A table of 541 rows here would
+show 541 copies of eighteen answers and imply a precision that does not exist.
+So the page is built on the sector, and the tract count appears only as
+coverage.
 
 | Element | Field or measure |
 |---|---|
 | What-if slicer | `Income input` (see section 5) |
-| Slicers | property type (single select), quarter |
-| KPI | `Sectors within reach of this income`, out of `Sectors priced` |
-| Bar | `Income required, lower bound (mean)` by `Sector[name]`, with a constant line at `Income input Value` |
-| Table | `Sector[name]`, `Income required, lower bound (mean)`, `Verdict for this income`, `Tracts priced` |
+| Slicers | property type (single select), quarter (single select) |
+| KPI | `Sectors within reach of this income`, `Sectors borderline`, out of `Sectors priced` |
+| Bar | `Income required, lower bound (mean)` by `Sector[name]`, sorted ascending, bars coloured by `Sector bar colour`, tooltips `Tracts priced` and `Verdict for this income`, with an X-axis constant line at `Income input Value` |
+| Table | `Sector[name]`, `Income required, lower bound (mean)`, `Verdict for this income`, `Tracts priced` — sorted the same way as the bar |
 | Card | `Down payment assumption` |
+| Card | `Slice warning` |
 | Card | `Grain warning` |
 
+**No household-profile slicer, unlike page 2 — and that is a measured omission,
+not a forgotten one.** The required income depends on the price, not on who is
+buying: across the 1 566 sector × quarter × property-type combinations, it never
+takes two values across the three profiles. Adding the slicer would put a
+control on the page that changes nothing, which reads as a broken filter. It
+also gives the build a second, independent check: the report shows the same
+counts with no profile filter at all that `report_oracle.py` computes on the
+couple profile alone.
+
+**The bar chart is horizontal, and the bars are sorted by required income
+ascending.** Eighteen sector names do not fit under vertical columns, and the
+question the page asks — where can I buy — is answered by reading from the top.
+The constant line then cuts the list in two: everything left of it is within
+reach. The table repeats that order, so the two visuals never have to be
+mentally re-matched.
+
 Page filter: `Sector[geography_type] is apciq_sector`.
+
+**Both slicers are single select, and that is a correctness setting rather than
+a convenience.** Every figure on this page is an average of the required income,
+and an average answers even when it is averaging three property types or
+twenty-nine quarters together — silently, and with a plausible number. See
+`Slice warning` in section A for what was measured. `Sector[geography_type]`
+only affects the axis: `fact_affordability` keys to the eighteen APCIQ sectors
+and to nothing else — 141 462 rows, 18 geography keys, zero island rows,
+measured 2026-08-30 — so the page filter cannot change a figure, only keep the
+island row of `Sector` off the chart.
 
 **The constant line is the whole page.** A bar chart of required income per
 sector, cut by a horizontal line at the income the user typed, answers "where
@@ -256,6 +286,53 @@ without the count of sectors that had a price at all.
 assumes the legal *minimum* down payment, because that is the only scenario
 `fact_mortgage_scenario` carries. A reader with 50 000 $ saved is not modelled,
 and the card is what stops the page from implying otherwise.
+
+**One interaction is switched off: the bar chart must not filter the three KPI
+cards.** *Format > Edit interactions*, bar selected, **None** on each card; the
+table stays on *Filter*. Everything else keeps its default, because unlike page
+1 every visual here reads one table at one grain and no click can produce an
+empty intersection. The exception matters because clicking a single sector turns
+"6 of 17" into "0 of 1", which reads as *no sector is within reach* when the
+reader has merely selected one that is not. The KPI row is also where the four
+counts are checked against eighteen — it has to stay the summary of the page
+rather than follow the click.
+
+**The KPI row has to add up to eighteen, and that is the check to run first.**
+`Sectors within reach of this income` + `Sectors borderline` + the rows the
+table reads *Out of reach* + the rows it reads *No published price* = 18. Four
+counts, one page, one definition of each. It is the cheapest way to catch the
+fault this page was specified with: a card and a table applying two different
+thresholds to the same comparison.
+
+#### The figures this page has to reproduce
+
+Measured against the database on 2026-08-30. Property type **Condominium**,
+profile **Couple, two persons**, quarter **2026 Q2**, income **95 000 $**:
+
+| Measure | Expected |
+|---|---|
+| `Sectors priced` | 17 of 18 |
+| `Sectors within reach of this income` | 6 |
+| `Sectors borderline` | 1 |
+| Sectors reading *Out of reach* in the table | 10 |
+| Sectors reading *No published price* | 1 (sector 17, Montréal-Nord) |
+| `Tracts priced`, summed over the table | 524 rows for 523 distinct tracts |
+| `Income required, lower bound (mean)` | the figure `report_oracle.py` prints — not reproduced here |
+
+Move the slicer and the page has to keep answering. At **30 000 $** and at
+**60 000 $** every card reads a firm **0**, never a blank; at **150 000 $**,
+16 of the 17 priced sectors are within reach, and at the slicer's ceiling of
+**300 000 $**, all 17. A page that only ever gets checked at its default income
+has not been checked.
+
+**Built on 2026-08-30, and every figure above was reproduced** — the KPI row,
+the four verdict counts adding to eighteen, Montréal-Nord with no bar and
+`Tracts priced` at zero, and the cards holding at zero at the low end of the
+slicer. Unlike page 2, nothing had to be corrected during the build: the three
+faults this page was specified with — a card and a table on two thresholds, two
+measures returning blank instead of zero, and no guard on the property type or
+the quarter — were found by checking the measures against the database first,
+which is the practice page 2 paid for.
 
 ### Page 4 — Macro
 
@@ -349,6 +426,7 @@ step with it.
 |---|---|---|---|---|---|
 | Guards | `Grain warning` | `_Measures` | filter state of `Census Tract` | Text | 2, 3 |
 | Guards | `Income vintage warning` | `_Measures` | `fact_affordability` | Text | 2 |
+| Guards | `Slice warning` | `_Measures` | `dim_property_type`, `fact_affordability` | Text | 2, 3 |
 | Market | `Sales (island, as published)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1 |
 | Market | `Sales (sectors)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1, 4 |
 | Market | `Sectors minus island (sales)` | `_Measures` | the two `Sales` measures | Whole number | 1 |
@@ -372,8 +450,10 @@ step with it.
 | Rates | `Rate grain warning` | `_Measures` | `fact_interest_rate` | Text | 4 |
 | First-time buyer | `Sectors priced` | `_Measures` | `fact_affordability` | Whole number | 3 |
 | First-time buyer | `Sectors within reach of this income` | `_Measures` | `fact_affordability`, `Income input` | Whole number | 3 |
+| First-time buyer | `Sectors borderline` | `_Measures` | `fact_affordability`, `Income input` | Whole number | 3 |
 | First-time buyer | `Tracts priced` | `_Measures` | `fact_affordability` | Whole number | 3 |
 | First-time buyer | `Verdict for this income` | `_Measures` | `fact_affordability`, `Income input` | Text | 3 |
+| First-time buyer | `Sector bar colour` | `_Measures` | `Verdict for this income` | Text | 3 |
 | First-time buyer | `Down payment assumption` | `_Measures` | nothing — a constant string | Text | 3 |
 | — | `Income input Value` | `Income input` | the slicer selection | Currency, 0 dec. | 3 |
 
@@ -392,9 +472,9 @@ explanation, so build in this order:
 | 5 | `Rate (mean of period)` | the two rate means wrap it in `CALCULATE` |
 | 6 | `Contract rate (mean)`, `Posted rate (mean)` | `Posted minus contract (points)` subtracts one from the other |
 | 7 | `Posted minus contract (points)`, `Rate grain warning` | independent |
-| 8 | **the `Income input` parameter (section 5)** | two First-time buyer measures read `'Income input'[Income input Value]` |
-| 9 | the First-time buyer group | — |
-| 10 | the two Grain guards | independent; they only need `fact_affordability` and the `Census Tract` table |
+| 8 | **the `Income input` parameter (section 5)** | three First-time buyer measures read `'Income input'[Income input Value]` |
+| 9 | the First-time buyer group, `Verdict for this income` before `Sector bar colour` | the colour measure reads the verdict rather than repeating its comparison |
+| 10 | the three Grain guards | independent; they only need `fact_affordability`, `dim_property_type` and the `Census Tract` table |
 
 **Build a group, then build its page, then check the number.** Each group has a
 figure already measured against the database, and the report has to reproduce it
@@ -405,7 +485,7 @@ or something is wrong upstream of the visual:
 | Market | `Sectors minus island (sales)` across every quarter | zero everywhere except 2023 Q4, where it is about 0.3 % — reproduced on 2026-08-28 |
 | Affordability | `Share of tracts affordable`, condominium, couple, by quarter | 93.2 % in 2019 Q2 falling to 35.0 % in 2026 Q2, with the break at 2022 Q2 |
 | Rates | `Posted minus contract (points)`, 2026 Q2 | about 1.84 points |
-| First-time buyer | page 3 at 95 000 $, condominium, 2026 Q2 | each of the eighteen sectors is all of its tracts or none |
+| First-time buyer | page 3 at 95 000 $, condominium, couple, 2026 Q2 | 6 within reach, 1 borderline, 10 out of reach, 1 with no published price — and `Sectors priced` reads 17 |
 
 These are the same figures section 1 and section 2 of this file quote. A visual
 that disagrees with them is not a new finding — it is a filter in the wrong
@@ -457,6 +537,36 @@ outlive the next census.
 value only when one distinct value survives; twenty-nine quarters carry eight
 different gaps. Same mechanism as the page 1 cards — the quarter slicer is what
 makes the card speak.
+
+```dax
+Slice warning =
+VAR Types = COUNTROWS ( VALUES ( dim_property_type[name_en] ) )
+VAR Quarters = COUNTROWS ( VALUES ( fact_affordability[edition_label] ) )
+RETURN
+    IF (
+        Types > 1 || Quarters > 1,
+        "Averaged over " & Types & " property type(s) and " & Quarters & " quarter(s). "
+            & "Every figure here assumes one price: select a single property type and a single quarter."
+    )
+```
+
+**The third guard, added on 2026-08-30, and the one that guards a page that
+looks right.** A required income averaged over several property types or several
+quarters raises nothing at all — no blank, no error, no empty visual. It just
+answers a different question. Measured on 2026 Q2, condominium, couple:
+releasing the property-type filter raises the mean required income by **49 %**
+and drops the sectors within reach from **7 to 2**; releasing the quarter filter
+instead takes them from **7 to 14**. Both are plausible-looking pages.
+
+It is worse than the page 1 mechanism, not milder. There, a median over more
+than one row returns blank and the card says `--`, which is a visible refusal to
+answer. Here the average answers, and the answer is a mixture. `Sectors priced`
+even climbs from 17 to 18, because Montréal-Nord has a price in *some* type or
+*some* quarter — so the KPI's own denominator moves to cover the mixture up.
+
+It reads the quarter off `fact_affordability[edition_label]` rather than off
+`dim_date`, so it reports what actually reached the fact table after the filter
+propagated, not what the slicer looks like it is doing.
 
 ### B. Market — on `fact_market`
 
@@ -765,23 +875,63 @@ RETURN
 
 ```dax
 Sectors priced =
-CALCULATE (
-    DISTINCTCOUNT ( fact_affordability[apciq_sector_number] ),
-    NOT ISBLANK ( fact_affordability[income_required_lower_bound] )
-)
+VAR Priced =
+    CALCULATE (
+        DISTINCTCOUNT ( fact_affordability[apciq_sector_number] ),
+        NOT ISBLANK ( fact_affordability[median_price] )
+    )
+RETURN IF ( ISBLANK ( Priced ), 0, Priced )
 ```
+
+```dax
+Tracts priced =
+VAR Priced =
+    CALCULATE (
+        DISTINCTCOUNT ( fact_affordability[ct_uid] ),
+        NOT ISBLANK ( fact_affordability[median_price] )
+    )
+RETURN IF ( ISBLANK ( Priced ), 0, Priced )
+```
+
+**Both count a published price, not a derived one**, and that is deliberate:
+`median_price` is what APCIQ printed, `income_required_lower_bound` is what this
+project computed from it. A denominator built on the project's own arithmetic
+would move if the mortgage seeds moved.
+
+The shortcut it allows was measured on 2026-08-30 rather than assumed: across
+all 141 462 rows and all three property types, **there is not one row where a
+median price is present and a required income is missing, nor the reverse**. So
+the two absences coincide today, and the KPI reads "6 of 17" without a caveat.
+`report_oracle.py` recomputes that agreement on every run — the day a price sits
+outside the insurable range and carries no required income, the sector belongs
+in the denominator and not in the numerator, and the oracle is what will say so.
 
 ```dax
 Sectors within reach of this income =
 VAR Income = 'Income input'[Income input Value]
-RETURN
+VAR Reached =
     COUNTROWS (
         FILTER (
             VALUES ( fact_affordability[apciq_sector_number] ),
             VAR Required = CALCULATE ( AVERAGE ( fact_affordability[income_required_lower_bound] ) )
-            RETURN NOT ISBLANK ( Required ) && Required <= Income
+            RETURN NOT ISBLANK ( Required ) && Required * 1.10 <= Income
         )
     )
+RETURN IF ( ISBLANK ( Reached ), 0, Reached )
+```
+
+```dax
+Sectors borderline =
+VAR Income = 'Income input'[Income input Value]
+VAR Band =
+    COUNTROWS (
+        FILTER (
+            VALUES ( fact_affordability[apciq_sector_number] ),
+            VAR Required = CALCULATE ( AVERAGE ( fact_affordability[income_required_lower_bound] ) )
+            RETURN NOT ISBLANK ( Required ) && Required <= Income && Required * 1.10 > Income
+        )
+    )
+RETURN IF ( ISBLANK ( Band ), 0, Band )
 ```
 
 **The `NOT ISBLANK` is not defensive padding — without it the measure is
@@ -790,20 +940,32 @@ returns `BLANK()`; DAX coerces a blank to `0` in a numeric comparison, and
 `0 <= Income` is true for every income the slicer can produce. Montréal-Nord,
 which publishes no condominium median in 2026 Q2, would have been counted as
 *within reach* — the one verdict the data cannot support. The test on the
-sector's own price is what keeps `41` consistent with `Sectors priced`.
+sector's own price is what keeps the KPI consistent with `Sectors priced`.
+
+**The `× 1.10` was added on 2026-08-30, because the first version made the card
+disagree with the table underneath it.** The card tested `Required <= Income`
+and the verdict column tested `Income >= Required * 1.10`: on 2026 Q2,
+condominium, at 95 000 $, the card said seven and the table showed six rows
+reading *Within reach*. That is not a rounding difference and not particular to
+one quarter — measured across the 87 quarter × property-type slices, **the two
+definitions disagree in 44 of them, by as much as five sectors**. One page
+cannot carry two meanings of "within reach", so the band that the verdict
+already applied is now the only definition, and `Sectors borderline` puts the
+sectors between the two thresholds on the KPI row rather than leaving them to be
+inferred from a subtraction. The four counts add up to the eighteen sectors.
+
+**The `IF ( ISBLANK ( … ), 0, … )` is the page-2 fault, caught before drawing.**
+`COUNTROWS` over an empty table and `DISTINCTCOUNT` over an empty set both
+return `BLANK()`, so a measured zero and a missing figure arrive at the visual
+as the same thing. It is reachable by the first gesture a reader makes: measured
+on 2026 Q2 condominium, **no sector is within reach at 30 000 $ or at 60 000 $**,
+which is most of the left half of the slicer. Without the guard the card goes
+empty there and reads as broken, when the answer is a firm zero.
 
 The `FILTER` runs over the eighteen sector numbers, not over 141 462 fact rows.
 Iterating the fact table would give the same answer at a cost no page should
 pay, and would count a sector once per tract if the measure ever landed in a
 visual without a sector on the axis.
-
-```dax
-Tracts priced =
-CALCULATE (
-    DISTINCTCOUNT ( fact_affordability[ct_uid] ),
-    NOT ISBLANK ( fact_affordability[median_price] )
-)
-```
 
 ```dax
 Verdict for this income =
@@ -826,6 +988,36 @@ would charge them. Calling that band "Borderline" rather than "Within reach" is
 an honest reading of a number the model states is incomplete. It is an
 assumption, and `methodology.md` must name it as one.
 
+It is also the one arbitrary constant on this page, so it is written in exactly
+two measures — this one and `Sectors within reach of this income` — and nowhere
+else. Changing the band means editing both, and the KPI row is what makes a
+half-done change visible immediately: the four counts stop adding up to
+eighteen.
+
+```dax
+Sector bar colour =
+SWITCH (
+    [Verdict for this income],
+    "Within reach", "#17527A",
+    "Borderline",   "#5B9BC4",
+    "Out of reach", "#C7CCD1",
+    "#E8EAEC"
+)
+```
+
+**It reads the verdict rather than repeating its comparison, and that is the
+whole point of the measure.** Conditional formatting on this bar was first asked
+for as *blue at or below the income, grey above* — a threshold of 100 %, which
+would have coloured seven bars blue beside a card reading six. The band of 10 %
+would then have been written in three measures instead of two, with nothing
+keeping them in step. Reading `[Verdict for this income]` makes the colour
+incapable of disagreeing with the word printed in the table beside it.
+
+Bound through *Format visual > Bars > Color > `fx` > Format style = Field
+value*. Conditional formatting produces **no legend**, so `Verdict for this
+income` also goes in the visual's tooltips: the table and the tooltip are the
+only two places the three shades are named.
+
 ```dax
 Down payment assumption =
 "Assumes the legal minimum down payment for this price, insured. "
@@ -844,6 +1036,14 @@ here: **do not use a red-green scale for the affordability verdict** — it read
 as good/bad on a figure that is a floor, not a judgement — and **keep one colour
 per `rate_kind`** across every page, so posted and contracted are never the same
 colour in two charts.
+
+The page-3 verdict scale, chosen on 2026-08-30 and carried by `Sector bar
+colour`: `#17527A` within reach, `#5B9BC4` borderline, `#C7CCD1` out of reach,
+`#E8EAEC` no published price. One hue plus a neutral, and **decreasing
+luminosity in verdict order**, so the ranking survives greyscale printing and
+colour-blind vision without relying on hue at all. Blue-to-grey rather than
+green-to-red because the comparison is a floor against a typed income, not a
+pass and a fail.
 
 ---
 
@@ -878,9 +1078,50 @@ called `Income input Value`. `Sectors within reach of this income` and
 value comes from the slicer rather than from the model.
 
 ⚠️ **That table does not exist until this section has been done.** Create the
-parameter *before* typing those two measures — DAX refuses both until it can
-resolve `'Income input'`. If you name the parameter something else, both
-measures must be edited to match.
+parameter *before* typing those three measures — DAX refuses all of them until
+it can resolve `'Income input'`. If you name the parameter something else, all
+three must be edited to match.
+
+**The `Default` field of the dialog becomes the second argument of the generated
+measure.** Verified in Desktop on 2026-08-30: with `Default` set to 95000,
+Power BI writes
+
+```dax
+Income input Value = SELECTEDVALUE ( 'Income input'[Income input], 95000 )
+```
+
+That second argument is what the whole page falls back to whenever the slicer is
+not on a single value — which happens the moment it is switched from *Single
+value* to *Between*, a two-click gesture in the visual's header. Left at `0`,
+every sector would read *Out of reach* and nothing on the page would say why:
+the model would have answered exactly the question it was asked, about a
+household earning nothing. Filled in, a mis-set slicer degrades to the
+documented scenario instead of to a false one.
+
+⚠️ **Read the generated formula rather than trusting the dialog.**
+learn.microsoft.com's page on what-if parameters, updated 2026-05-21, lists
+Name, Data type, Minimum, Maximum and Increment and shows no **Default** field
+at all — the field exists in Desktop, and the page is behind. Which is the
+reason to check the formula: the article that would tell you what was generated
+is the one that did not know the field was there.
+
+**A constant line's `Value` can be bound to a measure through its `fx` button,
+and page 3 does exactly that.** Verified in Desktop on 2026-08-30: Analytics
+pane > X-axis constant line > `fx` beside **Value** > *Field value* >
+`Income input Value`. The line then follows the slicer.
+
+learn.microsoft.com's Analytics-pane page, updated 2026-07-23, does not say so
+either way — it documents which visuals accept a constant line, and states that
+Min / Max / Average / Median lines take their value from *a measure already in
+the visual*, which would have been the fallback here: drop `Income input Value`
+into the field well and put an **Average** line on it, at the cost of a second
+bar per sector. That fallback was not needed.
+
+⚠️ **Never leave a typed constant in that field.** A line frozen at 95 000 $
+while the slicer says 140 000 $ is the worst outcome available on this page:
+every bar is right, the line is neat, and the verdict a reader takes from it is
+false. Dragging the slicer and watching the line move is the check, and it is in
+the acceptance list for page 3.
 
 ---
 
