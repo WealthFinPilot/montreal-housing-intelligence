@@ -12,7 +12,16 @@ finished tables:
 
 > For a two-person couple looking at a condominium, the share of island census
 > tracts whose median household income reaches the required income falls from
-> **93.2 % in 2019 Q2 to 34.9 % in 2026 Q2**.
+> **93.2 % in 2019 Q2 to 35.0 % in 2026 Q2**.
+
+⚠️ **That closing figure read 34.9 % until 2026-08-29, and the correction is
+worth keeping rather than silently applying.** The two ends of the sentence had
+been measured two different ways: 93.2 % counts distinct census tracts
+(494 / 530), 34.9 % counted fact rows (179 / 513). They differ because
+`4620511.02` is genuinely shared between sectors 2 and 5 and therefore holds two
+rows — the one shared tract of J3.4. `Tracts evaluated` and `Tracts affordable`
+both use `DISTINCTCOUNT`, so the report says **179 / 512 = 35.0 %**, and a page
+showing 34.9 % would mean a measure counting rows instead of tracts.
 
 The fall is not smooth, and the report should not smooth it. It is gradual
 until 2022 Q1, drops by sixteen points in a single quarter — 2022 Q2 — keeps
@@ -136,13 +145,70 @@ per visual — the slicer carries a visual filter
 | KPI | `Share of tracts affordable`, `Tracts evaluated`, `Income required, lower bound (mean)` |
 | Line | `Share of tracts affordable` by `dim_date[quarter_label]` — **the finding** |
 | Bar | `Share of tracts affordable` by `Sector[name]` |
-| Table | `Census Tract[name]`, `Price to income (median)`, `Income required, lower bound (mean)`, `Verdict` |
+| Table | `Sector[name]`, `Census Tract[name]`, `Household income (2020 census)`, `Income required, lower bound (mean)`, `Income shortfall (mean)`, `Price to income (median)`, `Verdict` — sorted by shortfall ascending |
 | Card | `Income vintage warning` |
 | Card | `Grain warning` |
 
 `Grain warning` prints only when a census tract is filtering, which is exactly
 when a market measure on the same page would be repeating a sector total once
 per tract. Put it in the title of any visual that mixes the two grains.
+
+**This page carries no geography filter, and page 1 carried one on every
+visual.** The difference is not an oversight. `fact_affordability` has no island
+row — measured on 2026-08-29, its 141 462 rows key to eighteen sectors and
+nothing else — so the two zones that made page 1 exclude itself do not exist
+here. Every visual reads the same 542 tract rows, and the sector bar simply
+groups them.
+
+**The one thing that follows from it: interactions can stay on their defaults.**
+Clicking a sector in the bar filters the tract table to that sector's tracts,
+which is the gesture a reader expects. The only interaction to set by hand is
+the line chart, which should drive nothing — its axis is the quarter the slicer
+already governs, exactly as on page 1.
+
+**A sector can be absent from the bar, and an absent bar is not a zero.** On
+2026 Q2, condominium, sector 17 (Montréal-Nord) has no published median, so all
+eighteen of its tracts are unevaluable and the sector has no bar at all. Put
+`Tracts evaluated` in the bar's tooltip; a share of nothing and a share of zero
+are different statements and the chart cannot tell them apart on its own.
+
+**`Income required, lower bound (mean)` does not move when the profile slicer
+moves, and that is correct.** The required income depends on the price, not on
+who is buying: measured on 2026 Q2 condominium, it holds the same value across
+all three profiles to the dollar. (The amount is not written here -- it derives
+from an APCIQ median. `scripts/report_oracle.py` prints it.) Only the comparison to what households earn is profile-dependent.
+Say so in the card's subtitle, otherwise the flat number reads as a broken
+slicer.
+
+**Its base is not the KPI beside it either.** The mean is taken over the 524
+rows that carry a required income, while `Tracts evaluated` counts the 512
+tracts that also carry an income to compare it with. Two honest denominators on
+one row of cards; the subtitle is where that gets stated, not hidden.
+
+#### The figures this page has to reproduce
+
+Measured against the database on 2026-08-29. Property type **Condominium**,
+profile **Couple, two persons**, quarter **2026 Q2**:
+
+| Measure | Expected |
+|---|---|
+| `Tracts evaluated` | 512 |
+| `Tracts affordable` | 179 |
+| `Share of tracts affordable` | 35.0 % |
+| `Income required, lower bound (mean)` | the figure `report_oracle.py` prints -- not reproduced here |
+| `Price to income (median)` | the figure `report_oracle.py` prints -- not reproduced here |
+| Sectors with at least one evaluable tract | 17 of 18 |
+
+And on the line, across every quarter at the same property type and profile:
+93.2 % at 2019 Q2, **70.3 % at 2022 Q1 falling to 54.7 % at 2022 Q2** — the
+break the page exists to show — a floor of 29.7 % at 2023 Q4, then sideways to
+35.0 % at 2026 Q2.
+
+**Switch the profile to One person and the page reads 1 tract out of 512.** That
+is the data, not a filter fault: a single-person household at the 2020 median
+income clears the required income in exactly one census tract of the island.
+Plex and single-family return 0 and 2 for the couple. A page that only ever
+gets checked on its most favourable combination has not been checked.
 
 ### Page 3 — First-time buyer
 
@@ -295,7 +361,9 @@ step with it.
 | Affordability | `Tracts affordable` | `_Measures` | `fact_affordability` | Whole number | 2 |
 | Affordability | `Share of tracts affordable` | `_Measures` | the two `Tracts` measures | Percentage, 1 dec. | 2 |
 | Affordability | `Income required, lower bound (mean)` | `_Measures` | `fact_affordability` | Currency, 0 dec., thousands sep. | 2, 3 |
-| Affordability | `Price to income (median)` | `_Measures` | `fact_affordability` | Decimal, 1 dec. | 2 |
+| Affordability | `Household income (2020 census)` | `_Measures` | `fact_affordability` | Currency, 0 dec., thousands sep. | 2 |
+| Affordability | `Income shortfall (mean)` | `_Measures` | `fact_affordability` | Currency, 0 dec., thousands sep. | 2 |
+| Affordability | `Price to income (median)` | `_Measures` | `fact_affordability` | Custom `0.0"×"` — **never a currency** | 2 |
 | Affordability | `Verdict` | `_Measures` | `fact_affordability` | Text | 2 |
 | Rates | `Rate (mean of period)` | `_Measures` | `fact_interest_rate` | Decimal, 2 dec. | 4 |
 | Rates | `Contract rate (mean)` | `_Measures` | `Rate (mean of period)`, `dim_interest_rate_series` | Decimal, 2 dec. | 4 |
@@ -335,7 +403,7 @@ or something is wrong upstream of the visual:
 | After group | Check | Expected |
 |---|---|---|
 | Market | `Sectors minus island (sales)` across every quarter | zero everywhere except 2023 Q4, where it is about 0.3 % — reproduced on 2026-08-28 |
-| Affordability | `Share of tracts affordable`, condominium, couple, by quarter | 93.2 % in 2019 Q2 falling to 34.9 % in 2026 Q2 |
+| Affordability | `Share of tracts affordable`, condominium, couple, by quarter | 93.2 % in 2019 Q2 falling to 35.0 % in 2026 Q2, with the break at 2022 Q2 |
 | Rates | `Posted minus contract (points)`, 2026 Q2 | about 1.84 points |
 | First-time buyer | page 3 at 95 000 $, condominium, 2026 Q2 | each of the eighteen sectors is all of its tracts or none |
 
@@ -365,13 +433,30 @@ IF (
 ```dax
 Income vintage warning =
 VAR Gap = SELECTEDVALUE ( fact_affordability[price_year_minus_income_year] )
+VAR IncomeYear = SELECTEDVALUE ( fact_affordability[income_year] )
+VAR Preamble = "Income is the " & IncomeYear & " census, unindexed. This price is "
 RETURN
-    IF (
-        NOT ISBLANK ( Gap ),
-        "Income is the 2020 census, unindexed. This price is "
-            & Gap & " year(s) later."
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Gap ), BLANK (),
+        Gap = 0, Preamble & "from the same year.",
+        Gap < 0, Preamble & -Gap & " year(s) earlier.",
+        Preamble & Gap & " year(s) later."
     )
 ```
+
+**The first version said "later" for every quarter, and for 2019 that was
+wrong.** `price_year_minus_income_year` runs from **-1 to 6** — measured on
+2026-08-29 across the whole table, on a single `income_year`, 2020. The census
+income is *newer* than the price for the four quarters of 2019, and the card
+would have printed "this price is -1 year(s) later". Reading the year off the
+column rather than typing `2020` into the string also means the sentence cannot
+outlive the next census.
+
+⚠️ **The card is blank without a quarter selected.** `SELECTEDVALUE` returns the
+value only when one distinct value survives; twenty-nine quarters carry eight
+different gaps. Same mechanism as the page 1 cards — the quarter slicer is what
+makes the card speak.
 
 ### B. Market — on `fact_market`
 
@@ -489,16 +574,41 @@ it is the denominator of `Share of tracts affordable`.
 
 ```dax
 Tracts affordable =
-CALCULATE (
-    DISTINCTCOUNT ( fact_affordability[ct_uid] ),
-    fact_affordability[meets_income_requirement] = TRUE ()
-)
+VAR Affordable =
+    CALCULATE (
+        DISTINCTCOUNT ( fact_affordability[ct_uid] ),
+        fact_affordability[meets_income_requirement] = TRUE ()
+    )
+RETURN
+    IF ( NOT ISBLANK ( [Tracts evaluated] ), Affordable + 0 )
 ```
 
 ```dax
 Share of tracts affordable =
-DIVIDE ( [Tracts affordable], [Tracts evaluated] )
+VAR Evaluated = [Tracts evaluated]
+RETURN
+    IF ( NOT ISBLANK ( Evaluated ), DIVIDE ( [Tracts affordable], Evaluated ) )
 ```
+
+**Both were one line until 2026-08-29, and both made a measured zero
+disappear.** `DISTINCTCOUNT` returns `BLANK()` over an empty set, and DAX
+divides a blank into a blank rather than into zero — so a sector where every
+tract was evaluated and none reached the threshold dropped out of the bar chart
+entirely, indistinguishable from Montréal-Nord, which has no published price at
+all. The guard turns on `Tracts evaluated`, which is the only measure that knows
+whether the question could be asked: **evaluable and none affordable is a zero,
+not evaluable is nothing.** Same distinction the raw layer keeps between APCIQ's
+`-`, `**` and an empty cell.
+
+Two selections show the cost, both measured on 2026-08-29. Condominium, one
+person, 2025 Q4: **one bar instead of seventeen**, sixteen of which belong at
+zero. Plex, couple, 2026 Q2: **an empty chart instead of nine bars at zero**,
+which reads as "nothing was measured" when nine sectors were.
+
+**It only shows on an unfavourable selection.** On the default page — condominium,
+couple — every priced sector has at least one affordable tract, so the fault is
+invisible. It was found by running the check on One person, which is the whole
+reason that step is in the recipe.
 
 **Always show `Tracts evaluated` beside it.** The denominator moves:
 condominium is evaluable on 95 % of rows, plex on 60 %, because APCIQ withholds
@@ -521,17 +631,87 @@ Price to income (median) =
 MEDIAN ( fact_affordability[price_to_income_ratio] )
 ```
 
+⚠️ **Format it `0.0"×"`, so it always carries the multiplier sign and never appears bare.** The column is
+`round(median_price / household_income, 3)` — a multiple of **annual** income,
+carrying no unit at all. A bare number beside a currency card was read as a
+dollar amount on 2026-08-29, and the reading is a reasonable one: every other
+number on the page is money. The multiplier sign is what makes the misreading
+impossible, and it costs one custom format string.
+
+Name the table column *Price to income (× annual income)* while you are there.
+The ratio is the one figure on this page a reader can compare to something
+outside the report — three to four times income was the conventional threshold —
+and it says more than the verdict does, because it does not depend on any
+lending rule.
+
+```dax
+Household income (2020 census) =
+VAR Tracts = DISTINCTCOUNT ( fact_affordability[ct_uid] )
+RETURN
+    IF ( Tracts = 1, MAX ( fact_affordability[household_income] ) )
+```
+
+```dax
+Income shortfall (mean) =
+AVERAGE ( fact_affordability[income_shortfall] )
+```
+
+**The table showed a verdict and one side of the comparison, and that was the
+gap.** `Verdict` printed "Out of reach", `Income required` said against what,
+and the income that lost the comparison appeared nowhere — so nothing on the
+page could be checked, and the distance was invisible. These two put the
+observation back beside the derivation: `household_income` is a Statistics
+Canada figure, while the required income rests on three stacked assumptions
+(minimum down payment, qualifying rate at contract + 2 points, 39 % GDS).
+
+**The `IF` is verrou n° 1 of J4, enforced in DAX.** At one census tract there is
+one income and the measure returns it; above that, aggregating forty tract
+medians into a sector income is wrong whether or not it is weighted — the reason
+the whole model sits at the tract. So it goes blank above a single tract, like
+`Median price` on page 1, and the table's total row is correctly empty.
+
+**The year is in the name deliberately.** With `Income input` (a what-if
+hypothesis) and `income_required_lower_bound` (a derivation) already in the
+model, a measure called plain "Household income" would be the third revenue-ish
+field in a model whose entire purpose is to keep observed, derived and assumed
+apart.
+
+⚠️ **These two columns do not share a licence, and that matters at J4.5.**
+`Household income (2020 census)` is Statistics Canada, redistributable
+explicitly. Everything else in this table derives from an APCIQ median. If the
+public route ends up being the zero-APCIQ fallback, the observed column stays
+and the derived ones go — a page carrying both degrades into something that
+still says something.
+
 ```dax
 Verdict =
 VAR Meets = SELECTEDVALUE ( fact_affordability[meets_income_requirement] )
+VAR HasPrice = NOT ISBLANK ( SELECTEDVALUE ( fact_affordability[median_price] ) )
+VAR HasIncome = NOT ISBLANK ( SELECTEDVALUE ( fact_affordability[household_income] ) )
 RETURN
     SWITCH (
         TRUE (),
-        ISBLANK ( Meets ), "No published price",
-        Meets, "Within reach",
-        "Out of reach"
+        NOT ISBLANK ( Meets ) && Meets, "Within reach",
+        NOT ISBLANK ( Meets ), "Out of reach",
+        NOT HasPrice, "No published price",
+        NOT HasIncome, "No published income",
+        "Not evaluated"
     )
 ```
+
+**Two different absences, and the first version called both of them a missing
+price.** Measured on 2026-08-29, 2026 Q2, condominium, couple: of 542 rows,
+513 are evaluated, **18 have no APCIQ price** — every tract of sector 17,
+Montréal-Nord — and **11 have a price but no 2020 census income**. Those eleven
+are the near-empty tracts of J3.3, suppressed at source. Printing "No published
+price" against a tract APCIQ *did* price is the kind of confusion this model
+exists to prevent, and the reader has no way to catch it.
+
+`Not evaluated` is the branch that should never appear. It can only fire on a
+row where the price and the income both exist yet the verdict is null, or on the
+shared tract `4620511.02` if its two sectors ever disagree on the price — in
+which case `SELECTEDVALUE` returns blank for both. Leave it visible: a branch
+that never fires is a control, and one that starts firing is news.
 
 ### D. Rates — on `fact_interest_rate` and `dim_interest_rate_series`
 

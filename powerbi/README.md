@@ -157,6 +157,29 @@ one of them appear to.
 | `dim_household_profile[household_profile_code]` | `fact_affordability` | `household_profile_code` |
 | `dim_interest_rate_series[series_id]` | `fact_interest_rate` | `series_id` |
 
+### A missing relationship raises nothing — it answers
+
+One of these thirteen was absent when page 2 was built on 2026-08-29:
+`dim_property_type` reached `fact_market`, so page 1 worked, but it did not
+reach `fact_affordability`. Power BI reported no error. The slicer moved, the
+visuals redrew, and every figure on the page was the average of condominium,
+plex and single-family together: the mean required income came out roughly half
+as high again as the true condominium figure (both amounts derive from APCIQ
+medians and are therefore not written here -- `scripts/report_oracle.py` prints
+them), and the share read 33.8 % where it was 35.0 %.
+
+**One of the five checked figures was right anyway**, which is what makes this
+worth writing down: `Tracts affordable` read 179 either way, because the two
+tracts affordable as single-family and the zero as plex are already inside the
+condominium 179. A control that happens to agree is not a control that passed.
+
+Two things follow. **Check the relationships against the table above by hand
+after importing** — auto-detection created some and not others, with no pattern
+worth learning. And **check a group of measures against the database before
+drawing a page, not after**: three wrong figures out of five were unmistakable,
+whereas the same fault noticed on a finished page looks like a broken visual and
+gets debugged in the wrong place.
+
 ### The one that needs explaining
 
 `fact_market_trailing_12m` joins `dim_date` on **`edition_quarter_start_date`**,

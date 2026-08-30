@@ -132,15 +132,24 @@ def main() -> int:
             "PAGE 2 -- Share of tracts affordable, this quarter",
             "Always read the base beside the percentage. It moves a lot by property\n"
             "type: APCIQ withholds plex medians in five sectors entirely, so the\n"
-            "plex percentage rests on far fewer tracts than the condo one.",
+            "plex percentage rests on far fewer tracts than the condo one.\n"
+            "Tracts are counted DISTINCT, as the DAX measures do. 4620511.02 is\n"
+            "genuinely shared between two sectors and holds two rows, so counting\n"
+            "rows here would sit 0.1 point away from the report, for a reason no\n"
+            "one would find twice.\n"
+            "The last two columns are the amounts report-design.md deliberately\n"
+            "does not print: both derive from an APCIQ median.",
             """
             select p.name_en as property_type,
                    h.name_en as household_profile,
-                   count(*) filter (where a.meets_income_requirement is not null) as tracts_evaluated,
-                   count(*) filter (where a.meets_income_requirement)             as tracts_affordable,
-                   round(100.0 * count(*) filter (where a.meets_income_requirement)
-                         / nullif(count(*) filter (where a.meets_income_requirement is not null), 0), 1)
-                                                                                  as pct_affordable
+                   count(distinct a.ct_uid) filter (where a.meets_income_requirement is not null) as tracts_evaluated,
+                   count(distinct a.ct_uid) filter (where a.meets_income_requirement)             as tracts_affordable,
+                   round(100.0 * count(distinct a.ct_uid) filter (where a.meets_income_requirement)
+                         / nullif(count(distinct a.ct_uid) filter (where a.meets_income_requirement is not null), 0), 1)
+                                                                                  as pct_affordable,
+                   round(avg(a.income_required_lower_bound))                      as mean_income_required,
+                   round(percentile_cont(0.5) within group (order by a.price_to_income_ratio)::numeric, 2)
+                                                                                  as median_price_to_income
             from marts.fact_affordability a
             join marts.dim_property_type p using (property_type_code)
             join marts.dim_household_profile h using (household_profile_code)
@@ -160,8 +169,8 @@ def main() -> int:
             """
             select a.edition_label as quarter,
                    count(*) filter (where a.meets_income_requirement is not null) as tracts_evaluated,
-                   round(100.0 * count(*) filter (where a.meets_income_requirement)
-                         / nullif(count(*) filter (where a.meets_income_requirement is not null), 0), 1)
+                   round(100.0 * count(distinct a.ct_uid) filter (where a.meets_income_requirement)
+                         / nullif(count(distinct a.ct_uid) filter (where a.meets_income_requirement is not null), 0), 1)
                                                                                   as pct_affordable
             from marts.fact_affordability a
             where a.property_type_code = 'condo'
