@@ -340,24 +340,40 @@ which is the practice page 2 paid for.
 
 | Element | Field or measure |
 |---|---|
-| Slicer | `dim_date[calendar_year]`, multi-select, nothing selected when saving |
+| Slicer | `dim_date[calendar_year]`, **Dropdown**, multi-select, nothing selected when saving |
 | KPI | `Posted minus contract (points)` |
 | Card | `Rate freshness warning` |
 | Line | `Rate (mean of period)` by `dim_date[date_key]`, **continuous** axis, legend `dim_interest_rate_series[rate_kind]` |
-| Combo | `Sales (sectors)` as columns by `dim_date[quarter_label]`, `Contract rate (mean)` as line — visual filter `Sales (sectors) is not blank` |
+| Combo (line and stacked column) | columns `Sales (island, 12 months)`, line `Contract rate (mean)`, by `dim_date[quarter_label]` — **both Y-axis ranges pinned by hand** |
+| Card | `Trailing window` |
 | Card | `Rate grain warning` |
-| Table — series | `series_label`, `rate_kind`, `frequency`, `Observations`, `First observation`, `Last observation`, `what_it_is` |
-| Table — quarters | `dim_date[quarter_label]`, `Posted rate (mean)`, `Contract rate (mean)`, `Posted minus contract (points)` |
+| Table — series | `series_label`, `rate_kind`, `frequency`, `Rate observations`, `First rate observation`, `Last rate observation`, `what_it_is` |
+| Table — quarters | `dim_date[quarter_label]`, `Posted rate (mean)`, `Contract rate (mean)`, `Posted minus contract (points)`, `Rate observations` |
+| Text box | the association caveat — see below |
+
+`calendar_year` is a whole number, so Power BI renders its slicer as a **numeric
+range** by default. Set the style to Dropdown: a range slider always holds a
+value, so "nothing selected" does not really exist on it, and isolating one year
+means dragging two handles. Both check passes below become tedious to reproduce,
+and a check that is tedious does not get repeated. The same will happen with
+`calendar_quarter`. If the eleven-year line wants a zoom, the line chart has its
+own **zoom slider** (Format > General), which touches no other visual.
 
 The series table is the page. Three series that all look like "the interest
 rate" on a chart are three different things, and the posted one — the one most
 reports would have used — stood **1.84 points above** the contracted one in
-2026 Q2, which moves the required income by about 15 %.
+2026 Q2, which moves the required income by about 15 %. `rate_kind` is in the
+table although `series_label` almost repeats it: it is the exact token the line
+chart legend shows, and it is what maps a colour to a row. `what_it_is` gets the
+widest column and word wrap — it is the column that justifies the page.
 
-**The combo chart mixes a daily/weekly series with a quarterly one.** That is
-section 22 of the brief in one visual. `Rate grain warning` names each series
-and the number of observations behind its average, so the chart cannot imply the
-weekly series was observed as often as the daily one.
+Sort `series_label` by `sort_order` (*Column tools > Sort by column*), once, in
+the model. Alphabetical order puts the posted rate above the contracted one,
+which is the reverse of the hierarchy the page argues for.
+
+**`Rate grain warning` names each series and the observations behind its
+average**, so no chart on this page can imply the weekly series was observed as
+often as the daily one. That is section 22 of the brief in one card.
 
 #### The contracted series stopped publishing on 2026-06-02, and calling that a lag was wrong
 
@@ -439,19 +455,116 @@ Checked against learn.microsoft.com on 2026-08-30, page dated 2026-02-17
   the order here would be contracted, policy, posted — the posted one falls
   first, and it is the one the page exists to contrast.
 
-#### Two more things the combo chart does differently
+#### The combo chart is a dual axis, the objection was raised, and it was kept
 
-**Its line does not sample.** Same source: *a combo chart uses the same
-strategies as a column chart, and the line in a combo chart does not use the
-high-density algorithm that the line chart uses.* At 29 quarters that costs
-nothing — it is written down so nobody transplants a conclusion from one chart
-to the other.
+**The `dataviz` rule this file already tells the reader to consult calls a
+dual-axis chart the single most common charting mistake**, for a reason that
+lands squarely on this project: *the alignment of the two scales is arbitrary,
+so the chart invents a correlation that isn't in the data.* Section 27 of the
+brief forbids presenting a correlation as a cause, and section 6 below states
+that every label on this page says *association*.
 
-**Its axis is shorter than the page.** `fact_market` covers 29 quarters,
-2019 Q2 → 2026 Q2; `dim_date` runs from 2015-01-01 because the Bank of Canada
-series do. Without the visual filter, seventeen quarters would carry a rate line
-and no columns. Same treatment as the page 1 slicer: filter the **visual**,
-never narrow `dim_date`, which page 4 is precisely the page that needs wide.
+A stacked pair was built first — volume above, rate below, one shared time axis,
+nothing scaled against anything — and then **abandoned on 2026-08-30 in favour
+of the combo**. The reason is real and is recorded rather than argued away: the
+combo is compact, and a reader sees the relationship in one glance instead of
+travelling between two frames. On a page that already carries two tables and
+four cards, a frame saved is not nothing.
+
+**What the decision costs, stated once.** The vertical distance between the
+column tops and the line is a convention, not a measurement. Slide either scale
+and the two series appear to agree more or less. The chart cannot be read for
+how *closely* they move — only for whether they move in opposite directions,
+which they do.
+
+**And what makes that cost bearable — pin both axis ranges by hand.** Left on
+auto-scale, Power BI recomputes both scales on every slicer move, so the apparent
+gap between the two series **changes when the filter changes while the data does
+not**. That is the part a reader cannot see and cannot correct for. Set
+*Format > Y axis > Range* and *Format > Secondary Y axis > Range*, Start and End,
+once, on the unfiltered view, and leave them. The alignment stays arbitrary —
+nothing fixes that — but it becomes **stable and declared** instead of
+recalculated behind the reader. The caveat text box carries more weight here,
+not less.
+
+One detail: with a single measure in the column well, *stacked* does nothing
+that *clustered* would not.
+
+#### And the volume series had to change too — the quarterly one is mostly the calendar
+
+The question on 2026-08-30 was what the pair was for. Measuring the answer
+found a second fault, independent of the first.
+
+**Quarterly sales are strongly seasonal.** Island sales by calendar quarter,
+indexed to each year's mean, 2020-2025: **Q1 100 · Q2 117 · Q3 91 · Q4 92**.
+Within a single year the strongest quarter beats the weakest by a factor of
+**1.36 to 1.92**, every year measured. Raw quarterly sales beside a rate line
+therefore show the calendar as much as the market — and a reader attributes the
+sawtooth to the rate. This fault is **independent of the chart type**: it
+survives a combo, a stacked pair, or anything else built on the quarterly
+series.
+
+**`fact_market_trailing_12m` fixes it by construction**: a twelve-month window
+always contains all four seasons. Measured, same years: the intra-year ratio
+falls from 1.36–1.92 to **1.05–1.28**. What is left is the movement, not the
+calendar.
+
+So the columns read `Sales (island, 12 months)`, never `Sales (island, as
+published)`. This is also the first use the trailing table has found in the
+report: it was imported at page 1 and had answered nothing until here.
+
+⚠️ **One residual, accepted rather than solved: consecutive windows overlap by
+nine months, and columns read as buckets that partition the period.** They do
+not — adding two neighbouring columns counts most of a year twice. Nothing on
+the chart invites the addition and no total is shown, so the risk is conceptual
+rather than arithmetic, but it is the reason the `Trailing window` card sits
+beside the visual and the reason the title has to say *12 months to*. A line
+carried the same series without that reading; the column well came with the
+combo.
+
+**No coefficient goes on this page, and the reason is arithmetic rather than
+caution.** Twenty-nine overlapping windows are not twenty-nine independent
+observations — neighbours share three quarters of their data, so the effective
+count is nearer seven, and any correlation computed on them is inflated. Two
+series that each carry a trend correlate almost by construction. And a pandemic
+sits in the middle of the window, having pushed rates down and housing demand up
+at the same time — a textbook confounder. The direction is not settled either:
+a central bank raises rates *in response* to an economy that includes housing.
+
+**What the report can assert instead is stronger, and it is not statistical.**
+The link between the rate and purchasing power is not observed here, it is
+*computed*: `fact_mortgage_scenario` takes the contracted rate, applies the CMHC
+qualifying rate, the amortization and the debt-service ratio, and returns a
+required income. Raise the rate and the required income rises — by arithmetic.
+The two curves illustrate that mechanism on the real market; they are not asked
+to prove it. The lag analysis section 28 of the brief asks for is real
+statistical work and belongs to J5, not to a milestone whose job is to finish.
+
+#### Titles, captions, and the one that must not be a text box
+
+A card is for text that **changes with the selection** — `Rate grain warning`,
+`Rate freshness warning`, `Trailing window`. Fixed text belongs to the visual's
+own title (Format > General > Title) or to a text box, never to a card.
+
+The combo carries a short title on the visual — *Sales (12 months) and the
+contracted rate* — and the caveat in a **text box** beneath: three lines of
+prose in a visual title get truncated on the first resize.
+
+⚠️ **No count goes in that text box.** The first draft read "over these 29
+quarters". A text box is filtered by nothing and refreshes never, so the day a
+thirtieth APCIQ edition lands the page states a false figure and nothing flags
+it. Either drop the number or make it a measure in a card. Same rule as
+everywhere else here: what depends on the data lives in a measure, what does not
+lives in fixed text, and mixing them is how a page goes stale in silence.
+
+#### The axis is shorter than the page, and `quarter_label` needs no sort column
+
+`fact_market` and `fact_market_trailing_12m` cover 29 quarters, 2019 Q2 →
+2026 Q2; `dim_date` runs from 2015-01-01 because the Bank of Canada series do.
+Without a visual filter the combo would carry seventeen quarters of rate line
+and no columns at all. Filter the **visual** — `Sales (island, 12 months) is not
+blank` — never narrow `dim_date`: page 4 is precisely the page that needs it
+wide, since the three-series line beside it runs the full eleven years.
 
 `quarter_label` is written `2015 Q1`, so its alphabetical order is its
 chronological order and it needs no *Sort by column*. That holds for the page 1
@@ -460,25 +573,41 @@ and page 2 axes too.
 #### Interactions
 
 Simpler than page 1 — there are no mutually exclusive zones here — but the
-default is still wrong in one direction that matters.
+default is still wrong in one direction that matters. **Five sources**, and only
+one of them is allowed to do anything.
 
-| Source clicked | KPI | Freshness card | Line | Combo | Grain card | Series table | Quarter table |
-|---|---|---|---|---|---|---|---|
-| Year slicer | Filter | — | Filter | Filter | Filter | Filter | Filter |
-| Line | **None** | — | — | **None** | **None** | **None** | **None** |
-| Combo | **None** | — | **None** | — | **None** | **None** | **None** |
-| Series table | **None** | — | **None** | **None** | **None** | — | **None** |
-| Quarter table | **None** | — | **None** | **None** | **None** | **None** | — |
+| Source clicked | Effect to set on every other visual |
+|---|---|
+| Year slicer | **Filter**, everywhere |
+| Rate line (daily, three series) | **None**, everywhere |
+| Combo (12-month sales and contract rate) | **None**, everywhere |
+| Series table | **None**, everywhere |
+| Quarter table | **None**, everywhere |
 
-One rule: **the slicer drives, nothing else does.** A click on the line chart
-selects a single day, and a single day propagates through `dim_date` to
-`fact_market`, whose rows are keyed on a quarter *start* date — so it empties
-the combo chart on every day of the quarter but one. A click on a combo column
-selects one quarter and collapses the eleven-year line to it. Neither is a
-question anyone wanted to ask.
+The four cards are never sources — they appear only as targets.
 
-`Rate freshness warning` takes no column from the row: it removes `dim_date`
-itself, so it is indifferent to every source and there is nothing to set.
+One rule: **the slicer drives, nothing else does**, and three separate reasons
+converge on it.
+
+**The page holds two grains.** The three-series rate line is at the *day*; the
+combo and the quarter table are at the *quarter*. Clicking one point of
+the rate line selects a single day, which propagates through `dim_date` to facts
+keyed on a quarter *start* date — so it empties the quarterly visuals on 89 days
+out of 90.
+
+**The reverse collapses the history.** Clicking a quarter reduces an
+eleven-year daily chart to three months, which is the view the page exists to
+give.
+
+**And a click inside the combo removes the comparison it exists to show.**
+Selecting one column filters the visual to that quarter, leaving a single column
+and a single point of line — the pair of shapes the chart is read for is gone.
+
+`Rate freshness warning` removes `dim_date` twice by construction, so it is
+indifferent to every source and there is nothing to set on it. That is also the
+check: **if it goes quiet when a year is selected, the `ALL ( dim_date )` calls
+have been lost**, and a source outage became invisible the moment anyone
+filtered — the opposite of a control.
 
 #### The figures this page has to reproduce
 
@@ -495,6 +624,9 @@ With **nothing selected in the year slicer**:
 | `Posted minus contract (points)` | 2.11 |
 | `Rate freshness warning` | fires, naming the contracted series at 2026-06-02 |
 | `Rate grain warning` | fires, naming all three series with the counts above |
+| `Trailing window` | `12 months, 2018-07-01 to 2026-06-30` |
+| The combo | **29 columns**, 2019 Q2 → 2026 Q2 |
+| The three-series rate line | the contracted line stops in June 2026, the other two run on |
 
 With **`calendar_year` = 2026**:
 
@@ -506,21 +638,39 @@ With **`calendar_year` = 2026**:
 | Quarter table, **2026 Q2** | posted 6.09 · contracted 4.25 · **gap 1.84** · 9 contract observations |
 | Quarter table, **2026 Q3** | posted 6.09 · contracted **blank** · gap **blank** · 0 contract observations |
 | `Rate freshness warning` | fires, unchanged — the year slicer must not silence it |
+| `Trailing window` | `12 months, 2025-04-01 to 2026-06-30` |
 
-**The 2026 Q3 row is the one to check first.** A gap reading 6.09 there instead
-of blank is the unguarded subtraction, and it is the only figure on this page
-that a wrong measure returns *confidently*. Everything else either matches or
-goes blank.
+**Two rows carry the whole check, because they are the only two things on this
+page that can be wrong while looking right.**
 
-The combo chart must start at **2019 Q2** and end at 2026 Q2 — 29 columns. Thirty
-or more means the visual filter on `Sales (sectors)` is missing and the empty
-quarters of `dim_date` are showing.
+**2026 Q3, the gap cell.** Blank is correct. **6.09** is the unguarded
+subtraction of section D, and it is the only figure here a wrong measure returns
+*confidently*. Everything else either matches or goes visibly blank.
 
-`scripts/report_oracle.py` prints all of it under *PAGE 4*; two of its three
-tables there were added on 2026-08-30 with this page. The one element of this
-page it does **not** cover is the combo chart's sales column, which is an APCIQ
-figure: its check is the *PAGE 1 — Sectors minus island* table, the same measure
-read the same way.
+**`Rate freshness warning` with a year selected.** If it disappears, the
+`ALL ( dim_date )` calls have been dropped and a publisher outage becomes
+invisible the moment anyone filters.
+
+The combo must run **2019 Q2 → 2026 Q2, 29 columns**. Thirty or more means the
+visual filter was lost and the empty quarters of `dim_date` are showing. **A
+repeating annual sawtooth on the columns means they are reading `fact_market`
+instead of `fact_market_trailing_12m`** — that is the seasonality fault
+returning, and it is the one thing on this visual that looks like a finding and
+is not.
+
+`scripts/report_oracle.py` prints the rate figures under *PAGE 4*; two of its
+three tables there were added on 2026-08-30 with this page. The one element it
+does **not** cover is the sales line, which is an APCIQ figure: its check is the
+*PAGE 1 — Sectors minus island* table, the same underlying column.
+
+**Built on 2026-08-30, and both passes reproduced.** Everything that changed,
+changed *during* the build rather than after it, because the measures were
+checked against the database before anything was drawn: the volume series moved
+from quarterly to twelve-month trailing, the year slicer came off Power BI's
+numeric-range default, the series table went from a throwaway check to the
+centrepiece, and the combo was replaced by a stacked pair and then reinstated as
+a combo with its axis ranges pinned. Nothing had to be corrected once the page
+existed.
 
 ---
 
@@ -571,7 +721,7 @@ four pages. Ordering inside a folder of five or six measures is not worth a
 rename on every visual that will ever be built.
 
 What the folders give without the code: five groups instead of one flat list of
-thirty-six, and a name that reads the same in the model and on the page.
+thirty-eight, and a name that reads the same in the model and on the page.
 
 ### 3.2 Index
 
@@ -592,6 +742,8 @@ step with it.
 | Market | `Price status` | `_Measures` | `fact_market` | Text | 1 |
 | Market | `Days on market` | `_Measures` | `fact_market` | Whole number | 1 |
 | Market | `Active listings (island)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1 |
+| Market | `Sales (island, 12 months)` | `_Measures` | `fact_market_trailing_12m` | Whole number, thousands sep. | 4 |
+| Market | `Trailing window` | `_Measures` | `fact_market_trailing_12m` | Text | 4 |
 | Affordability | `Tracts evaluated` | `_Measures` | `fact_affordability` | Whole number | 2 |
 | Affordability | `Tracts affordable` | `_Measures` | `fact_affordability` | Whole number | 2 |
 | Affordability | `Share of tracts affordable` | `_Measures` | the two `Tracts` measures | Percentage, 1 dec. | 2 |
@@ -634,6 +786,7 @@ explanation, so build in this order:
 | 6 | `Contract rate (mean)`, `Posted rate (mean)` | `Posted minus contract (points)` reads both, and tests both for blank |
 | 7 | `Posted minus contract (points)` | needs the two above |
 | 7b | `Rate observations`, `First rate observation`, `Last rate observation`, `Rate grain warning`, `Rate freshness warning` | independent |
+| 7c | `Sales (island, 12 months)`, `Trailing window` | Market group, but built with page 4 — nothing before it needed the trailing table |
 | 8 | **the `Income input` parameter (section 5)** | three First-time buyer measures read `'Income input'[Income input Value]` |
 | 9 | the First-time buyer group, `Verdict for this income` before `Sector bar colour` | the colour measure reads the verdict rather than repeating its comparison |
 | 10 | the three Grain guards | independent; they only need `fact_affordability`, `dim_property_type` and the `Census Tract` table |
@@ -1325,6 +1478,38 @@ colour-blind vision without relying on hue at all. Blue-to-grey rather than
 green-to-red because the comparison is a floor against a typed income, not a
 pass and a fail.
 
+The page-4 rate lines, chosen on 2026-08-30 and **validated by script rather
+than by eye** — `dataviz/scripts/validate_palette.js`, light mode, all pairs:
+
+| Series | Colour |
+|---|---|
+| `contracted` | `#2A78D6` |
+| `posted` | `#EB6834` |
+| `policy` | `#4A3AA7` |
+| sales (single series, its own chart) | `#8A9199` |
+
+Blue and orange go on the two mortgage rates because **that** is the comparison
+the page exists for, and they are the best-separated pair in the set. All three
+pass the lightness band, the chroma floor, colour-blind separation and contrast
+against a light surface.
+
+⚠️ **The page-3 blue `#17527A` was tried here first and the validator refused
+it** — too dark for the lightness band and too grey for the chroma floor. That
+is not a contradiction between the two pages: on page 3 it belongs to a
+single-hue scale running dark to light, which is a *sequential* job, and on page
+4 it would have to establish identity against two other hues, which is a
+*categorical* one. The same hex is right for one and wrong for the other.
+
+The sales grey fails the chroma floor on purpose. That check says "this reads as
+grey", which is exactly the brief: sales are alone in their chart with no
+identity to defend, the only test that applies is contrast, and a saturated
+colour there would compete with the rates.
+
+**Colour follows the entity, never the visual.** The contracted rate is
+`#2A78D6` on the eleven-year line and `#2A78D6` again on the quarterly one. A
+reader who learns "blue is the negotiated rate" at the top of the page must find
+it unchanged at the bottom.
+
 ---
 
 ## 5. The what-if parameter
@@ -1445,9 +1630,18 @@ reduced here to the required income, which dominates it anyway. Building a
 composite index on top of a figure already stated to be a lower bound would add
 precision that is not there.
 
-**No forecast, and no causal wording.** The rate line and the sales columns on
-page 4 sit on the same axis because they moved in the same years. Every label
-on that page says *association*, never *cause*.
+**No forecast, no coefficient, and no causal wording.** The rate line and the
+sales columns of page 4 share a time axis because they moved in the same years,
+and nothing more is claimed: every label there says *association*, never
+*cause*. No correlation figure appears on the page either, and that is
+arithmetic rather than modesty — 29 overlapping twelve-month windows are worth
+about seven independent observations, both series carry a trend, and a pandemic
+sits in the middle of the window having moved rates and housing demand at once.
+The link the project can actually assert is the computed one:
+`fact_mortgage_scenario` turns a rate into a required income by arithmetic. The
+chart illustrates that mechanism on the real market; it is not asked to prove
+it. The lag analysis of section 28 of the brief is real statistical work and
+belongs to J5.
 
 ---
 

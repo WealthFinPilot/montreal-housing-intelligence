@@ -194,14 +194,21 @@ reader means.
 The consequence has to stay visible: with 2026 Q2 selected, a quarterly figure
 and a 12-month figure on the same page describe different spans of time.
 
-**None of the four pages shows both, and that is why no measure guards it.** An
-earlier version of this paragraph pointed at a `Trailing window` measure in
-[report-design.md](report-design.md); it was never written, because no page
-needed it. The table is imported all the same — it carries 341 of the 430 median
-prices the quarterly table withholds, so it is what a fifth page would be built
-on. **The measure is the first thing that page owes**, before its first visual:
-a card printing `MIN ( period_start_date )` and `MAX ( period_end_date )`, so
-the span is on screen rather than in this file.
+**Page 4 shows both, and it is the only page that does.** Its combo chart reads
+`Sales (island, 12 months)` from this table against a quarterly contracted rate,
+so the two spans sit side by side in one visual. The guard is the `Trailing
+window` measure — a card printing `MIN ( period_start_date )` to
+`MAX ( period_end_date )` — written on 2026-08-30 with that page, after an
+earlier version of this paragraph had pointed at it for months while it did not
+exist. Without it, "2026 Q2" means three months on one axis and twelve on the
+other, and nothing on screen says so.
+
+Why the trailing table is on page 4 at all: **island sales by calendar quarter
+are strongly seasonal** — indexed to each year's mean over 2020-2025, Q1 100 ·
+Q2 117 · Q3 91 · Q4 92, with the strongest quarter beating the weakest by 1.36
+to 1.92 within a single year. A twelve-month window contains all four seasons by
+construction and that ratio falls to 1.05–1.28. Put the quarterly series against
+a rate line and a reader reads the calendar as a response to the rate.
 
 ### The relationship that is real in the database and absent here
 
