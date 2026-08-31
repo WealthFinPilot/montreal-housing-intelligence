@@ -146,8 +146,10 @@ per visual — the slicer carries a visual filter
 | Line | `Share of tracts affordable` by `dim_date[quarter_label]` — **the finding** |
 | Bar | `Share of tracts affordable` by `Sector[name]` |
 | Table | `Sector[name]`, `Census Tract[name]`, `Household income (2020 census)`, `Income required, lower bound (mean)`, `Income shortfall (mean)`, `Price to income (median)`, `Verdict` — sorted by shortfall ascending |
+| **Shape map** | `Census_Tract[geography_code]` in **Location**, colour by `Tract map colour` — see below |
 | Card | `Income vintage warning` |
 | Card | `Grain warning` |
+| Card | `Map coverage note` |
 
 `Grain warning` prints only when a census tract is filtering, which is exactly
 when a market measure on the same page would be repeating a sector total once
@@ -209,6 +211,93 @@ is the data, not a filter fault: a single-person household at the 2020 median
 income clears the required income in exactly one census tract of the island.
 Plex and single-family return 0 and 2 for the couple. A page that only ever
 gets checked on its most favourable combination has not been checked.
+
+#### The map, and why it is on this page and not another
+
+**Built and accepted on 2026-08-30.** `Shape map` colours a shape file you hand
+it: it geocodes nothing and contacts no external service, which is why it can
+draw a geography no mapping provider knows about.
+
+The shape file is generated from the same table the page reads its numbers
+from, by `scripts/export_map_shapes.py` — 541 features, 1.3 MB, one property per
+feature. Regenerate it after any change to `dim_geography`:
+
+```bash
+.venv/Scripts/python.exe scripts/export_map_shapes.py
+```
+
+⚠️ **A census tract id looks like a number and is not one.** `4620001.00`
+written as a JSON number becomes `4620001`: the file loads without error and
+joins to nothing. Every key is written as a string and the script refuses to
+write a file where that stops being true. Confirm the match in Power BI with
+*Format visual > Map settings > View map type key* before looking anywhere else.
+
+**`Color saturation` is deliberately left empty, and that costs the automatic
+tooltip.** Microsoft documents three colour configurations, and they exclude one
+another: filling `Color saturation` greys out the per-location colour entirely.
+It also offers a single *Blank area* colour — and this page has **two** absences
+that must not look alike:
+
+| Absence | Shapes | What it means |
+|---|---|---|
+| no APCIQ price | **18** | the whole of sector 17, Montréal-Nord — one solid block |
+| no 2020 census income | **11** | near-empty tracts, suppressed at source, scattered |
+
+One grey for both would say the same thing about "APCIQ published no price
+here" and "almost nobody lives here". So the map uses `Location` alone with
+*Colors > Location > Fx > Format style = Field value*, pointing at a measure
+that returns a hex string — and the fields that `Color saturation` would have
+put in the tooltip are added to the **Tooltips** well by hand.
+
+**The scale is fixed at 0 to 15× annual income, never autoscaled.** An
+autoscaled map repaints itself every time a slicer moves, which hides exactly
+the trend the page exists to show. Clipping at 15 costs **2.09 %** of rows
+overall, **0 %** on condominium and 4.51 % on single-family — measured
+2026-08-30, where the single-family maximum is 2.4 times its own 99th
+percentile. A scale stretched to that outlier would flatten everything else.
+
+**`Verdict` gained a branch because of this map.** The table on this page
+carries `Sector[name]` *and* `Census Tract[name]`, so every row is unique. **The
+map carries only the tract**, so `4620511.02` — the one genuinely shared tract
+of the island, J3.4 — arrives with both its rows in context and `SELECTEDVALUE`
+returns blank. Measured over its 261 combinations: **174 disagree on the price
+and 12 disagree on the verdict**, and in those 12 the original measure would
+have printed *No published price* for a tract that has two. The `Sectors > 1`
+branch fires first and names the real situation. It cannot regress the table,
+where a sector is always filtering and the count is always one.
+
+#### The figures the map has to reproduce
+
+Measured 2026-08-30, quarter **2026 Q2**. The three colour classes must add up
+to 541 — the shape count of the file — which is the cheapest check that no
+tract is drawn twice or lost:
+
+| Type / profile | Shaded | Grey, no price | Beige, no income | Affordable | Median ratio |
+|---|---|---|---|---|---|
+| **Condominium / Couple** | **512** | **18** | **11** | 179 | not reproduced |
+| Condominium / One person | 512 | 18 | 11 | 1 | not reproduced |
+| **Plex / Couple** | 317 | **216** | 8 | 0 | not reproduced |
+| Single-family / Couple | 395 | 138 | 8 | 2 | not reproduced |
+
+⚠️ **512 shapes, not the 513 rows the KPI counts.** The shared tract is one
+shape and two rows; confusing the two is how a map ends up asserting a count
+the page contradicts. With the `Sectors > 1` branch the split reads
+511 + 1 + 18 + 11.
+
+**Plex is the acceptance case, not condominium.** At 216 grey shapes it puts
+40 % of the island in the "no published price" colour, which is the only slice
+that shows whether that colour truly reads as an absence rather than as a low
+ratio. Verified on 2026-08-30: 317 / 216 / 8, exact.
+
+**One interaction is switched off: the map must not filter the three KPI
+cards.** Same mechanism as the bar chart on page 3 — clicking one tract turns
+"179 of 512" into "0 of 1", which reads as *nothing is affordable*. The table
+and the bar stay on *Filter*.
+
+⚠️ **Still to set at the close of 2026-08-30**: that interaction, and moving the
+visual from the scratch page it was built on onto Affordability itself. The
+measures, the shape file, the join and the four acceptance slices are done and
+verified; these two are placement, not correctness.
 
 ### Page 3 — First-time buyer
 
@@ -752,6 +841,8 @@ step with it.
 | Affordability | `Income shortfall (mean)` | `_Measures` | `fact_affordability` | Currency, 0 dec., thousands sep. | 2 |
 | Affordability | `Price to income (median)` | `_Measures` | `fact_affordability` | Custom `0.0"×"` — **never a currency** | 2 |
 | Affordability | `Verdict` | `_Measures` | `fact_affordability` | Text | 2 |
+| Affordability | `Tract map colour` | `_Measures` | `Verdict`, `Price to income (median)` | Text — a `#RRGGBB` string, **never formatted** | 2 |
+| Affordability | `Map coverage note` | `_Measures` | `fact_affordability` | Text | 2 |
 | Rates | `Rate (mean of period)` | `_Measures` | `fact_interest_rate` | Decimal, 2 dec. | 4 |
 | Rates | `Contract rate (mean)` | `_Measures` | `Rate (mean of period)`, `dim_interest_rate_series` | Decimal, 2 dec. | 4 |
 | Rates | `Posted rate (mean)` | `_Measures` | `Rate (mean of period)`, `dim_interest_rate_series` | Decimal, 2 dec. | 4 |
@@ -1112,12 +1203,14 @@ still says something.
 
 ```dax
 Verdict =
+VAR Sectors = DISTINCTCOUNT ( fact_affordability[apciq_sector_number] )
 VAR Meets = SELECTEDVALUE ( fact_affordability[meets_income_requirement] )
 VAR HasPrice = NOT ISBLANK ( SELECTEDVALUE ( fact_affordability[median_price] ) )
 VAR HasIncome = NOT ISBLANK ( SELECTEDVALUE ( fact_affordability[household_income] ) )
 RETURN
     SWITCH (
         TRUE (),
+        Sectors > 1, "Shared between two sectors",
         NOT ISBLANK ( Meets ) && Meets, "Within reach",
         NOT ISBLANK ( Meets ), "Out of reach",
         NOT HasPrice, "No published price",
@@ -1135,10 +1228,79 @@ price" against a tract APCIQ *did* price is the kind of confusion this model
 exists to prevent, and the reader has no way to catch it.
 
 `Not evaluated` is the branch that should never appear. It can only fire on a
-row where the price and the income both exist yet the verdict is null, or on the
-shared tract `4620511.02` if its two sectors ever disagree on the price — in
-which case `SELECTEDVALUE` returns blank for both. Leave it visible: a branch
-that never fires is a control, and one that starts firing is news.
+row where the price and the income both exist yet the verdict is null. Leave it
+visible: a branch that never fires is a control, and one that starts firing is
+news.
+
+⚠️ **The shared tract was anticipated here and the consequence was predicted
+wrong, which the map found on 2026-08-30.** This paragraph used to say that
+`4620511.02` would fall through to `Not evaluated` when its two sectors
+disagree. It does not: `SELECTEDVALUE` returns blank for `median_price`, so
+`NOT HasPrice` catches it first and prints **`No published price`** — for a
+tract that has two. Measured over its 261 combinations, **174 disagree on the
+price and 12 disagree on the verdict**, so the wrong branch was reachable in
+twelve of them. The `Sectors > 1` branch added above fires before either and
+names what is actually true. **A branch predicted to be unreachable is not a
+control until something tries to reach it.**
+
+```dax
+Tract map colour =
+VAR State = [Verdict]
+VAR Ratio = [Price to income (median)]
+
+VAR ScaleMax = 15
+VAR Position = MIN ( 1, MAX ( 0, DIVIDE ( Ratio, ScaleMax ) ) )
+
+VAR StartR = 222   VAR StartG = 235   VAR StartB = 247
+VAR EndR   = 8     VAR EndG   = 48    VAR EndB   = 107
+
+VAR R = INT ( StartR + ( EndR - StartR ) * Position )
+VAR G = INT ( StartG + ( EndG - StartG ) * Position )
+VAR B = INT ( StartB + ( EndB - StartB ) * Position )
+
+VAR HexChars = "0123456789ABCDEF"
+VAR Hex =
+    "#"
+        & MID ( HexChars, QUOTIENT ( R, 16 ) + 1, 1 ) & MID ( HexChars, MOD ( R, 16 ) + 1, 1 )
+        & MID ( HexChars, QUOTIENT ( G, 16 ) + 1, 1 ) & MID ( HexChars, MOD ( G, 16 ) + 1, 1 )
+        & MID ( HexChars, QUOTIENT ( B, 16 ) + 1, 1 ) & MID ( HexChars, MOD ( B, 16 ) + 1, 1 )
+
+RETURN
+    SWITCH (
+        State,
+        "No published price",         "#9E9E9E",
+        "No published income",        "#EDE3D0",
+        "Shared between two sectors", "#7FBF7F",
+        "Not evaluated",              "#FF00FF",
+        Hex
+    )
+```
+
+**Leave the format string on *General*.** This measure returns a colour, not a
+number, and any currency or decimal format would corrupt the string before
+Power BI reads it. The magenta is deliberate: `Not evaluated` is the branch that
+must never light up, and a colour that shouts is a control rather than a
+palette choice.
+
+```dax
+Map coverage note =
+VAR Coloured = CALCULATE ( DISTINCTCOUNT ( fact_affordability[ct_uid] ),
+                           NOT ISBLANK ( fact_affordability[price_to_income_ratio] ) )
+VAR NoPrice  = CALCULATE ( DISTINCTCOUNT ( fact_affordability[ct_uid] ),
+                           ISBLANK ( fact_affordability[median_price] ) )
+VAR NoIncome = CALCULATE ( DISTINCTCOUNT ( fact_affordability[ct_uid] ),
+                           NOT ISBLANK ( fact_affordability[median_price] ),
+                           ISBLANK ( fact_affordability[household_income] ) )
+RETURN
+    FORMAT ( Coloured, "#,0" ) & " tracts shaded, scale capped at 15x — "
+        & FORMAT ( NoPrice, "#,0" )  & " with no published price, "
+        & FORMAT ( NoIncome, "#,0" ) & " with no 2020 census income"
+```
+
+**It counts tracts, not rows, and that is the whole point.** A map draws one
+shape per tract; the KPI row counts rows. The two differ by exactly the shared
+tract, and stating the shape count under the map is what stops the two numbers
+from being read as a contradiction.
 
 ### D. Rates — on `fact_interest_rate` and `dim_interest_rate_series`
 
@@ -1592,34 +1754,35 @@ the acceptance list for page 3.
 
 ## 6. What this report deliberately does not do
 
-**No map — and the reason written here on 2026-08-27 was wrong, so the question
-is reopened rather than settled.** It claimed `Shape Map` needed a TopoJSON
-conversion and that the alternatives were a Bing round-trip or a custom visual.
-Checked against learn.microsoft.com on 2026-08-28, page dated 2026-06-10:
-`Shape Map` is not a preview feature and not a custom visual, it accepts
-**GeoJSON** as well as TopoJSON, and it colours a shape file you supply rather
-than geocoding anything. Its stated ceiling is 1 500 data points; eighteen
-sectors and 541 tracts are far below it.
+**~~No map~~ — superseded on 2026-08-30. The census tract map is built and
+accepted; it lives on page 2.** The reason first written here on 2026-08-27 was
+wrong twice over, and the record is kept rather than deleted. It claimed
+`Shape Map` needed a TopoJSON conversion and that the alternatives were a Bing
+round-trip or a custom visual; it accepts **GeoJSON**, colours a shape file you
+supply, and geocodes nothing. It was then labelled a preview feature on the
+strength of a second Microsoft page — **confirmed in Power BI Desktop on
+2026-08-30 that it carries no preview label**. Two documentation pages
+disagreed, and the more recently revised one was the wrong one. **A
+disagreement between two docs pages is settled in the product, not by the
+revision date.**
 
-What a map costs here is not the visual. It is that the eighteen APCIQ sectors
-carry `geometry = NULL` — `dim_geography.sql`, the `apciq_sectors` CTE, and
-deliberately so since J3.1. J3.4 settled how to build it: **the union of each
-sector's census tract polygons**, one source file, a tessellation by
-construction, and the `st_union` pattern already appears twice in that same
-model. Every geometry is stored in EPSG:4326, so `ST_AsGeoJSON` is the entire
-export.
+**No map of the eighteen APCIQ sectors, and that one is still open.** They carry
+`geometry = NULL` — `dim_geography.sql`, the `apciq_sectors` CTE, deliberately
+so since J3.1. `Etude-J4.2.5-cartes.md` measured what building it costs: the
+union of each sector's census tract polygons takes 0.21 s and yields a file
+*lighter* than the tract one, but it needs a stated majority-assignment rule,
+because two tracts otherwise place the same polygon in two sectors.
 
-Two different maps are available, and they do not say the same thing. Eighteen
-sectors shaded by median price is the one a reader expects. **541 tracts shaded
-by the affordability verdict is the one that shows something no other report
-has**: the J4.1 finding that in seventeen of the eighteen sectors the verdict
-changes from tract to tract at an identical price. Eighteen flat areas cannot
-show that.
+**The two maps do not say the same thing, and the one that was built is the one
+that says more.** Eighteen sectors shaded by median price is what a reader
+expects. **541 tracts shaded by the price-to-income ratio shows what no other
+report has**: the J4.1 finding that in seventeen of the eighteen sectors the
+verdict changes from tract to tract at an identical price. Eighteen flat areas
+cannot show that.
 
-Not built in this milestone — not because it is expensive, but because it is
-not one of the eleven criteria of section 44. Section 30 of the brief does ask
-for one. **Whether it earns its own session is a scope decision, not a
-technical one.**
+Neither map is one of the eleven criteria of section 44, though section 30 of
+the brief asks for one. This one was built because it was **faisable en
+l'état** — the geometry, the measure and the join key all already existed.
 
 **No `housing_burden_ratio`.** It needs sixteen municipal tax rates that are not
 identified and condo fees that only exist in listings. Out of scope for J4,
