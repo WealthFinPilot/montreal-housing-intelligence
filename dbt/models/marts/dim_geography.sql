@@ -12,25 +12,45 @@
     the island. The fourth does not, which is the whole reason this project
     needs a bridge table beside this one.
 
-    WHY APCIQ SECTORS HAVE NO GEOMETRY HERE
+    WHERE THE APCIQ SECTOR OUTLINES COME FROM
 
-    Two of the eighteen cut a borough in half:
+    Not from a file APCIQ publishes: there is none. They are the union of
+    the census tract polygons of each sector, taken through
+    bridge_census_tract_apciq_sector. One source file, so no two shorelines
+    to reconcile.
 
-        Côte-des-Neiges–Notre-Dame-de-Grâce  ->  sector 7 takes NDG,
-                                                 sector 8 takes Côte-des-Neiges
-        Verdun                               ->  sector 10 takes L'Île-des-Sœurs,
-                                                 sector 4 takes the rest
+    That is NOT the method settled in J3.1, which was to cut the two split
+    boroughs with a neighbourhood file as a knife (ST_Intersection /
+    ST_Difference across three files). J3.4 made that method unnecessary by
+    resolving every tract to a sector, and a union of one file beats a cut
+    across three: a cut inherits every disagreement between the files it
+    cuts, and the tract polygons already disagree with the city's
+    boundaries by up to 6.6 % of a tract.
 
-    Their true outlines are reconstructible -- the city publishes both
-    "Quartiers sociologiques" (which names Côte-des-Neiges and
-    Notre-Dame-de-Grâce) and "Quartiers de référence en habitation" (which
-    names Ile-des-Soeurs), both CC-BY, both checked on 2026-08-23. Assembling
-    them and proving the result tiles the island without gaps or overlaps is a
-    piece of work in its own right, and it has not been done.
+    THE PROOF THAT NOTHING IS LOST OR DOUBLE-COUNTED
 
-    Until it is, geometry is NULL for these rows. A NULL that says "not
-    established" is worth more than a polygon that looks authoritative and is
-    approximate -- especially on a map, where nobody would ever question it.
+    An equality, not a tolerance. Measured 2026-08-31:
+
+        sum of the 18 sector areas   499.627 km2
+        area of their union          499.627 km2
+        area of the 541 tracts       499.627 km2
+
+    A drawing that dropped or duplicated a tract would not produce those
+    three identical numbers. It is the geometric counterpart of the
+    population reconciliation of J3.4, and a test holds it.
+
+    TWO THINGS THIS GEOMETRY IS NOT
+
+    It is not APCIQ's own line. Where APCIQ splits a borough it publishes
+    two names and no boundary, so the tracts on each side were settled in
+    J3.4 against a city neighbourhood file -- a DERIVED assumption, carried
+    on every bridge row by assignment_method.
+
+    And it does not tile in the topological sense. The union is exact in
+    AREA, but the source polygons do not all touch: sector 3 comes out as
+    two halves 13.3 m apart with nothing between them. At that size nothing
+    is visible on any map this project draws, but it is measured, so it is
+    stated rather than rounded up to "it tiles".
 */
 
 with boundaries as (
@@ -110,13 +130,45 @@ boroughs as (
 
 ),
 
+sector_geometry as (
+
+    /*
+        The outline of each APCIQ sector, assembled from the census tracts
+        it DRAWS.
+
+        is_drawn_in_this_sector, not the row simply existing: one tract has
+        residents in two sectors and would otherwise be painted in both,
+        which is an overlap rather than a shared shape. The bridge header
+        explains what that rule costs -- 476 residents counted in one
+        sector and drawn in another.
+
+        Area in km2 through ::geography, never through EPSG:3347: a
+        conformal conic preserves angles, not areas, and overstates this
+        island by 3.3 % while returning a perfectly plausible number
+        (docs/geography.md section 6).
+    */
+    select
+        bridge.apciq_sector_number,
+        st_union(tracts.geometry)                 as geometry,
+        round(
+            (st_area(st_union(tracts.geometry)::geography) / 1000000.0)::numeric,
+            3
+        )                                         as area_km2
+    from {{ ref('bridge_census_tract_apciq_sector') }} as bridge
+    join {{ ref('stg_statcan__census_tracts') }} as tracts
+      on tracts.ct_uid = bridge.ct_uid
+    where bridge.is_drawn_in_this_sector
+    group by bridge.apciq_sector_number
+
+),
+
 apciq_sectors as (
 
     select
-        'apciq_sector:' || apciq_sector_number    as geography_key,
-        'apciq_sector'                            as geography_type,
-        cast(apciq_sector_number as text)         as geography_code,
-        apciq_sector_name                         as name,
+        'apciq_sector:' || sectors.apciq_sector_number    as geography_key,
+        'apciq_sector'                                    as geography_type,
+        cast(sectors.apciq_sector_number as text)         as geography_code,
+        sectors.apciq_sector_name                         as name,
 
         /*
             Parented to the island, not to a municipality, and that is not
@@ -124,11 +176,19 @@ apciq_sectors as (
             linked city and half a borough. The only entity that contains every
             sector is the island itself.
         */
-        'island:mtl'                              as parent_geography_key,
+        'island:mtl'                                      as parent_geography_key,
 
-        cast(null as geometry)                    as geometry,
-        cast(null as numeric)                     as area_km2
+        sector_geometry.geometry,
+        sector_geometry.area_km2
     from sectors
+    /*
+        An inner join would hide a sector that lost its tracts by removing
+        the row entirely, and 18 rows would silently become 17. Left join,
+        so the row survives with a NULL geometry and the test that counts
+        geometries fails loudly.
+    */
+    left join sector_geometry
+      on sector_geometry.apciq_sector_number = sectors.apciq_sector_number
 
 ),
 
@@ -169,15 +229,13 @@ administrative as (
     select * from municipalities
     union all
     select * from boroughs
-    union all
-    select * from apciq_sectors
 
 )
 
 /*
     WHY area_km2 CARRIES A SECOND COLUMN SAYING WHAT IT MEASURES
 
-    The two families of rows below do not mean the same thing by "area", and
+    The families of rows below do not mean the same thing by "area", and
     summing them together would produce a number with no referent.
 
     The city's administrative boundaries run out into the water -- Verdun is
@@ -189,17 +247,27 @@ administrative as (
     shoreline. The same island measures 499 km² that way, which is its land
     area, and the two figures are both correct about different questions.
 
+    APCIQ sectors sit with the tracts, not with the administrative rows,
+    because they are BUILT from tract polygons: the 18 of them measure the
+    same 499 km² of land. A sector and a borough therefore cannot be
+    compared on area without reading this column first -- which is exactly
+    what it is for.
+
     Rather than pick one and leave the reader to discover the discrepancy in a
     dashboard, every row states which it is.
 */
 
 select
     *,
-    case
-        when area_km2 is null then null
-        else 'boundary_including_water'
-    end                                           as area_basis
+    'boundary_including_water'                    as area_basis
 from administrative
+
+union all
+
+select
+    *,
+    'land_only'                                   as area_basis
+from apciq_sectors
 
 union all
 

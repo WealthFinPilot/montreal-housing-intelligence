@@ -130,7 +130,9 @@ models:
       sectors. The first three nest; the sectors do not, which is why
       bridge_apciq_sector_geography exists beside this table.
 
-      APCIQ sector rows carry no geometry on purpose -- see the model header.
+      APCIQ sector outlines are not published by APCIQ: they are the union of
+      the census tract polygons each sector draws. The model header carries the
+      proof that the 18 of them cover the island exactly once.
 
     columns:
       - name: geography_key
@@ -167,9 +169,11 @@ models:
           land_only -- the cartographic outline, clipped to the shoreline. The
           same island is 499 km² this way.
 
-          NULL where area_km2 is null, i.e. the APCIQ sectors, whose geometry
-          has not been built. Both figures are right about different questions,
-          and adding them together is not one of those questions.
+          APCIQ sectors are land_only: they are built FROM tract polygons, so
+          the 18 of them measure the same 499 km² as the 541 tracts. A sector
+          and a borough therefore cannot be compared on area without reading
+          this column. Both figures are right about different questions, and
+          adding them together is not one of those questions.
         data_tests:
           - accepted_values:
               arguments:
@@ -191,8 +195,12 @@ models:
 
       - name: area_km2
         description: >
-          Ellipsoidal area in km². NULL for APCIQ sectors, which have no
-          geometry here.
+          Ellipsoidal area in km², measured through ::geography. Never through
+          EPSG:3347, which overstates this island by 3.3 % while returning a
+          plausible number (docs/geography.md section 6).
+
+          Read it with area_basis: the administrative rows include the water
+          they extend over, the tract and sector rows stop at the shoreline.
 
   - name: bridge_apciq_sector_geography
     description: >
@@ -341,6 +349,29 @@ models:
           True where a declared misplacement moved the area of this row off the
           side its point had landed on. One tract carries it -- see the seed
           statcan_misplaced_representative_point.
+        data_tests:
+          - not_null
+      - name: is_drawn_in_this_sector
+        description: >
+          True on the single row that DRAWS the tract on a map: the sector
+          where the majority of its residents live.
+
+          A second rule beside population_weight, because a surface cannot be
+          shared the way an income can. A tract weighted 92.9 % / 7.1 % sends
+          its income to both sectors and is painted in one -- painting it in
+          both is an overlap, and 1.833 km² of the island would be
+          double-counted without this flag.
+
+          Exactly one row per tract carries it: 541 of the 543 rows. No
+          tie-break was needed -- measured, no tract has two rows of equal
+          weight -- but the sector number decides if one ever appears, so a
+          redraw is reproducible.
+
+          The cost is that the map and the figures disagree on one tract: 476
+          residents counted in sector 5 are drawn in sector 2, 0.024 % of the
+          island. It is a column rather than a silent rule inside
+          dim_geography precisely so that difference can be selected,
+          counted and tested.
         data_tests:
           - not_null
 

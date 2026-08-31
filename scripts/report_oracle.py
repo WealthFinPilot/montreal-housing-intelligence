@@ -135,6 +135,66 @@ def main() -> int:
 
         table(
             cur,
+            "PAGE 1 MAP -- colour classes, which must add up to 18",
+            "The map has one absence: a sector APCIQ did not price. Coloured plus\n"
+            "grey must equal 18, the shape count of apciq_sector_island.geojson.\n"
+            "A total under 18 means a sector failed to join and is invisible --\n"
+            "which looks exactly like a sector that happens to be off screen.",
+            """
+            select p.name_en                                              as property_type,
+                   count(*) filter (where f.median_price is not null)     as coloured,
+                   count(*) filter (where f.median_price is null)         as grey_no_price,
+                   count(*)                                                as must_be_18
+            from marts.fact_market f
+            join marts.dim_property_type p using (property_type_code)
+            join marts.dim_geography g using (geography_key)
+            where g.geography_type = 'apciq_sector'
+              and f.edition_year = %s and f.edition_quarter = %s
+            group by p.name_en, p.sort_order
+            order by p.sort_order
+            """,
+            (year, quarter),
+        )
+
+        table(
+            cur,
+            "PAGE 1 BAR -- relative price and rank, as the bar must sort them",
+            "Two checks in one table. The rank column of the report must match\n"
+            "`rank` here exactly, and the bar must be in this order. The multiple\n"
+            "must sit inside the fixed 0-3.5x axis: the whole archive runs 0.51x\n"
+            "to 3.29x, so a bar at the edge means the axis was left on auto.",
+            """
+            with island as (
+                select property_type_code, median_price::numeric as island_price
+                from marts.fact_market f join marts.dim_geography g using (geography_key)
+                where g.geography_type = 'island'
+                  and f.edition_year = %s and f.edition_quarter = %s
+                  and f.median_price is not null
+            )
+            select p.name_en                                             as property_type,
+                   g.name                                                as sector,
+                   -- dense_rank, not rank: the DAX measure uses RANKX ( .., DENSE ),
+                   -- and 13 pairs of sectors share an identical median somewhere in
+                   -- the archive. With plain rank() the two would disagree by one
+                   -- place after every tie -- a false failure at acceptance time.
+                   dense_rank() over (partition by p.name_en
+                                      order by f.median_price desc)      as rank,
+                   round(f.median_price::numeric / i.island_price, 2)    as x_island,
+                   f.median_price_value_status                           as price_status
+            from marts.fact_market f
+            join marts.dim_property_type p using (property_type_code)
+            join marts.dim_geography g using (geography_key)
+            join island i using (property_type_code)
+            where g.geography_type = 'apciq_sector'
+              and f.edition_year = %s and f.edition_quarter = %s
+              and f.median_price is not null
+            order by p.sort_order, rank
+            """,
+            (year, quarter, year, quarter),
+        )
+
+        table(
+            cur,
             "PAGE 2 -- Share of tracts affordable, this quarter",
             "Always read the base beside the percentage. It moves a lot by property\n"
             "type: APCIQ withholds plex medians in five sectors entirely, so the\n"
@@ -225,12 +285,17 @@ def main() -> int:
 
         table(
             cur,
-            f"PAGE 3 -- KPI row, which must add up to eighteen",
+            f"PAGE 3 -- KPI row AND map colours, which must add up to eighteen",
             "within_reach + borderline + out_of_reach + no_price = 18. Four counts,\n"
             "one definition each. If Power BI shows a blank rather than a zero in\n"
             "any of them, the measure is missing its IF ( ISBLANK ( .. ), 0, .. ) --\n"
             "COUNTROWS and DISTINCTCOUNT both return blank over an empty set, and\n"
-            "no sector is within reach at the low end of the slicer.",
+            "no sector is within reach at the low end of the slicer.\n"
+            "\n"
+            "The same four counts are the map's four colour classes, because the map\n"
+            "reads Sector bar colour, which reads Verdict for this income. Counting\n"
+            "shapes of each shade must reproduce this row -- and a shape that failed\n"
+            "to join carries no colour at all, so the four would fall short of 18.",
             """
             with per_sector as (
               select a.apciq_sector_number, avg(a.income_required_lower_bound) as required

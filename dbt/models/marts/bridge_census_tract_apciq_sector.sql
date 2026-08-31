@@ -254,7 +254,9 @@ weighted as (
                                           over (partition by ct_uid) as sectors_with_residents
     from per_tract_sector
 
-)
+),
+
+bridged as (
 
 select
     'census_tract:' || ct_uid                       as census_tract_geography_key,
@@ -321,3 +323,50 @@ select
     includes_corrected_point
 
 from weighted
+
+)
+
+/*
+    WHY A SECOND RULE EXISTS HERE, FOR DRAWING ONLY
+
+    Everything above shares a tract between sectors by POPULATION, because
+    population is what a household income describes. A surface cannot be
+    shared that way. A map colours whole polygons: a tract weighted 92.9 %
+    / 7.1 % would have to be drawn in both sectors, and drawing it twice is
+    an overlap -- 1.833 km2 of double-counted land across two pairs of
+    sectors, measured on 2026-08-31.
+
+    So one extra column says which single sector DRAWS each tract: the one
+    where the majority of its residents live. Exactly one row per tract
+    carries it, 541 of the 543.
+
+    The rule needs no tie-break, and that was measured rather than assumed:
+    no tract has two rows of equal weight. If one ever appears, the sector
+    number decides, so the drawing stays reproducible.
+
+    WHAT IT COSTS, AND WHY THE COLUMN EXISTS RATHER THAN THE RULE BEING
+    APPLIED SILENTLY IN dim_geography
+
+    On one tract, the drawing and the figures stop agreeing:
+
+        4620511.02   476 residents COUNTED in sector 5, DRAWN in sector 2
+        4620421.05   a zero-weight row in sector 6, drawn in sector 5
+
+    476 people is 0.024 % of the island, on 1 tract out of 541 -- small, and
+    not nothing. Anyone comparing a map to a table has to be able to find
+    that difference, so it is a column that can be selected, counted and
+    tested, exactly like assignment_method carries the CDN/NDG substitution.
+
+    Cutting the shared polygon instead is what J3.4 examined and rejected,
+    and nothing here reopens it: a cut inherits every disagreement between
+    the files it cuts, and this one would be cut along a line APCIQ has
+    never published.
+*/
+select
+    *,
+    row_number() over (
+        partition by ct_uid
+        order by population_weight desc, apciq_sector_number
+    ) = 1                                           as is_drawn_in_this_sector
+
+from bridged

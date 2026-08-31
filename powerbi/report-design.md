@@ -56,30 +56,246 @@ it.
 | Slicer | `dim_date[quarter_label]` |
 | KPI row | `Sales (island, as published)`, `Median price`, `Days on market`, `Active listings (island)` — visual filter `Sector[geography_type] is island` |
 | Line | `Median price` by `dim_date[quarter_label]` — same visual filter |
-| Bar | `Median price` by `Sector[name]`, sorted descending — visual filter `Sector[geography_type] is apciq_sector` |
-| Table | `Sector[name]`, `Median price`, `Price status`, `Sales (sectors)` — same as the bar |
+| **Map** | `Shape map`, `Sector[geography_code]` on **Location**, `Median price` on **Color saturation**, `Legend` **empty**, a drawn gradient shape as legend — visual filter `Sector[geography_type] is apciq_sector` |
+| Column chart | `Price relative to the island` by `Sector[name]`, sorted descending, **Y axis fixed 0 to 3.5×**, Y constant line at **1.0×**, columns coloured by `Sector price colour`, tooltip `Sector rank (price)` — same visual filter |
+| Table | `Sector[name]`, **`Sector rank (price)`**, `Median price`, `Price status`, `Sales (sectors)` — same filter |
 
-**The bar ranks the eighteen sectors by price, and it did not always.** It was
-first specified as `Sales (sectors)` by sector; that chart is dominated by how
-large a sector is — sector 1 spans seven municipalities — so it mostly restates
-the housing stock, and a tall bar reads as a hot market when it means a big one.
-`Median price` is not confounded that way, each bar is one figure APCIQ printed,
-and it answers the question the page asks. `Sales (sectors)` keeps two jobs
-elsewhere: the reconciliation control, and page 4, where the axis is time and a
-sector compared with itself is no longer confounded by its size.
+**The bar has changed measure twice, and each change was made for a reason
+worth keeping.** It started as `Sales (sectors)` by sector; that chart is
+dominated by how large a sector is — sector 1 spans seven municipalities — so it
+mostly restates the housing stock, and a tall bar reads as a hot market when it
+means a big one. It became `Median price`, which is not confounded that way and
+is one figure APCIQ printed per bar. It is now **`Price relative to the
+island`**, and the reason is the map beside it.
 
-⚠️ **A sector whose median APCIQ withheld has no bar, and a missing bar reads as
-a zero.** That is why the table beside it carries `Price status`: the bar gives
-the ranking, the table says why a place is empty. Never the bar alone. Switch
-the property type to Plex and the effect is immediate.
+**Why the bar gives up dollars: because the map keeps them, and the two must not
+say the same thing twice.**
+
+The map is coloured by `Median price` on an **automatic** scale, which is a
+deliberate trade with a known cost: Power BI recomputes the colour bounds from
+whatever the slicers leave standing, so every property type uses the whole
+palette — and **two quarters become visually incomparable**, because a general
+rise in prices repaints itself away. A fixed common scale was measured and is
+worse: on 2026 Q2 a scale spanning all three types leaves condominium occupying
+**26 %** of the palette and plex **26.5 %**, against 89 % for single-family. The
+condominium map would be near-monochrome, which is the one thing a choropleth
+must not be.
+
+**The relative bar is what pays for that.** Its axis is a multiple of the
+island's own median, so it does not move when prices do: 2019 and 2026 sit on
+the same scale, and the reader compares *structure* on the bar and *level* on the
+map.
+
+⚠️ **And the bar loses nothing by dropping dollars, which was verified rather
+than assumed.** Dividing every sector by the island's median divides them all by
+the same constant, so the ranking cannot change — measured across **1 136
+sector-rows over 87 type × quarter slices: zero changed rank**. The bar ranks
+exactly as it did, and now carries a second reading for free: above 1.0× is
+dearer than the island, below is cheaper, and the constant line makes that
+threshold a place on the chart rather than a mental calculation.
+
+**The value axis is fixed from 0 to 3.5×, never autoscaled** — and it is the
+**Y** axis, because this chart is vertical columns. (Page 3 is the horizontal
+one, for a reason stated there: eighteen sector names do not fit under vertical
+columns, and that page has no map competing for width.) An autoscaled axis would
+restore exactly the incomparability the columns exist to remove. 3.5 is above the
+maximum ever observed — the whole archive runs from **0.51× to 3.29×**, 99th
+percentile 2.91× — so nothing is clipped and no column is ever truncated. The
+axis starts at 0 because a column chart that starts elsewhere exaggerates every
+difference on it.
+
+The reference line is therefore a **Y constant line at 1.0** (Analytics pane),
+not an X one: everything above it is dearer than the island, everything below is
+cheaper.
+
+**The columns are also coloured on that threshold**, added on
+2026-08-31 — dark above the island, lighter below:
+
+```dax
+Sector price colour =
+VAR X = ROUND ( [Price relative to the island], 2 )
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( X ), "#E8EAEC",
+        X >= 1, "#17527A",
+        "#5B9BC4"
+    )
+```
+
+**It reads `[Price relative to the island]` rather than comparing the price to
+the island a second time**, for the same reason `Sector bar colour` reads
+`[Verdict for this income]`: written as its own comparison, the threshold would
+exist in three places — the constant line, the column height and the colour —
+with nothing keeping them in step. Reading the measure makes the colour
+incapable of disagreeing with the line drawn across it.
+
+The `ISBLANK` branch is unreachable on screen, since a sector with no price has
+no column at all. It is there because DAX compares a blank as a zero, which
+would file every unpriced sector *below the island*, and **that fault has
+already appeared three times in this report**.
+
+⚠️ **`ROUND ( .., 2 )` was added after the first build, and it fixes a real
+contradiction rather than a hypothetical one.** Without it the colour reads the
+full precision while the label reads two decimals, so on 2026 Q2 Saint-Laurent
+sat at **0.998530×**, printed *1.00×*, and was coloured pale — a column
+apparently on the reference line, coloured as if below it. Measured across the
+archive: **11 rows display 1.00×; 3 of them are strictly below 1** and 5 are
+exactly equal to the island. The same printed figure would therefore come out
+in two different colours depending on a third decimal nobody can see.
+
+Rounding first makes **the colour decide on what the reader is shown**. The
+cost is that a column can be dark while its top sits a fraction under the line
+— 0.04 % of the axis height at 0.9985×, invisible on an axis that reaches 3.5.
+Of the two inconsistencies, the visible one is the one worth removing.
+
+⚠️ **The same hex means something different on page 3, and that is deliberate.**
+`#17527A` is *within reach* there and *dearer than the island* here. What the
+reader learns is not a meaning per colour but a direction — **darker is more of
+the thing being measured** — and the two pages are consistent in that. Which is
+also why the map's gradient is pinned to the same two colours, Minimum
+`#5B9BC4` to Maximum `#17527A`: on this page the map and the columns must not
+disagree about which end is dear. The `#C7CCD1` *Blank area* grey stays outside
+both, being neutral.
+
+⚠️ **A sector whose median APCIQ withheld has no bar and no colour, and both
+read as a zero.** That is why the table beside them carries `Price status`: the
+bar gives the ranking, the map gives the geography, the table says why a place
+is empty. Never any of them alone. Switch the property type to Plex and the
+effect is immediate — see the acceptance figures below.
+
+**The sort is recalculated every quarter, and the ranking it shows really
+moves.** A Power BI bar sorted by a measure re-sorts itself in each filter
+context, so the order on screen is always the selected quarter's own. Measured
+across the 29 quarters, condominium:
+
+| What the ranking does | Measured |
+|---|---|
+| sectors moving **5 places or more** over the archive | **9 of 18** |
+| largest swing | sector 7 (NDG), from **2nd to 11th** |
+| first quarter vs last | **11 of 17** sectors changed rank, largest move 7 places |
+| average move from one quarter to the next | 1.15 places, 60 moves of 3+ over 476 pairs |
+| sector 9 (Centre) | **1st in all 29 quarters, without exception** |
+
+**But a recalculated sort shows the order and hides the movement**: when one
+sector climbs, every other one shifts, and the eye has to re-read the names to
+notice. That is why `Sector rank (price)` sits in the bar's tooltip and as a
+column in the table — a rank read as a number can be compared across two
+quarters without reconstructing an order. The colour of the map and the length
+of the bar answer "how much"; the rank column answers "which place, and has it
+changed".
+
+The rank is also the honest way to read the top and bottom of this chart, which
+barely move: sector 9 has been first in every published quarter, and the churn
+measured above is concentrated in the middle of the table.
+
+#### The map, and the one absence it has to show
+
+**Built and accepted on 2026-08-31**, together with the relative column chart
+beside it. `Shape map` colours a shape file you hand it: it geocodes nothing and
+contacts no external service. The file is generated from the same table the page reads
+its numbers from:
+
+```bash
+.venv/Scripts/python.exe scripts/export_map_shapes.py --layer sectors
+```
+
+`powerbi/shapes/apciq_sector_island.geojson` — 18 features, 720 kB, one property
+per feature (`sector_id`). **It is smaller than the 541-tract file of page 2**,
+because the union that builds it erases every internal border. Its outlines are
+the union of each sector's census tract polygons; `docs/geography.md` section 5
+carries the construction, the majority rule it needs and the proof that the
+eighteen cover the island exactly once.
+
+**`Color saturation` is used here and was refused on page 2, and the difference
+is the number of absences.** Filling `Color saturation` greys out the
+per-location colour entirely and offers a single *Blank area* colour. Page 2 has
+**two** absences that must not look alike — no APCIQ price, and no 2020 census
+income. **This page has one**: a sector APCIQ did not price. One absence, one
+grey, and in exchange the tooltip and the colour legend come for free instead of
+being rebuilt by hand.
+
+⚠️ **The grey has to be told apart from the bottom of the scale**, which is the
+whole risk of a saturation map: "cheapest" and "not published" are adjacent
+colours by default. Set *Blank area* to a colour that is not on the ramp — the
+neutral grey `#C7CCD1` already used for *Out of reach* on page 3 — and check it
+on the acceptance slice below, where more than half the island is grey.
+
+**Both were constated in Desktop on 2026-08-31, and one of them cost a
+measure.**
+
+⚠️ **`Color saturation` renders NO legend on this visual.** The gradient paints
+correctly and nothing on screen says what a shade is worth — the same kind of
+silence as page 2 losing its automatic tooltip, and worse here, because the
+scale is automatic: the colours mean something different in every quarter and
+the reader is told neither value nor direction.
+
+**A text measure was written to replace it and dropped the same day.** It read
+the palest and darkest published price out of `ALLSELECTED` and printed them
+as a sentence, so the caption would follow the scale it described. Rejected on
+sight: **a line of text under a map is a lot of text for a
+legend**, and this page is already dense. The measure is recorded here and not
+in the model.
+
+**What replaces it is a drawn gradient shape**, added by hand beside the map.
+⚠️ **It must carry no figures.** The scale is automatic, so any amount written
+on a static shape is wrong by the next quarter — the shape says *pale → dark =
+cheaper → dearer* and names the grey, and the exact value stays in the tooltip.
+A legend that states a direction is honest; one that states a bound it cannot
+keep is not.
+
+**Legend is a fourth well on this visual, and it stays empty.** `Color
+saturation` is what produces the gradient; filling `Legend` colours by category
+instead, and the two would contest the same colour.
+**Projection: Mercator**, constated, and accepted. The island comes out
+stretched east-west as expected at 45° N; nothing on this page compares areas,
+so the distortion costs nothing here. It would matter if a shape were ever read
+as a quantity — `area_basis` in `dim_geography` exists for that reason.
+
+**The Tooltips well is filled by hand** even though `Color saturation` provides
+an automatic one: `Sector[name]`, `Price status`, `Price relative to the
+island`, `Sector rank (price)`. Without `Price status`, a grey shape does not
+say whether APCIQ withheld the figure or the join failed — and those two look
+identical on a map.
+
+#### The figures this page has to reproduce
+
+Measured against the database on 2026-08-31. **The three colour classes must add
+up to 18**, the shape count of the file — the cheapest check that no sector is
+drawn twice or lost:
+
+| Type / quarter | Coloured | Grey, no price | Total |
+|---|---|---|---|
+| **Condominium / 2026 Q2** | **17** | **1** (sector 17, Montréal-Nord) | 18 |
+| Single-family / 2026 Q2 | 14 | 4 | 18 |
+| Plex / 2026 Q2 | 9 | 9 | 18 |
+| **Plex / 2022 Q3** | **7** | **11** | 18 |
+
+**Plex 2022 Q3 is the acceptance case, not condominium.** At 11 grey shapes it
+puts more than half the island in the "no published price" colour, which is the
+only slice that shows whether that colour reads as an absence rather than as a
+cheap sector. It is the sector-map equivalent of the 216 grey tracts page 2 is
+recetted on.
+
+**Reproduced on screen on 2026-08-31**: 17 coloured and 1 grey on condominium
+2026 Q2, Centre first at 1.59×, Pointe Est de l'Île ranked 17, Montréal-Nord
+with no column, no colour and `withheld` in the table. **Nothing had to be
+corrected in the figures**; the two defects found during the build were both in
+the measures, and both are recorded above — the ranking universe and the
+rounding of the colour threshold.
+
+For the bar, on any slice: the topmost sector reads above **1.0×** and the
+bottom one below it, no bar exceeds the 3.5× axis, and the sector order is
+identical to the order `Median price` produced before the change — that identity
+is the regression check, and it holds on all 87 slices.
 
 **Every visual on this page carries a geography filter, and none of them is
-optional.** The bar and the table exclude the island so it does not sit beside
-its own eighteen parts. The KPI row and the line do the opposite for a different
-reason: `Median price` and `Days on market` count the rows left standing
-and return blank above one, so without `is island` they would read blank on a
-page that has nineteen geographies in scope. The two island measures carry their own
-island filter and are indifferent to it.
+optional.** The map, the bar and the table exclude the island so it does not sit
+beside its own eighteen parts. The KPI row and the line do the opposite for a
+different reason: `Median price` and `Days on market` count the rows left
+standing and return blank above one, so without `is island` they would read
+blank on a page that has nineteen geographies in scope. The two island measures
+carry their own island filter and are indifferent to it.
 
 **Single select on property type is not a preference.** `Median price` returns
 blank whenever the selection covers more than one published cell, which is what
@@ -89,17 +305,17 @@ into an obvious control.
 
 **Both slicers are load-bearing, and the quarter one is the less obvious of the
 two.** `Median price`, `Price context`, `Price status` and `Days on market`
-return blank above one surviving row. With the
-island filter and one property type but *no* quarter, twenty-nine rows survive —
-one per published quarter — so the price and the days-on-market cards read
-blank. The quarter slicer is not a convenience; it is what makes half the page
-non-empty. Set it to **Dropdown** (Format > Slicer settings > Options > Style),
-single select, and leave the newest quarter selected when saving.
+return blank above one surviving row. With the island filter and one property
+type but *no* quarter, twenty-nine rows survive — one per published quarter — so
+the price and the days-on-market cards read blank. The quarter slicer is not a
+convenience; it is what makes half the page non-empty. Set it to **Dropdown**
+(Format > Slicer settings > Options > Style), single select, and leave the newest
+quarter selected when saving.
 
 **Then set every interaction by hand, because the page has two geographic zones
 that exclude each other.** The KPI cards and the price line accept only the
-island row; the bar and the table accept only the eighteen sectors. Left on
-their defaults, a click in one zone filters the other to
+island row; the map, the bar and the table accept only the eighteen sectors.
+Left on their defaults, a click in one zone filters the other to
 `island AND apciq_sector`, which is the **empty set** — the cards read `--`, the
 line vanishes, the table empties. That is not a rendering fault and the values
 are not merely small: there is nothing left to show.
@@ -108,25 +324,38 @@ It also looks different depending on the target, which is worth knowing before
 diagnosing it. A chart that receives a selection **cross-highlights**: it keeps
 its full height in a pale tint and paints the selected share solid, so an empty
 selection reads as bars that have gone faint rather than as bars that have gone.
-A table cannot highlight — it can only be filtered — so it simply empties.
+A table cannot highlight — it can only be filtered — so it simply empties. **A
+`Shape map` does neither**: an empty selection leaves every shape in its *Blank
+area* colour, which is the same grey that means "no published price". On this
+visual an interaction fault and a data absence look identical, which is the
+strongest reason the two zones stay sealed.
 
 **Format > Edit interactions**, then set each source visual in turn:
 
-| Source clicked | KPI cards | Price line | Sector bar | Table |
-|---|---|---|---|---|
-| Property type slicer | Filter | Filter | Filter | Filter |
-| Quarter slicer | Filter | **None** | Filter | Filter |
-| Price line | **None** | — | **None** | **None** |
-| Sector bar | **None** | **None** | — | Filter |
-| Table | **None** | **None** | None | — |
+| Source clicked | KPI cards | Price line | Map | Sector bar | Table |
+|---|---|---|---|---|---|
+| Property type slicer | Filter | Filter | Filter | Filter | Filter |
+| Quarter slicer | Filter | **None** | Filter | Filter | Filter |
+| Price line | **None** | — | **None** | **None** | **None** |
+| Map | **None** | **None** | — | Filter | Filter |
+| Sector bar | **None** | **None** | Filter | — | Filter |
+| Table | **None** | **None** | **None** | **None** | — |
 
-Three rules produce that table. **The two slicers drive everything**, because
+Four rules produce that table. **The two slicers drive everything**, because
 they are the only controls whose scope is the whole page. **The price line
 drives nothing**: its axis is the quarter, which the slicer already governs, and
 it is meant to stand still as the history behind the selected quarter. **Nothing
-crosses between the zones**, in either direction. The one cross-filter left
-alive is bar → table, which is the only pair that shares a scope: click a sector
-in the bar, read its row in the table.
+crosses between the zones**, in either direction. And inside the sector zone the
+three visuals do cross-filter, in the two directions a reader actually uses:
+click a shape on the map to find its bar and its row, click a bar to light up
+its shape. The table drives nothing, because a table click is as easily
+accidental as deliberate and it would repaint the map.
+
+⚠️ **Map → bar is a filter, not a highlight, and that is worth checking at the
+screen.** Filtering the bar down to one sector removes the constant line's
+context: a single bar beside a 1.0× line still reads correctly, but the ranking
+is gone. If it reads badly in practice, the fix is to set map → bar to
+*Highlight* rather than to unpick the zone rule.
 
 **The date dimension is wider than this page, and stays that way.** `dim_date`
 starts on 2015-01-01 because the Bank of Canada series are daily and weekly from
@@ -328,6 +557,7 @@ coverage.
 | Slicers | property type (single select), quarter (single select) |
 | KPI | `Sectors within reach of this income`, `Sectors borderline`, out of `Sectors priced` |
 | Bar | `Income required, lower bound (mean)` by `Sector[name]`, sorted ascending, bars coloured by `Sector bar colour`, tooltips `Tracts priced` and `Verdict for this income`, with an X-axis constant line at `Income input Value` |
+| **Map** | `Shape map`, `Sector[geography_code]` on **Location**, colour by `Sector bar colour` through *Colors > Location > `fx` > Field value*, tooltips `Verdict for this income`, `Income required, lower bound (mean)`, `Tracts priced` |
 | Table | `Sector[name]`, `Income required, lower bound (mean)`, `Verdict for this income`, `Tracts priced` — sorted the same way as the bar |
 | Card | `Down payment assumption` |
 | Card | `Slice warning` |
@@ -392,6 +622,81 @@ table reads *Out of reach* + the rows it reads *No published price* = 18. Four
 counts, one page, one definition of each. It is the cheapest way to catch the
 fault this page was specified with: a card and a table applying two different
 thresholds to the same comparison.
+
+#### The map, and why it is the sector map and not the tract map
+
+**Built and accepted on 2026-08-31.** No new measure was written for it: it
+reads `Sector bar colour`, which the column chart beside it already reads.
+
+**The map asked for on this page was a census tract map of the required income,
+and it was refused on a measurement.** The map feasibility study counted it: on
+2026 Q2, condominium, couple profile, the required income takes **17 distinct
+values across 541 census tracts**. A tract map would draw 541 polygons to show
+17 answers and imply a precision that does not exist, which section 41.2 of the
+brief forbids. The alternative of comparing the required income to each tract's
+own household income was measured too — it reproduces `meets_income_requirement`,
+which *is* page 2, and it would take `Income input` out of the loop on the one
+page whose only control is that slider.
+
+So the map here is the **eighteen sectors, coloured by the verdict**: 18 shapes
+for 17 values, it moves with the slider, and it reuses the shape file of page 1
+at no extra cost. Two of the report's maps sharing one outline is not a
+weakness — the reader learns the island once and then compares a price to a
+verdict on the same silhouette.
+
+| Well | Field |
+|---|---|
+| Location | `Sector[geography_code]` |
+| Colors > Location > `fx` > Format style | **Field value**, on `Sector bar colour` |
+| Tooltips | `Verdict for this income`, `Income required, lower bound (mean)`, `Tracts priced` |
+
+**It reuses `Sector bar colour` unchanged, and that is the point rather than an
+economy.** The bar and the map read the same measure, so they cannot disagree
+about where the 10 % band falls — the fault this page was specified with, a card
+and a table on two thresholds, is structurally impossible between these two.
+Adding a second colour measure for the map would have re-created it.
+
+**`Color saturation` cannot be used here**, unlike page 1: it takes a number and
+this map paints a verdict, which is a category. Colour by location through `fx`
+is the only configuration that does that — at the cost of the automatic tooltip,
+which is why three fields are added to the Tooltips well by hand.
+
+⚠️ **A shape map cannot be cross-highlighted**, so an empty selection and a
+"no published price" sector are the same grey. `Sector bar colour` returns
+`#E8EAEC` for the fourth branch — a lighter grey than *Out of reach* — and those
+two shades are the whole legend, since conditional formatting produces none. The
+tooltip is where the words are.
+
+**One thing this map is safe from that page 2 was not.** The tract map broke a
+branch of `Verdict` because a shape carried only the tract, and the one shared
+tract of the island then arrived with two rows. Measured here: across the whole
+of `fact_affordability`, **no sector slice holds two different required
+incomes** — 18 sectors, 18 geography keys, zero slices with two values. One
+shape is one value, and `AVERAGE` over a sector's tracts averages a constant.
+
+#### The figures the map has to reproduce
+
+Same slice as the rest of the page — condominium, couple, 2026 Q2, 95 000 $ —
+and **the four colour classes must add up to 18**, which is the same check the
+KPI row already carries:
+
+| Colour | Verdict | Shapes |
+|---|---|---|
+| `#17527A` | Within reach | **6** |
+| `#5B9BC4` | Borderline | **1** |
+| `#C7CCD1` | Out of reach | **10** |
+| `#E8EAEC` | No published price | **1** (sector 17, Montréal-Nord) |
+| | **Total** | **18** |
+
+Move the slider and the map has to keep answering: at **30 000 $** and at
+**60 000 $** every priced sector is *Out of reach* and exactly one stays in the
+"no published price" shade — a map that goes entirely blank at the low end of
+the slider has a blank-versus-zero fault, not an empty market.
+
+**One interaction is switched off, for the same reason as the bar: the map must
+not filter the three KPI cards.** Clicking one sector turns "6 of 17" into
+"0 of 1" or "1 of 1", which reads as a verdict about the island. Map → table
+stays on *Filter*, so a click on a shape finds its row.
 
 #### The figures this page has to reproduce
 
@@ -831,6 +1136,9 @@ step with it.
 | Market | `Price status` | `_Measures` | `fact_market` | Text | 1 |
 | Market | `Days on market` | `_Measures` | `fact_market` | Whole number | 1 |
 | Market | `Active listings (island)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1 |
+| Market | `Price relative to the island` | `_Measures` | `Median price`, `Sector` | Custom `0.00"×"` — **never a currency** | 1 |
+| Market | `Sector rank (price)` | `_Measures` | `Median price`, `Sector` | Whole number | 1 |
+| Market | `Sector price colour` | `_Measures` | `Price relative to the island` | Text — a `#RRGGBB` string, **never formatted** | 1 |
 | Market | `Sales (island, 12 months)` | `_Measures` | `fact_market_trailing_12m` | Whole number, thousands sep. | 4 |
 | Market | `Trailing window` | `_Measures` | `fact_market_trailing_12m` | Text | 4 |
 | Affordability | `Tracts evaluated` | `_Measures` | `fact_affordability` | Whole number | 2 |
@@ -863,14 +1171,17 @@ step with it.
 
 ### 3.3 Build order
 
-Five measures reference another measure, and one group references a table that
+Eight measures reference another measure, and one group references a table that
 section 5 creates. Typing them out of order gets a red squiggle and no
 explanation, so build in this order:
 
 | Order | Create | Because |
 |---|---|---|
 | 1 | `Sales (island, as published)`, `Sales (sectors)` | `Sectors minus island (sales)` subtracts one from the other |
-| 2 | the rest of the Market group | independent |
+| 2 | `Median price` | `Price relative to the island` and `Sector rank (price)` both read it |
+| 2b | `Price relative to the island`, `Sector rank (price)` | need `Median price` above |
+| 2b bis | `Sector price colour` | reads `Price relative to the island` rather than repeating its comparison |
+| 2c | the rest of the Market group | independent |
 | 3 | `Tracts evaluated`, `Tracts affordable` | `Share of tracts affordable` divides one by the other |
 | 4 | the rest of the Affordability group | independent |
 | 5 | `Rate (mean of period)` | the two rate means wrap it in `CALCULATE` |
@@ -889,6 +1200,9 @@ or something is wrong upstream of the visual:
 | After group | Check | Expected |
 |---|---|---|
 | Market | `Sectors minus island (sales)` across every quarter | zero everywhere except 2023 Q4, where it is about 0.3 % — reproduced on 2026-08-28 |
+| Market | `Sector rank (price)` against the bar's own order, any slice | identical — the rank column and the sort must never disagree, and they cannot, since both read `Median price` |
+| Market | `Price relative to the island`, condominium 2026 Q2 | between 0.71× and 1.59×; the archive as a whole never leaves 0.51×–3.29×, so no bar reaches the fixed 3.5× axis |
+| Market | the map's colour classes, plex 2022 Q3 | 7 coloured + 11 grey = 18 — the acceptance slice, where more than half the island has no published price |
 | Affordability | `Share of tracts affordable`, condominium, couple, by quarter | 93.2 % in 2019 Q2 falling to 35.0 % in 2026 Q2, with the break at 2022 Q2 |
 | Rates | `Posted minus contract (points)`, on the quarter table's 2026 Q2 row | 1.84 points — and 1.93 with the year slicer on 2026, 2.11 with nothing selected. All three are the same measure; see page 4 |
 | Rates | `Rate freshness warning`, no slicer | names the contracted series, last 2026-06-02, against observations held to 2026-08-26 |
@@ -1062,6 +1376,99 @@ VAR PublishedCells = COUNTROWS ( fact_market )
 RETURN
     IF ( PublishedCells = 1, SUM ( fact_market[days_on_market] ) )
 ```
+
+```dax
+Price relative to the island =
+VAR SectorPrice = [Median price]
+VAR IslandPrice =
+    CALCULATE (
+        [Median price],
+        REMOVEFILTERS ( Sector ),
+        Sector[geography_type] = "island"
+    )
+RETURN DIVIDE ( SectorPrice, IslandPrice )
+```
+
+**It divides by a constant, so it cannot reorder anything** — the island median
+is the same figure for every sector of a given quarter and property type.
+Verified rather than reasoned: across 1 136 sector-rows over 87 type × quarter
+slices, **not one sector changes rank** between this measure and `Median price`.
+The bar keeps its ranking and gains an axis that does not move with inflation.
+
+**`REMOVEFILTERS ( Sector )` before the island filter is what makes it work on
+page 1**, where the bar carries a visual filter of `is apciq_sector`. Without
+it, `Sector[geography_type] = "island"` would intersect with that filter and
+return nothing, and `DIVIDE` would hand back a blank for every bar — a chart
+that is entirely empty rather than visibly wrong.
+
+**`DIVIDE`, not `/`.** A quarter where APCIQ published sector prices but no
+island price would divide by blank; `DIVIDE` returns blank and the bar is
+absent, which is the honest outcome. Measured on 2026-08-31: **all 87 slices
+that carry sector prices also carry an island price**, so the branch is unused
+today. It exists because the archive grows every quarter and the failure would
+otherwise be an infinity.
+
+Format: custom `0.00"×"` — a multiple, **never a currency and never a
+percentage**. Same rule as `Price to income (median)`.
+
+```dax
+Sector rank (price) =
+IF (
+    NOT ISBLANK ( [Median price] ),
+    RANKX (
+        FILTER ( ALLSELECTED ( Sector ), Sector[geography_type] = "apciq_sector" ),
+        [Median price],
+        ,
+        DESC,
+        DENSE
+    )
+)
+```
+
+**The rank is what a re-sorted bar chart cannot show.** A bar sorted by a
+measure re-sorts itself in every filter context, so the order on screen is
+always the selected quarter's — and when one sector climbs, all the others
+shift, which the eye reads as noise. A rank printed as a number can be carried
+from one quarter to the next. It is not decoration: measured over the 29
+quarters on condominium, **9 of the 18 sectors move by 5 places or more**,
+sector 7 travels from 2nd to 11th, and 11 of 17 sectors sit at a different rank
+in the last quarter than in the first.
+
+⚠️ **The `FILTER` is not belt and braces — the first version of this measure
+was wrong, and it was wrong on screen within minutes of being typed.** It read
+`RANKX ( ALLSELECTED ( Sector[name] ), … )`, which ranks whatever the visual
+leaves standing. Checked in a scratch table without the `is apciq_sector`
+filter on 2026-08-31: **the island row joined the ranking at 9th place and
+pushed every sector below it down one**, so Pointe Est de l'Île read 18 out of
+an island that has eighteen sectors. Centre still read 1, which is why nothing
+looked broken.
+
+Restricting the ranking universe to `geography_type = "apciq_sector"` makes
+the measure give the same rank in any visual, filtered or not. **A measure
+whose correctness depends on a filter someone else remembers to set is not a
+measure, it is a trap** — and this one was sprung by the very first table built
+to test it.
+
+`ALLSELECTED` rather than `ALL` is still what respects the two slicers: the
+ranking is of the selected quarter and property type, not of the whole archive.
+
+**A withheld sector is ranked last and shows nothing**, which costs no one a
+place: `[Median price]` is blank there, DAX sorts a blank to the bottom in
+`DESC`, and `NOT ISBLANK` keeps the number off the screen. Montréal-Nord is
+the case to check — and it disappears from a table altogether unless
+`Price status` is beside it, because Power BI drops a row whose measures are
+all blank. That is the same reason the page's table carries `Price status` at
+all: **the map, the bar and the table each go silent on a withheld sector, and
+only one of them says why.**
+
+**The `NOT ISBLANK` guard keeps unpriced sectors out of the ranking.** Without
+it `RANKX` gives them the last place, which is a statement about the market;
+what the data says is that APCIQ printed nothing. A blank rank beside
+`Price status = withheld` says that, and the two are read together.
+
+`DENSE` rather than `SKIP`: two sectors at the same median share a rank and the
+next one follows immediately, so the column is always read as "of 18" rather
+than jumping.
 
 ```dax
 Active listings (island) =
@@ -1766,23 +2173,29 @@ disagreed, and the more recently revised one was the wrong one. **A
 disagreement between two docs pages is settled in the product, not by the
 revision date.**
 
-**No map of the eighteen APCIQ sectors, and that one is still open.** They carry
-`geometry = NULL` — `dim_geography.sql`, the `apciq_sectors` CTE, deliberately
-so since J3.1. `Etude-J4.2.5-cartes.md` measured what building it costs: the
-union of each sector's census tract polygons takes 0.21 s and yields a file
-*lighter* than the tract one, but it needs a stated majority-assignment rule,
-because two tracts otherwise place the same polygon in two sectors.
+**~~No map of the eighteen APCIQ sectors~~ — built on 2026-08-31.** They had
+carried `geometry = NULL` since J3.1. They now carry the union of the census
+tract polygons each of them draws, proved by an equality — sum of the parts =
+area of the union = area of the 541 tracts = 499.627 km² — and held by a dbt
+test. `docs/geography.md` section 5 has the construction and the majority rule
+it needs; the cost of that rule is one tract whose 476 residents are counted in
+one sector and drawn in another, 0.024 % of the island.
 
-**The two maps do not say the same thing, and the one that was built is the one
-that says more.** Eighteen sectors shaded by median price is what a reader
-expects. **541 tracts shaded by the price-to-income ratio shows what no other
+**The three maps do not say the same thing, and that is why there are three.**
+Eighteen sectors shaded by median price is what a reader expects, and it is now
+page 1. **541 tracts shaded by the price-to-income ratio shows what no other
 report has**: the J4.1 finding that in seventeen of the eighteen sectors the
 verdict changes from tract to tract at an identical price. Eighteen flat areas
-cannot show that.
+cannot show that. And the sector map returns on page 3 carrying a verdict
+rather than a price, which is the one thing `Income input` can change.
 
-Neither map is one of the eleven criteria of section 44, though section 30 of
-the brief asks for one. This one was built because it was **faisable en
-l'état** — the geometry, the measure and the join key all already existed.
+**The tract map of the required income was refused, and on a measurement.** It
+would draw 541 shapes for **17 distinct values** — see page 3. That is the one
+map this report deliberately does not do.
+
+No map is one of the eleven criteria of section 44, though section 30 of the
+brief asks for one. They were built because the geometry, the measures and the
+join keys already existed or cost a single dbt model.
 
 **No `housing_burden_ratio`.** It needs sixteen municipal tax rates that are not
 identified and condo fees that only exist in listings. Out of scope for J4,

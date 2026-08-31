@@ -31,7 +31,7 @@ smoothing it, which is section 22 of the original brief.
 | `island` | 1 | ✅ union of the 34 | — |
 | `municipality` | 16 | ✅ | `island:mtl` |
 | `borough` | 19 | ✅ | `municipality:66023` |
-| `apciq_sector` | 18 | ❌ **NULL** — see section 5 | `island:mtl` |
+| `apciq_sector` | 18 | ✅ union of the tracts each draws — section 5 | `island:mtl` |
 | `census_tract` | 541 | ✅ | `municipality:…` |
 
 Census tracts are parented to their **municipality**, not to their borough,
@@ -39,10 +39,13 @@ because no published source says which borough a tract is in. Ville de Montréal
 therefore holds 485 tracts directly, which looks coarse and is honest. Reaching
 the borough — and the APCIQ sector — is section 7.
 
-`area_km2` carries `area_basis` beside it, because the two families do not mean
-the same thing by "area": administrative boundaries run out into the water
-(the island measures 619 km²), tract polygons stop at the shore (499 km²). Both
-are correct about different questions, and adding them is not one of them.
+`area_km2` carries `area_basis` beside it, because the families do not mean the
+same thing by "area": administrative boundaries run out into the water (the
+island measures 619 km²), tract polygons stop at the shore (499 km²). Both are
+correct about different questions, and adding them is not one of them. **APCIQ
+sectors sit with the tracts** — they are built from tract polygons, so the 18 of
+them measure the same 499 km², and a sector cannot be compared on area with a
+borough without reading that column.
 
 The key is readable rather than hashed: `borough:REM19`, `municipality:66112`,
 `apciq_sector:8`. A row is identifiable at a glance in Power BI and in a
@@ -122,76 +125,161 @@ Sector names must never be read as geography.
 
 ---
 
-## 5. Why APCIQ sectors have no geometry
+## 5. Where APCIQ sector outlines come from
 
-> **Superseded as a prerequisite, 2026-08-24.** Everything below still holds,
-> and the sectors still have no geometry. What changed is that **nothing
-> depends on it any more.** Attaching census tracts to sectors was the reason
-> this construction was scheduled, and section 7 shows the attachment is done
-> without a single polygon being cut. Should a map ever need sector outlines,
-> there is now a better construction than the one described here: **the union
-> of the census-tract polygons of each sector**. It draws from one file instead
-> of three, so no two edges have to be reconciled, and it tiles by
-> construction.
+> **Built on 2026-08-31, session J4.2½.** This section used to be titled *Why
+> APCIQ sectors have no geometry*, and it described a construction that was
+> never carried out. The 18 sectors now carry a polygon in
+> `marts.dim_geography`. **The construction that was finally used is not the
+> one this document planned**, and the reason is section 7: once every census
+> tract had a sector, the sectors could be assembled from the tracts.
 
+APCIQ publishes no boundary file. Page 6 of the Baromètre lists which
+municipalities and boroughs make up each sector, and that is all. The outlines
+here are therefore **derived**, and the derivation is one line long:
 
-Their true outlines are reconstructible. Two further CC-BY city datasets were
-checked on 2026-08-23:
+> **A sector is the union of the census tract polygons it draws.**
 
-| Dataset | Features | Solves | Does not solve |
-|---|---|---|---|
-| `quartiers-sociologiques` | 32 | **CDN / NDG** — both named explicitly | Verdun is one block |
-| `quartiers` (Quartiers de référence en habitation) | 91 | **Verdun / Ile-des-Soeurs** | CDN–NDG split into 7 differently-named quarters |
+One source file — the Statistics Canada cartographic boundaries — so there are
+no two shorelines to reconcile, and the map is drawn on exactly the geography
+the figures are attached to.
 
-Neither solves both. Building exact sector polygons means assembling geometries
-from three files and then proving with PostGIS that the result tiles the island
-with no gap and no overlap. That work has not been done.
+### The rule the union needs, and what it costs
 
-Until it is, the geometry is NULL. **A NULL that says "not established" is
-worth more than a polygon that looks authoritative and is approximate** —
-particularly on a map, where nobody questions a shape.
+`bridge_census_tract_apciq_sector` shares a tract between sectors **by
+population**, because population is what a household income describes. A
+surface cannot be shared that way. A map paints whole polygons: a tract
+weighted 92.9 % / 7.1 % would be painted in both sectors, and painting it twice
+is not a shared shape, it is an overlap.
 
-### How it will be built, and why not by union
+So the bridge carries a second rule for drawing only, in the column
+`is_drawn_in_this_sector`: **each tract is drawn in the sector where the
+majority of its residents live.** Exactly one row per tract carries it, 541 of
+the 543.
 
-The obvious construction is `ST_Union(neighbourhood, linked_city)`. It is the
-wrong one. The two polygons come from different files drawn twelve years apart,
-so their shared edges do not coincide exactly; a union leaves slivers of gap
-where they fall short and slivers of overlap where they cross.
+Without that rule, measured on 2026-08-31:
 
-The construction that cannot fail is to **cut the administrative polygon using
-the neighbourhood polygon as a knife**, and never to take an outer edge from
-anywhere but the official file:
+| Overlapping pair | Area | Where it comes from |
+|---|---|---|
+| sectors **2 and 5** | 1.529 km² | `4620511.02`, the genuinely shared tract of J3.4 |
+| sectors **5 and 6** | 0.304 km² | `4620421.05`, which carries a **zero-weight** row |
 
-```sql
-ndg_part = ST_Intersection( borough_REM34 , ndg_sociological )
-cdn_part = ST_Difference  ( borough_REM34 , ndg_sociological )
-```
+The second one is worth pausing on. J3.4 deliberately kept a zero-weight bridge
+row for a tract that reaches into a second sector across land where nobody
+lives — *"the reach is real and a later census could put people there"*. That
+decision is right for the figures and wrong for the drawing, because **a
+surface has no weight**: a zero-weight row hands over the whole polygon. A
+bridge built to divide residents cannot be reused unchanged to divide pixels.
 
-By construction `ndg_part ∪ cdn_part = borough_REM34` exactly. The
-sociological file supplies only the dividing line.
+**What the rule costs is one disagreement between the map and the tables**, and
+it is a column rather than a silent adjustment so that anyone can find it:
 
-**Measured on 2026-08-23**, comparing each borough against the union of the
-neighbourhood pieces that should fill it:
+    4620511.02    476 residents COUNTED in sector 5, DRAWN in sector 2
+    4620421.05    a zero-weight row in sector 6, drawn in sector 5
 
-| Borough | Cutting file | Admin area | Pieces | Difference |
+476 people is 0.024 % of the island, on 1 tract out of 541. The alternative —
+cutting the shared polygon — is what J3.4 examined and rejected, and nothing
+here reopens it: the cut would follow a line APCIQ has never published.
+
+The rule also needs no tie-break, and that was **measured, not assumed**: no
+tract has two rows of equal weight. The sector number decides if one ever
+appears, so a redraw stays reproducible.
+
+### The proof, which is an equality and not a tolerance
+
+Measured 2026-08-31, and held by
+`assert_apciq_sector_geometry_tiles_the_island`:
+
+| Measurement | Value |
+|---|---|
+| sum of the 18 sector areas | **499.627 km²** |
+| area of their union | **499.627 km²** |
+| area of the 541 census tracts | **499.627 km²** |
+| overlapping pairs above 1 m² | **0** |
+
+Only a partition produces those three numbers at once: dropping a tract lowers
+the first two, duplicating one raises the first alone. A second, independent
+check agrees — the exported sector file and the exported tract file have the
+**same bounding box to the last published decimal on all four sides**.
+
+Two positive witnesses were run before the result was believed. Removing the
+majority clause returned 501.462 km² and named both overlapping pairs; dropping
+a single tract from the drawing returned 499.163 km². The test sees both
+failure modes.
+
+### Three things this geometry is not
+
+**1. It is not APCIQ's own line.** Where APCIQ splits a borough it publishes
+two names and no boundary. Which tracts fall on each side was settled in
+section 7 against a city neighbourhood file — a derived assumption, carried on
+every bridge row by `assignment_method`, and inherited by these polygons.
+
+**2. It does not tile in the topological sense.** The union is exact in
+**area**, but the source polygons do not all touch. Sector 3 comes out as two
+halves of 17.48 and 15.95 km², **13.3 m apart, with no other sector between
+them** — the tracts of one municipality that the source file did not draw
+edge to edge. Sector 11 (Ville-Marie) carries three interior rings downtown, of
+0.223, 0.222 and 0.003 km², which no island tract covers. None of this is
+visible at the scale any map here is read at, but *"it tiles by construction"*
+would claim more than has been measured, so it is stated instead.
+
+**3. A sector is not one piece, and that is mostly correct.** Ten of the
+eighteen come out in several parts, from three different causes that must not
+be confused:
+
+| Sector | Parts | Cause |
+|---|---|---|
+| 3 — Lachine/Lasalle | 34 | the sub-metric gaps above, plus islands |
+| 2 — Ouest-de-l'Île-Nord | 18 | the archipelago |
+| 1 — Ouest-de-l'Île-Sud | 14 | the archipelago; 99.6 % sits in one part |
+| 9 — Centre | 3 | **real geography** — Hampstead, Mont-Royal, Outremont and Westmount do not all touch |
+
+Sector 9 in three large pieces is a **non-regression signal**, not a defect:
+the fragmentation reproduces the composition APCIQ publishes on page 6.
+
+### Why the carving planned here was abandoned
+
+The construction this section used to describe was to cut the two split
+boroughs with a neighbourhood file as a knife
+(`ST_Intersection` / `ST_Difference`) and assemble three files. It was sound,
+and it is no longer the best available, for one reason: **a cut inherits every
+disagreement between the files it cuts.** The measurements that made the case
+for it are still true and still useful — they are kept here because they
+document the source, not the method:
+
+| Borough | Cutting file | Admin area | Neighbourhood pieces | Difference |
 |---|---|---|---|---|
 | CDN–NDG (`REM34`) | quartiers sociologiques | 21.4909 km² | 21.4880 km² | **0.44 %** |
 | Verdun (`REM12`) | quartiers de référence | 22.2952 km² | 9.8467 km² | **55.9 %** |
 
-The first is digitising noise, and the cut removes it entirely.
+The first is digitising noise between two files drawn twelve years apart. **The
+second is not an error: administrative boundaries include water.** Verdun
+reaches the middle of the St. Lawrence; the housing-reference neighbourhoods
+cover inhabited land only. The same effect is why the island measures 619 km²
+in the administrative rows and 499 km² in the tract rows.
 
-**The second is not an error, and it matters beyond this one borough:
-administrative boundaries include water.** Verdun extends to the middle of the
-St. Lawrence; the housing-reference neighbourhoods cover only inhabited land.
-The same effect is why the island measures 619 km² here rather than its land
-area. `ST_Difference` simply assigns the river to the larger piece — nobody
-sells a condo on it — but a map built without knowing this would show an
-inexplicable hole.
+That is also why `dim_geography.area_basis` puts the sectors with the **tracts**
+(`land_only`) and not with the boroughs (`boundary_including_water`). **A
+sector and a borough cannot be compared on area without reading that column
+first.**
 
-**Sequencing.** This construction was waiting on open question 1 below —
-whether sector 4 excludes L'Île-des-Sœurs or overlaps sector 10 — because the
-answer decides how sector 4 is cut. **The Baromètre settled it on 2026-08-23:
-no overlap.** The construction is unblocked.
+Both neighbourhood files are still in use — but in section 7, to place *points*
+inside polygons, which collects none of the edge disagreements a cut would
+have.
+
+### The exported shape file
+
+`scripts/export_map_shapes.py` writes both map layers from
+`marts.dim_geography`, never from a downloaded lookalike:
+
+| File | Features | Key property | Size |
+|---|---|---|---|
+| `powerbi/shapes/apciq_sector_island.geojson` | 18 | `sector_id` | 720 kB |
+| `powerbi/shapes/census_tract_island.geojson` | 541 | `ct_uid` | 1 307 kB |
+
+**The 18-shape file is the smaller of the two**, because the union erases every
+internal border. Both are versioned: the Statistics Canada licence permits
+redistribution, and without them nobody could redraw the maps after a clone.
 
 ---
 
@@ -289,7 +377,7 @@ against a neighbourhood file finishes the job.
 
 **No polygon is cut anywhere, and no membership is decided by a polygon edge.**
 
-### Why the carving of section 5 was not needed
+### Why the carving planned in section 5 was not needed
 
 The plan recorded at the end of J3.3 was to rebuild the eighteen sector
 polygons with `ST_Intersection` / `ST_Difference` and then attach tracts to
@@ -420,12 +508,17 @@ analytical figure.
    *Consequence:* the reconstruction in section 5 is no longer blocked. Verdun
    is cut in two, sector 10 taking L'Île-des-Sœurs and sector 4 the remainder,
    with no part of the borough counted twice.
-2. **Exact sector geometries** — still not built, and **no longer a
-   prerequisite for anything** since 2026-08-24. Section 7 attaches tracts to
-   sectors without them. They are wanted only for a map, and if that map is
-   ever drawn the construction is now the union of each sector's tract
-   polygons — one source file, no edges to reconcile, tiling by construction —
-   rather than the three-file carving of section 5.
+2. ~~**Exact sector geometries**~~ **Built 2026-08-31**, as the union of each
+   sector's census tract polygons, and held by an equality: sum of the parts =
+   area of the union = area of the 541 tracts = 499.627 km². Section 5 has the
+   construction, the majority rule it needs, and what that rule costs.
+
+   Two things the wording above got wrong and that the build corrected. The
+   union does **not** tile *by construction*: it tiles in area, while the
+   source polygons leave sub-metric to decametric gaps — sector 3 comes out in
+   two halves 13.3 m apart. And it needs a rule the sentence did not
+   anticipate, because the bridge divides *residents* and a surface has no
+   weight.
 3. ~~**Census tract to island**~~ **Settled 2026-08-24.** No spatial join was
    needed at all. The Geographic Attribute File states the municipality of
    every tract outright, and census division 2466 turns out to be exactly the
