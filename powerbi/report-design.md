@@ -1140,8 +1140,12 @@ step with it.
 | Guards | `Grain warning` | `_Measures` | filter state of `Census_Tract` | Text | 2, 3 |
 | Guards | `Income vintage warning` | `_Measures` | `fact_affordability` | Text | 2 |
 | Guards | `Income basis note` | `_Measures` | `fact_affordability` | Text | 2 |
+| Guards | `Selected area disclosure` | `_Measures` | `Place` | Text | 1, 2, 3 |
 | Guards | `Slice warning` | `_Measures` | `property_type`, `fact_affordability` | Text | 2, 3 |
 | Market | `Sales (island, as published)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1 |
+| Market | `Sales (selected area)` | `_Measures` | `fact_market`, `Place` | Whole number, thousands sep. | 1 |
+| Market | `Active listings (selected area)` | `_Measures` | `fact_market`, `Place` | Whole number, thousands sep. | 1 |
+| Market | `Area title` | `_Measures` | `Place` | Text | 1 |
 | Market | `Sales (sectors)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1, 4 |
 | Market | `Sectors minus island (sales)` | `_Measures` | the two `Sales` measures | Whole number | 1 |
 | Market | `Median price` | `_Measures` | `fact_market` | Currency, 0 dec., thousands sep. | 1 |
@@ -1182,6 +1186,7 @@ step with it.
 | First-time buyer | `Verdict for this income` | `_Measures` | `fact_affordability`, `Income input` | Text | 3 |
 | First-time buyer | `Sector bar colour` | `_Measures` | `Verdict for this income` | Text | 3 |
 | First-time buyer | `Down payment assumption` | `_Measures` | nothing — a constant string | Text | 3 |
+| First-time buyer | `Verdict for the selected place` | `_Measures` | `Verdict for this income`, `Place` | Text | 3 |
 | — | `Income input Value` | `Income input` | the slicer selection | Currency, 0 dec. | 3 |
 
 ### 3.3 Build order
@@ -2450,3 +2455,305 @@ half-unit — the same class of false disagreement as `rank()` versus
 is the mean of the twelve 2020 months. 2019 Q2 is **× 0.9901** — below one,
 because the index deflates towards the past. A card showing 1.000 everywhere
 means the measure lost its filter context.
+
+---
+
+# 9. J4.2¾ · 2 — The place filter
+
+**Specified on 2026-08-31.** One slicer, and it changes what three pages mean.
+Read 9.1 before anything else: it corrects a figure the feasibility study got
+the wrong way round, and the correction is the reason the slicer is shaped the
+way it is.
+
+## 9.1 The measurement that shaped this: 26 places of 34 show more than was asked
+
+The study measured that **32 of the 34 administrative entities resolve to
+exactly one APCIQ sector**, and concluded that only Verdun and
+Côte-des-Neiges–NDG were a problem. That figure is right and the conclusion
+does not follow, because it measures the wrong direction. What a reader
+experiences is **sector → places**, not place → sector.
+
+Measured on 2026-08-31 over `bridge_apciq_sector_geography`:
+
+| What the reader gets beyond the place they picked | Places |
+|---|---|
+| exactly what was asked | **8 of 34** |
+| one extra place | 10 |
+| two extra | 1 |
+| three extra | 8 |
+| **six extra** | **7** |
+
+Choosing Beaconsfield shows the figures of seven municipalities. Choosing
+Westmount shows Hampstead, Mont-Royal and Outremont with it. The eight clean
+places are the ones whose sector contains nothing else: Saint-Laurent,
+Ahuntsic-Cartierville, Ville-Marie, Le Plateau-Mont-Royal, Rosemont,
+Villeray, Mercier–Hochelaga-Maisonneuve, Montréal-Nord.
+
+**This is not a defect of the bridge.** APCIQ does not publish below the
+sector, and `docs/geography.md` has said since J3.1 that an APCIQ sector name
+is not a geography. What changes is the status of the disclosure: it is not a
+special case for two places, it is a **permanent statement for twenty-six**.
+
+## 9.2 The `Place` table, and why it is the bridge itself
+
+Import `marts.bridge_apciq_sector_geography` and **name it `Place`**. No new
+dbt model: the bridge already carries both levels of the hierarchy and the
+`coverage` column that flags a split place.
+
+| | |
+|---|---|
+| Rows | **36** — 34 places, two of them appearing twice |
+| Columns used | `apciq_sector_name`, `admin_name`, `apciq_geography_key`, `apciq_sector_number`, `coverage`, `admin_geography_type` |
+
+**Relationship:** `Place[apciq_geography_key]` → `Sector[geography_key]`,
+many-to-one, **cross-filter direction Both**.
+
+⚠️ **Bidirectional, deliberately, and it is safe here — but check before
+copying the pattern.** The slicer sits on `Place` and has to filter the facts,
+which hang off `Sector`; a single-direction many-to-one relationship filters
+the other way and the slicer would do nothing. Bidirectional is normally worth
+avoiding because it creates ambiguous paths, and here there are none: `Place`
+touches only `Sector`, and `Sector` touches only the four fact tables. No loop
+exists, so no ambiguity can.
+
+**Verdun appears twice in the hierarchy, under `Le Sud-Ouest` and under
+`L'Île-des-Sœurs`, and that is correct rather than a duplicate to clean up.**
+It is the one honest way a slicer can say that a borough sits in two published
+sectors. The same holds for Côte-des-Neiges–NDG under `NDG/Montréal-Ouest` and
+`CDN/CSL`.
+
+## 9.3 The slicer
+
+A **hierarchy slicer**, two levels: `Place[apciq_sector_name]` then
+`Place[admin_name]`. Chosen on 2026-08-31, against a flat list
+of 34 names.
+
+**The reason is 9.1.** A flat list hides the grouping until after the click; a
+hierarchy shows it before. Someone opening *Ouest-de-l'Île-Sud* sees its seven
+municipalities and understands, without reading anything, that picking one of
+them means picking the group. The disclosure card then confirms it rather than
+being the first news.
+
+- **Synchronise it across pages 1, 2 and 3. Never page 4.**
+  `marts.fact_interest_rate` has seven columns and not one of them is
+  geographic — the Bank of Canada publishes for Canada, and there is no
+  Montréal rate. A synchronised slicer there would be an inert control, which
+  is worse than no control.
+- **Multi-select stays allowed**, as on the property-type slicer of page 1.
+  `Median price` already blanks with its sentence when more than one published
+  cell survives, so nothing new is needed to make multi-selection honest.
+- Set *Select all* off. It reads as a state, and "all places" is not the same
+  question as "the island" — see 9.5.
+
+## 9.4 `Selected area disclosure` — the card that names what is on screen
+
+```dax
+Selected area disclosure =
+VAR Chosen = VALUES ( Place[admin_name] )
+VAR ChosenCount = COUNTROWS ( Chosen )
+VAR SectorsReached = CALCULATETABLE ( VALUES ( Place[apciq_sector_name] ) )
+VAR AllPlacesShown =
+    CALCULATETABLE (
+        VALUES ( Place[admin_name] ),
+        REMOVEFILTERS ( Place ),
+        TREATAS ( SectorsReached, Place[apciq_sector_name] )
+    )
+VAR Extra = EXCEPT ( AllPlacesShown, Chosen )
+VAR ExtraCount = COUNTROWS ( Extra )
+RETURN
+    SWITCH (
+        TRUE (),
+        NOT ISFILTERED ( Place[admin_name] ) && NOT ISFILTERED ( Place[apciq_sector_name] ),
+            "Island of Montréal — all 18 APCIQ sectors.",
+        ISBLANK ( ExtraCount ),
+            "Showing " & CONCATENATEX ( Chosen, Place[admin_name], ", " )
+                & ". APCIQ publishes this area on its own.",
+        "Showing " & CONCATENATEX ( Chosen, Place[admin_name], ", " )
+            & " — but APCIQ publishes it inside "
+            & CONCATENATEX ( SectorsReached, Place[apciq_sector_name], " and " )
+            & ", so the figures also cover " & ExtraCount & " other place(s): "
+            & CONCATENATEX ( Extra, Place[admin_name], ", " ) & "."
+    )
+```
+
+⚠️ **This card is permanent and it is not a warning, it is a caption.** It
+fires on 26 of the 34 places, which is most of the time — a message that
+appears that often has to read as an ordinary description of the view, not as
+an error. Word it as *what you are seeing*, never as *careful*.
+
+**Put it under the slicer, on all three pages.** It is the only thing standing
+between "I clicked Verdun" and "this is the price of Verdun", and that reading
+is the one the licence-free part of this project can least afford to leave
+uncorrected.
+
+## 9.5 Page 1 — the KPI row becomes contextual
+
+Today `Sales (island, as published)` and `Active listings (island)` filter on
+`fact_market[is_island_aggregate] = TRUE ()`. With a place selected, the
+intersection of "this sector" and "the island aggregate" is empty by
+construction, and **the two cards go blank while `Median price` and
+`Days on market` keep working** — a row that answers half.
+
+The filter becomes a switch:
+
+```dax
+Sales (selected area) =
+VAR PlaceChosen =
+    ISFILTERED ( Place[admin_name] ) || ISFILTERED ( Place[apciq_sector_name] )
+RETURN
+    IF (
+        PlaceChosen,
+        CALCULATE (
+            SUM ( fact_market[sales_count] ),
+            fact_market[is_island_aggregate] = FALSE ()
+        ),
+        CALCULATE (
+            SUM ( fact_market[sales_count] ),
+            fact_market[is_island_aggregate] = TRUE ()
+        )
+    )
+```
+
+`Active listings (selected area)` is the same shape on
+`fact_market[active_listings]`.
+
+⚠️ **Both branches of `ISFILTERED` are needed, and testing only `admin_name`
+is the mistake waiting to happen.** The slicer is a hierarchy: selecting at the
+top level filters `apciq_sector_name` and leaves `admin_name` untouched. A
+measure testing one column would fall back to the island aggregate while the
+visual clearly shows one sector selected — the figures would be the island's,
+under a title naming a sector.
+
+⚠️ **Never drop the filter instead of switching it.** Without any geographic
+filter the 19 rows add up: measured, sales come to **exactly ×2.0000** the
+island row, listings between ×1.4747 and ×2.0431. The exact doubling on sales
+is the J3.2 reconciliation seen from the other end — the 18 sectors tile the
+island — and it is the reason the switch is exclusive by construction: either
+the aggregate row, or the sector rows, never their union.
+
+**`Active listings` does not reconcile exactly, and the measure should say
+so.** APCIQ defines an active listing as *the mean of the monthly figures*, and
+eighteen rounded means do not sum to the nineteenth rounded mean: **±0.18 % at
+worst** on the clean slices, 25 of them exact. That is rounding, not a defect,
+and not nothing.
+
+```dax
+Area title =
+VAR PlaceChosen =
+    ISFILTERED ( Place[admin_name] ) || ISFILTERED ( Place[apciq_sector_name] )
+VAR Places = COUNTROWS ( VALUES ( Place[admin_name] ) )
+RETURN
+    SWITCH (
+        TRUE (),
+        NOT PlaceChosen, "Island of Montréal",
+        Places = 1, VALUES ( Place[admin_name] ),
+        Places & " places selected"
+    )
+```
+
+**A card that changes its perimeter without saying so is the trap this repo has
+refused since J3.1.** The title must read the *same* filter state as the value
+measures, never its own — the fault `Sector price colour` already avoided by
+reading `Price relative to the island` instead of recomputing the comparison.
+
+⚠️ **Promote `Price status` into the KPI row.** 430 of the 1 566 sector cells
+have no published price — 27.5 % overall, **48.1 % on plex**, 30.1 % on
+single-family, 4.2 % on condo — and those cells still carry sales and listings,
+430 of 430. A half-filled row is therefore the normal state, not a symptom, and
+only `Price status` distinguishes *APCIQ published nothing here* from *the
+filter is broken*.
+
+**The price line stays on the island, and that is measured rather than
+preferred.** If it followed the selection: on plex only 6 of 18 sectors have
+all 29 quarters and **5 have no series at all**, so the line would vanish
+entirely. Keeping it on the island also preserves its job — the depth behind
+the selected quarter. Both titles must say which geography they are on.
+
+**The interaction matrix of page 1 has to be redone.** The page had two mutually
+exclusive halves — `is island` for the cards and the line, `is apciq_sector` for
+the histogram and the table — and the slicer crosses that boundary where an
+interaction did not. Rebuild it against the acceptance cases in 9.7 rather than
+from the old matrix.
+
+## 9.6 Page 3 — three cards must stop following the place
+
+⚠️ **This is the one thing a slicer breaks that an interaction did not, and no
+interaction setting repairs it.** `report-design.md` documents that clicking a
+bar is unhooked from the three KPI cards, because selecting one sector turns
+"6 of 17" into "0 of 1", which reads as *no sector is within reach*. **A slicer
+is not an interaction: it cannot be unhooked.**
+
+So the three existing cards keep the island denominator:
+
+```dax
+Sectors within reach of this income =
+VAR Income = 'Income input'[Income input Value]
+VAR Reached =
+    CALCULATE (
+        COUNTROWS (
+            FILTER (
+                VALUES ( fact_affordability[apciq_sector_number] ),
+                VAR Required = CALCULATE ( AVERAGE ( fact_affordability[income_required_lower_bound] ) )
+                RETURN NOT ISBLANK ( Required ) && Required * 1.10 <= Income
+            )
+        ),
+        REMOVEFILTERS ( Place ),
+        REMOVEFILTERS ( Sector )
+    )
+RETURN IF ( ISBLANK ( Reached ), 0, Reached )
+```
+
+`Sectors borderline` and `Sectors priced` take the same two `REMOVEFILTERS`.
+
+⚠️ **`REMOVEFILTERS ( Sector )` alone is not enough, and this is the subtle
+part.** The slicer's filter lands on `Place`, and the bidirectional
+relationship propagates it to `Sector`. Removing it from `Sector` only lets it
+arrive again from `Place`. **Both tables, always.**
+
+Then a fourth card answers the question the slicer was added for:
+
+```dax
+Verdict for the selected place =
+VAR PlaceChosen =
+    ISFILTERED ( Place[admin_name] ) || ISFILTERED ( Place[apciq_sector_name] )
+RETURN
+    IF (
+        NOT PlaceChosen,
+        "Select a place to see whether it is within reach",
+        [Verdict for this income]
+    )
+```
+
+It deliberately reuses `[Verdict for this income]` rather than repeating the
+comparison — the same discipline that keeps `Sector bar colour` from applying a
+different threshold than the table beside it. The 10 % band stays written in
+exactly two measures.
+
+**The page then answers both questions at once**: *where can I buy on the
+island*, from the three island-wide cards, and *and the one I love, is it in
+reach*, from the fourth. That second question is the "choix de cœur" the slicer
+was requested for.
+
+## 9.7 Acceptance
+
+**The control that proves nothing moved:** with no place selected, all three
+pages must read exactly what they read today. That is a before-and-after
+comparison against `report_oracle.py`, not a visual inspection.
+
+| Case | What must happen |
+|---|---|
+| **No selection** | page 1 KPI row identical to today; `Area title` reads *Island of Montréal*; page 3 cards read 6 / 1 / 10 / 18 at 95 000 $ |
+| **Rosemont** (clean place) | disclosure says *APCIQ publishes this area on its own*; no extra places named |
+| **Westmount** | disclosure names **Centre** and the three other places; page 1 figures are the sector's |
+| **Beaconsfield** | disclosure names **six** other municipalities — the worst case |
+| **Verdun** | disclosure names sectors **Le Sud-Ouest and L'Île-des-Sœurs**, and Le Sud-Ouest as an extra place |
+| **plex, any quarter** | **16 of the 34 places have no published price on the entire archive.** The row must read `--` with `Price status`, never `0` |
+| **page 4** | the slicer is absent, and the page is unchanged |
+
+⚠️ **The plex figure is 16, not the 17 the study printed.** The study counted
+over the 36 bridge rows; the slicer selects a **place**, and a place reaches all
+of its sectors. Verdun's `L'Île-des-Sœurs` row has no plex price in any quarter,
+but its `Le Sud-Ouest` row has all 29 — so choosing Verdun does not produce an
+empty screen. Both figures are right about different questions, and **16 is the
+one this page is accepted against**. Same class of distinction as *512 shapes ≠
+513 rows* on the page 2 map.

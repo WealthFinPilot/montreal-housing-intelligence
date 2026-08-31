@@ -123,6 +123,47 @@ Sector **9 is called "Centre"** and contains Hampstead, Mont-Royal, Outremont
 and Westmount — three linked cities and one borough, none of them central.
 Sector names must never be read as geography.
 
+### What this costs anything that filters by place, measured 2026-08-31
+
+The two splits above are the celebrated cases, and they are not the common
+one. **The direction that matters is sector → places, not place → sector.**
+32 of the 34 administrative entities resolve to exactly one APCIQ sector — a
+true statement that invites the wrong conclusion, because a sector usually
+holds several entities.
+
+Counting the other way, over the 36 bridge rows:
+
+| Entities also shown when one is picked | Entities |
+|---|---|
+| none — the sector holds only it | **8 of 34** |
+| one more | 10 |
+| two more | 1 |
+| three more | 8 |
+| **six more** | **7** |
+
+The seven worst are the municipalities of sector 1, *Ouest-de-l'Île-Sud*:
+Baie-D'Urfé, Beaconsfield, Dorval, L'Île-Dorval, Pointe-Claire,
+Sainte-Anne-de-Bellevue and Senneville. Asking for any one of them returns all
+seven, because APCIQ prices the group and not its members.
+
+The eight that answer for themselves alone: Saint-Laurent,
+Ahuntsic-Cartierville, Ville-Marie, Le Plateau-Mont-Royal, Rosemont–La
+Petite-Patrie, Villeray–Saint-Michel–Parc-Extension,
+Mercier–Hochelaga-Maisonneuve, Montréal-Nord.
+
+**Consequence for any report that lets a reader choose a place:** naming what
+is actually on screen is not a courtesy for two edge cases, it is a permanent
+requirement for twenty-six of thirty-four. `coverage` flags the two split
+boroughs; it does **not** flag this, because nothing is split here — the place
+is whole, the sector around it is simply larger. See `powerbi/report-design.md`
+section 9.
+
+⚠️ **And a place that reaches two sectors is not automatically a place without
+data.** Verdun's sector 10 (*L'Île-des-Sœurs*) has no plex price in any of the
+29 quarters, while its sector 4 has all 29. Counted over bridge rows, Verdun
+looks unpriced on plex; counted as a place — which is what a reader selects —
+it is priced. **16 places have no plex price ever, not 17.**
+
 ---
 
 ## 5. Where APCIQ sector outlines come from

@@ -514,6 +514,90 @@ def main() -> int:
             """,
         )
 
+        table(
+            cur,
+            "PLACE SLICER -- what each place actually puts on screen",
+            "Added in J4.2-3/4 step 2. Choosing a place selects its APCIQ\n"
+            "sector(s), and a sector usually holds more than one place. Only 8\n"
+            "of the 34 places show exactly what was asked for.\n"
+            "\n"
+            "This is what Selected area disclosure must say. extra_places is\n"
+            "the count the card names; the last column is what it lists.",
+            """
+            with reached as (
+              select c.admin_name                             as chosen,
+                     count(distinct c.apciq_sector_number)    as sectors,
+                     count(distinct b.admin_name) - 1         as extra_places,
+                     string_agg(distinct b.admin_name, ', ')  as everything_shown
+              from marts.bridge_apciq_sector_geography c
+              join marts.bridge_apciq_sector_geography b
+                on b.apciq_sector_number = c.apciq_sector_number
+              group by c.admin_name)
+            select chosen, sectors, extra_places, left(everything_shown, 66) as everything_shown
+            from reached
+            where chosen in ('Rosemont-La Petite-Patrie', 'Westmount',
+                             'Beaconsfield', 'Verdun')
+               or extra_places = 6
+               or chosen in (select admin_name
+                             from marts.bridge_apciq_sector_geography
+                             where coverage = 'part')
+            order by extra_places desc, chosen
+            """,
+        )
+
+        table(
+            cur,
+            "PLACE SLICER -- the plex acceptance case",
+            "16 of the 34 places have NO published plex price in any quarter.\n"
+            "The KPI row must read -- with Price status, never 0.\n"
+            "\n"
+            "COUNT PLACES, NOT BRIDGE ROWS. The study printed 17 because it\n"
+            "counted the 36 rows: Verdun's Ile-des-Soeurs row has no plex price\n"
+            "ever, but its Le Sud-Ouest row has all 29, and choosing Verdun\n"
+            "reaches both. 16 is the figure this page is accepted against.",
+            """
+            with place_price as (
+              select b.admin_name, f.property_type_code,
+                     count(*) filter (where f.median_price is not null) as priced_quarters
+              from marts.bridge_apciq_sector_geography b
+              join marts.fact_market f on f.geography_key = b.apciq_geography_key
+              group by 1, 2)
+            select property_type_code,
+                   count(*) filter (where priced_quarters = 0)  as places_never_priced,
+                   count(*) filter (where priced_quarters = 29) as places_all_29_quarters,
+                   count(*)                                     as places
+            from place_price
+            group by 1
+            order by 1
+            """,
+        )
+
+        table(
+            cur,
+            "PLACE SLICER -- the island switch must stay exclusive",
+            "Sales (selected area) switches between the island aggregate and\n"
+            "the sector rows; it must never show their union. The ratio below\n"
+            "is what dropping the filter instead of switching it would cost.\n"
+            "\n"
+            "Exactly 2.0000 on sales is the J3.2 reconciliation seen from the\n"
+            "other end: the 18 sectors tile the island.",
+            """
+            select property_type_code,
+                   round(min(ratio), 4) as min_ratio,
+                   round(max(ratio), 4) as max_ratio
+            from (
+              select property_type_code, edition_label,
+                     sum(sales_count)::numeric
+                       / nullif(sum(sales_count) filter (where is_island_aggregate), 0) as ratio
+              from marts.fact_market
+              group by 1, 2
+              having sum(sales_count) filter (where is_island_aggregate) > 0
+            ) r
+            group by 1
+            order by 1
+            """,
+        )
+
         print(f"\n{'=' * 78}")
         print("Every figure above is read from marts at run time. If a Power BI card")
         print("disagrees with one of them, the card is wrong -- not this script.")
