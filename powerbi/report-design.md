@@ -1,5 +1,17 @@
 # Report design
 
+> **Table names in this file are the MODEL's names, not the database's.** The
+> `dim_` prefix is dropped on import, so `marts.dim_date` is `'date'` here,
+> `marts.dim_property_type` is `property_type`, and `marts.dim_geography` is
+> split into `Sector` and `Census_Tract`. Fact tables are unchanged. Where a
+> sentence genuinely means the dbt table it says so — `dim_geography` appears
+> twice below, both times about the database and not about the model.
+>
+> `'date'` is quoted everywhere because `DATE` is a DAX function and a bare
+> table name of that spelling does not parse. See `powerbi/README.md`.
+
+
+
 Four pages, and every measure they need. The connection, the tables and the
 relationships are in [README.md](README.md); build the model there first.
 
@@ -52,10 +64,10 @@ it.
 
 | Element | Field or measure |
 |---|---|
-| Slicer | `dim_property_type[name_en]`, single select, **required** |
-| Slicer | `dim_date[quarter_label]` |
+| Slicer | `property_type[name_en]`, single select, **required** |
+| Slicer | `'date'[quarter_label]` |
 | KPI row | `Sales (island, as published)`, `Median price`, `Days on market`, `Active listings (island)` — visual filter `Sector[geography_type] is island` |
-| Line | `Median price` by `dim_date[quarter_label]` — same visual filter |
+| Line | `Median price` by `'date'[quarter_label]` — same visual filter |
 | **Map** | `Shape map`, `Sector[geography_code]` on **Location**, `Median price` on **Color saturation**, `Legend` **empty**, a drawn gradient shape as legend — visual filter `Sector[geography_type] is apciq_sector` |
 | Column chart | `Price relative to the island` by `Sector[name]`, sorted descending, **Y axis fixed 0 to 3.5×**, Y constant line at **1.0×**, columns coloured by `Sector price colour`, tooltip `Sector rank (price)` — same visual filter |
 | Table | `Sector[name]`, **`Sector rank (price)`**, `Median price`, `Price status`, `Sales (sectors)` — same filter |
@@ -357,12 +369,12 @@ context: a single bar beside a 1.0× line still reads correctly, but the ranking
 is gone. If it reads badly in practice, the fix is to set map → bar to
 *Highlight* rather than to unpick the zone rule.
 
-**The date dimension is wider than this page, and stays that way.** `dim_date`
+**The date dimension is wider than this page, and stays that way.** `date`
 starts on 2015-01-01 because the Bank of Canada series are daily and weekly from
 then; page 4 uses those years. `fact_market` starts in 2019 Q2. Narrowing the
 dimension would amputate page 4, so the quarters with no market data are removed
 per visual — the slicer carries a visual filter
-`Sales (island, as published) is not blank` — never from `dim_date` itself.
+`Sales (island, as published) is not blank` — never from `'date'` itself.
 
 ### Page 2 — Affordability
 
@@ -370,11 +382,11 @@ per visual — the slicer carries a visual filter
 
 | Element | Field or measure |
 |---|---|
-| Slicers | property type (single select), `dim_household_profile[name_en]`, quarter |
+| Slicers | property type (single select), `household_profile[name_en]`, quarter |
 | KPI | `Share of tracts affordable`, `Tracts evaluated`, `Income required, lower bound (mean)` |
-| Line | `Share of tracts affordable` by `dim_date[quarter_label]` — **the finding** |
+| Line | `Share of tracts affordable` by `'date'[quarter_label]` — **the finding** |
 | Bar | `Share of tracts affordable` by `Sector[name]` |
-| Table | `Sector[name]`, `Census Tract[name]`, `Household income (2020 census)`, `Income required, lower bound (mean)`, `Income shortfall (mean)`, `Price to income (median)`, `Verdict` — sorted by shortfall ascending |
+| Table | `Sector[name]`, `Census_Tract[name]`, `Household income (2020 census)`, `Income required, lower bound (mean)`, `Income shortfall (mean)`, `Price to income (median)`, `Verdict` — sorted by shortfall ascending |
 | **Shape map** | `Census_Tract[geography_code]` in **Location**, colour by `Tract map colour` — see below |
 | Card | `Income vintage warning` |
 | Card | `Grain warning` |
@@ -486,7 +498,7 @@ overall, **0 %** on condominium and 4.51 % on single-family — measured
 percentile. A scale stretched to that outlier would flatten everything else.
 
 **`Verdict` gained a branch because of this map.** The table on this page
-carries `Sector[name]` *and* `Census Tract[name]`, so every row is unique. **The
+carries `Sector[name]` *and* `Census_Tract[name]`, so every row is unique. **The
 map carries only the tract**, so `4620511.02` — the one genuinely shared tract
 of the island, J3.4 — arrives with both its rows in context and `SELECTEDVALUE`
 returns blank. Measured over its 261 combinations: **174 disagree on the price
@@ -734,15 +746,15 @@ which is the practice page 2 paid for.
 
 | Element | Field or measure |
 |---|---|
-| Slicer | `dim_date[calendar_year]`, **Dropdown**, multi-select, nothing selected when saving |
+| Slicer | `'date'[calendar_year]`, **Dropdown**, multi-select, nothing selected when saving |
 | KPI | `Posted minus contract (points)` |
 | Card | `Rate freshness warning` |
-| Line | `Rate (mean of period)` by `dim_date[date_key]`, **continuous** axis, legend `dim_interest_rate_series[rate_kind]` |
-| Combo (line and stacked column) | columns `Sales (island, 12 months)`, line `Contract rate (mean)`, by `dim_date[quarter_label]` — **both Y-axis ranges pinned by hand** |
+| Line | `Rate (mean of period)` by `'date'[date_key]`, **continuous** axis, legend `interest_rate_series[rate_kind]` |
+| Combo (line and stacked column) | columns `Sales (island, 12 months)`, line `Contract rate (mean)`, by `'date'[quarter_label]` — **both Y-axis ranges pinned by hand** |
 | Card | `Trailing window` |
 | Card | `Rate grain warning` |
 | Table — series | `series_label`, `rate_kind`, `frequency`, `Rate observations`, `First rate observation`, `Last rate observation`, `what_it_is` |
-| Table — quarters | `dim_date[quarter_label]`, `Posted rate (mean)`, `Contract rate (mean)`, `Posted minus contract (points)`, `Rate observations` |
+| Table — quarters | `'date'[quarter_label]`, `Posted rate (mean)`, `Contract rate (mean)`, `Posted minus contract (points)`, `Rate observations` |
 | Text box | the association caveat — see below |
 
 `calendar_year` is a whole number, so Power BI renders its slicer as a **numeric
@@ -954,10 +966,10 @@ lives in fixed text, and mixing them is how a page goes stale in silence.
 #### The axis is shorter than the page, and `quarter_label` needs no sort column
 
 `fact_market` and `fact_market_trailing_12m` cover 29 quarters, 2019 Q2 →
-2026 Q2; `dim_date` runs from 2015-01-01 because the Bank of Canada series do.
+2026 Q2; `'date'` runs from 2015-01-01 because the Bank of Canada series do.
 Without a visual filter the combo would carry seventeen quarters of rate line
 and no columns at all. Filter the **visual** — `Sales (island, 12 months) is not
-blank` — never narrow `dim_date`: page 4 is precisely the page that needs it
+blank` — never narrow `'date'`: page 4 is precisely the page that needs it
 wide, since the three-series line beside it runs the full eleven years.
 
 `quarter_label` is written `2015 Q1`, so its alphabetical order is its
@@ -985,7 +997,7 @@ converge on it.
 
 **The page holds two grains.** The three-series rate line is at the *day*; the
 combo and the quarter table are at the *quarter*. Clicking one point of
-the rate line selects a single day, which propagates through `dim_date` to facts
+the rate line selects a single day, which propagates through `'date'` to facts
 keyed on a quarter *start* date — so it empties the quarterly visuals on 89 days
 out of 90.
 
@@ -997,9 +1009,9 @@ give.
 Selecting one column filters the visual to that quarter, leaving a single column
 and a single point of line — the pair of shapes the chart is read for is gone.
 
-`Rate freshness warning` removes `dim_date` twice by construction, so it is
+`Rate freshness warning` removes `'date'` twice by construction, so it is
 indifferent to every source and there is nothing to set on it. That is also the
-check: **if it goes quiet when a year is selected, the `ALL ( dim_date )` calls
+check: **if it goes quiet when a year is selected, the `ALL ( 'date' )` calls
 have been lost**, and a source outage became invisible the moment anyone
 filtered — the opposite of a control.
 
@@ -1042,11 +1054,11 @@ subtraction of section D, and it is the only figure here a wrong measure returns
 *confidently*. Everything else either matches or goes visibly blank.
 
 **`Rate freshness warning` with a year selected.** If it disappears, the
-`ALL ( dim_date )` calls have been dropped and a publisher outage becomes
+`ALL ( 'date' )` calls have been dropped and a publisher outage becomes
 invisible the moment anyone filters.
 
 The combo must run **2019 Q2 → 2026 Q2, 29 columns**. Thirty or more means the
-visual filter was lost and the empty quarters of `dim_date` are showing. **A
+visual filter was lost and the empty quarters of `date` are showing. **A
 repeating annual sawtooth on the columns means they are reading `fact_market`
 instead of `fact_market_trailing_12m`** — that is the seasonality fault
 returning, and it is the one thing on this visual that looks like a finding and
@@ -1102,7 +1114,7 @@ folder**, set in *Model view > Properties pane > Display folder*:
 | Grain guards | `Guards` | filter state, `fact_affordability` |
 | Market | `Market` | `fact_market` |
 | Affordability | `Affordability` | `fact_affordability` |
-| Rates | `Rates` | `fact_interest_rate`, `dim_interest_rate_series` |
+| Rates | `Rates` | `fact_interest_rate`, `interest_rate_series` |
 | First-time buyer | `First-time buyer` | `fact_affordability`, `Income input` |
 
 **A two-digit code in front of each name was specified on 2026-08-28 and dropped
@@ -1125,10 +1137,10 @@ step with it.
 
 | Group | Measure | Home table | Reads from | Format | Page |
 |---|---|---|---|---|---|
-| Guards | `Grain warning` | `_Measures` | filter state of `Census Tract` | Text | 2, 3 |
+| Guards | `Grain warning` | `_Measures` | filter state of `Census_Tract` | Text | 2, 3 |
 | Guards | `Income vintage warning` | `_Measures` | `fact_affordability` | Text | 2 |
 | Guards | `Income basis note` | `_Measures` | `fact_affordability` | Text | 2 |
-| Guards | `Slice warning` | `_Measures` | `dim_property_type`, `fact_affordability` | Text | 2, 3 |
+| Guards | `Slice warning` | `_Measures` | `property_type`, `fact_affordability` | Text | 2, 3 |
 | Market | `Sales (island, as published)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1 |
 | Market | `Sales (sectors)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1, 4 |
 | Market | `Sectors minus island (sales)` | `_Measures` | the two `Sales` measures | Whole number | 1 |
@@ -1155,14 +1167,14 @@ step with it.
 | Affordability | `Tract map colour` | `_Measures` | `Verdict`, `Price to income (median)` | Text — a `#RRGGBB` string, **never formatted** | 2 |
 | Affordability | `Map coverage note` | `_Measures` | `fact_affordability` | Text | 2 |
 | Rates | `Rate (mean of period)` | `_Measures` | `fact_interest_rate` | Decimal, 2 dec. | 4 |
-| Rates | `Contract rate (mean)` | `_Measures` | `Rate (mean of period)`, `dim_interest_rate_series` | Decimal, 2 dec. | 4 |
-| Rates | `Posted rate (mean)` | `_Measures` | `Rate (mean of period)`, `dim_interest_rate_series` | Decimal, 2 dec. | 4 |
+| Rates | `Contract rate (mean)` | `_Measures` | `Rate (mean of period)`, `interest_rate_series` | Decimal, 2 dec. | 4 |
+| Rates | `Posted rate (mean)` | `_Measures` | `Rate (mean of period)`, `interest_rate_series` | Decimal, 2 dec. | 4 |
 | Rates | `Posted minus contract (points)` | `_Measures` | the two rate means | Decimal, 2 dec. | 4 |
 | Rates | `Rate observations` | `_Measures` | `fact_interest_rate` | Whole number, thousands sep. | 4 |
 | Rates | `First rate observation` | `_Measures` | `fact_interest_rate` | Custom `yyyy-mm-dd` | 4 |
 | Rates | `Last rate observation` | `_Measures` | `fact_interest_rate` | Custom `yyyy-mm-dd` | 4 |
-| Rates | `Rate grain warning` | `_Measures` | `fact_interest_rate`, `dim_interest_rate_series` | Text | 4 |
-| Rates | `Rate freshness warning` | `_Measures` | `fact_interest_rate`, `dim_interest_rate_series` | Text | 4 |
+| Rates | `Rate grain warning` | `_Measures` | `fact_interest_rate`, `interest_rate_series` | Text | 4 |
+| Rates | `Rate freshness warning` | `_Measures` | `fact_interest_rate`, `interest_rate_series` | Text | 4 |
 | First-time buyer | `Sectors priced` | `_Measures` | `fact_affordability` | Whole number | 3 |
 | First-time buyer | `Sectors within reach of this income` | `_Measures` | `fact_affordability`, `Income input` | Whole number | 3 |
 | First-time buyer | `Sectors borderline` | `_Measures` | `fact_affordability`, `Income input` | Whole number | 3 |
@@ -1194,7 +1206,7 @@ explanation, so build in this order:
 | 7c | `Sales (island, 12 months)`, `Trailing window` | Market group, but built with page 4 — nothing before it needed the trailing table |
 | 8 | **the `Income input` parameter (section 5)** | three First-time buyer measures read `'Income input'[Income input Value]` |
 | 9 | the First-time buyer group, `Verdict for this income` before `Sector bar colour` | the colour measure reads the verdict rather than repeating its comparison |
-| 10 | the three Grain guards | independent; they only need `fact_affordability`, `dim_property_type` and the `Census Tract` table |
+| 10 | the three Grain guards | independent; they only need `fact_affordability`, `property_type` and the `Census_Tract` table |
 
 **Build a group, then build its page, then check the number.** Each group has a
 figure already measured against the database, and the report has to reproduce it
@@ -1221,7 +1233,7 @@ the report.
 ### A. Grain guards
 
 The model has two geography dimensions on purpose. `Sector` reaches the market
-facts, `Census Tract` reaches only affordability. Nothing in Power BI stops a
+facts, `Census_Tract` reaches only affordability. Nothing in Power BI stops a
 user from putting a tract on an axis beside a market measure — the total would
 simply repeat, once per tract, looking like data. These two measures make that
 visible.
@@ -1229,7 +1241,7 @@ visible.
 ```dax
 Grain warning =
 IF (
-    ISFILTERED ( 'Census Tract' ),
+    ISFILTERED ( 'Census_Tract' ),
     "No market figure exists at the census tract. APCIQ publishes for a sector; "
         & "affordability carries that sector price down to each of its tracts as a stated assumption."
 )
@@ -1265,7 +1277,7 @@ makes the card speak.
 
 ```dax
 Slice warning =
-VAR Types = COUNTROWS ( VALUES ( dim_property_type[name_en] ) )
+VAR Types = COUNTROWS ( VALUES ( property_type[name_en] ) )
 VAR Quarters = COUNTROWS ( VALUES ( fact_affordability[edition_label] ) )
 RETURN
     IF (
@@ -1290,7 +1302,7 @@ even climbs from 17 to 18, because Montréal-Nord has a price in *some* type or
 *some* quarter — so the KPI's own denominator moves to cover the mixture up.
 
 It reads the quarter off `fact_affordability[edition_label]` rather than off
-`dim_date`, so it reports what actually reached the fact table after the filter
+`date`, so it reports what actually reached the fact table after the filter
 propagated, not what the slicer looks like it is doing.
 
 ### B. Market — on `fact_market`
@@ -1712,7 +1724,7 @@ shape per tract; the KPI row counts rows. The two differ by exactly the shared
 tract, and stating the shape count under the map is what stops the two numbers
 from being read as a contradiction.
 
-### D. Rates — on `fact_interest_rate` and `dim_interest_rate_series`
+### D. Rates — on `fact_interest_rate` and `interest_rate_series`
 
 ```dax
 Rate (mean of period) =
@@ -1727,7 +1739,7 @@ to `0.00` and put the sign in the label rather than dividing by 100.
 Contract rate (mean) =
 CALCULATE (
     [Rate (mean of period)],
-    dim_interest_rate_series[rate_kind] = "contracted"
+    interest_rate_series[rate_kind] = "contracted"
 )
 ```
 
@@ -1735,7 +1747,7 @@ CALCULATE (
 Posted rate (mean) =
 CALCULATE (
     [Rate (mean of period)],
-    dim_interest_rate_series[rate_kind] = "posted"
+    interest_rate_series[rate_kind] = "posted"
 )
 ```
 
@@ -1800,11 +1812,11 @@ Rate grain warning =
 VAR SeriesInScope = DISTINCTCOUNT ( fact_interest_rate[series_id] )
 VAR PerSeries =
     CONCATENATEX (
-        dim_interest_rate_series,
-        dim_interest_rate_series[series_label] & " — "
+        interest_rate_series,
+        interest_rate_series[series_label] & " — "
             & COALESCE ( CALCULATE ( COUNTROWS ( fact_interest_rate ) ), 0 ),
         "; ",
-        dim_interest_rate_series[sort_order], ASC
+        interest_rate_series[sort_order], ASC
     )
 RETURN
     IF (
@@ -1818,7 +1830,7 @@ RETURN
 **The first version counted rows and series and reported neither per series**,
 while section 2 of this file claimed it stated "the number of observations
 behind each average". The sentence was right about what the page needs; the
-measure did something else. Iterating `dim_interest_rate_series` directly gives
+measure did something else. Iterating `interest_rate_series` directly gives
 the row context every column of the dimension, so `sort_order` is available to
 order the sentence and `CALCULATE ( COUNTROWS ( … ) )` transitions that row into
 a filter on the fact.
@@ -1834,13 +1846,13 @@ VAR NewestHeld =
     CALCULATE (
         MAX ( fact_interest_rate[observation_date] ),
         ALL ( fact_interest_rate ),
-        ALL ( dim_date ),
-        ALL ( dim_interest_rate_series )
+        ALL ( 'date' ),
+        ALL ( interest_rate_series )
     )
 VAR PerSeries =
     ADDCOLUMNS (
-        ALL ( dim_interest_rate_series ),
-        "@Last", CALCULATE ( MAX ( fact_interest_rate[observation_date] ), ALL ( dim_date ) )
+        ALL ( interest_rate_series ),
+        "@Last", CALCULATE ( MAX ( fact_interest_rate[observation_date] ), ALL ( 'date' ) )
     )
 VAR Stale = FILTER ( PerSeries, NewestHeld - [@Last] > 21 )
 RETURN
@@ -1849,10 +1861,10 @@ RETURN
         "Published nothing for more than three weeks — "
             & CONCATENATEX (
                 Stale,
-                dim_interest_rate_series[series_label] & ", last "
+                interest_rate_series[series_label] & ", last "
                     & IF ( ISBLANK ( [@Last] ), "never", FORMAT ( [@Last], "yyyy-mm-dd" ) ),
                 "; ",
-                dim_interest_rate_series[sort_order], ASC
+                interest_rate_series[sort_order], ASC
             )
             & ". The model holds observations to " & FORMAT ( NewestHeld, "yyyy-mm-dd" )
             & ". Any rate figure for a later period rests on the series that did publish."
@@ -1868,7 +1880,7 @@ threshold from 8 to 84 days selects the same series**, and the day that gap
 closes the constant deserves the argument it is not getting now. Same shape as
 the 1.5 area ratio of J3.4, which sat in a fossé of three orders of magnitude.
 
-It removes `dim_date` on purpose, twice: once for the reference date and once
+It removes `date` on purpose, twice: once for the reference date and once
 per series. A freshness card that a year slicer could silence is not a control.
 
 `ISBLANK ( [@Last] )` covers a series present in the dimension with no

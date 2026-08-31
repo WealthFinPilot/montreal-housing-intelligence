@@ -91,20 +91,40 @@ documents the exception instead of the rule.
 
 ### Dimensions
 
-| Table | Rows | Note |
-|---|---|---|
-| `dim_date` | 4 383 | one day, 2015-01-01 to end of the current year |
-| `dim_property_type` | 3 | |
-| `dim_household_profile` | 3 | |
-| `dim_interest_rate_series` | 3 | |
-| `dim_geography` | 595 | **split into two queries, see below** |
+⚠️ **The dimension tables are renamed on import: the `dim_` prefix is dropped.**
+The left column is what to select in the connection dialogue, the right column
+is what the table is called in the model and therefore in every DAX formula in
+`report-design.md`.
+
+| Table in the database | Name in the model | Rows | Note |
+|---|---|---|---|
+| `marts.dim_date` | `'date'` | 4 383 | one day, 2015-01-01 to end of the current year |
+| `marts.dim_property_type` | `property_type` | 3 | |
+| `marts.dim_household_profile` | `household_profile` | 3 | |
+| `marts.dim_interest_rate_series` | `interest_rate_series` | 3 | |
+| `marts.dim_geography` | `Sector` **and** `Census_Tract` | 595 | **split into two queries, see below** |
+
+**The fact tables keep their names.** `fact_market`, `fact_affordability` and
+the rest are imported and referenced exactly as the database calls them, so a
+name without a prefix is a dimension and a name with `fact_` is a fact — which
+is the whole point of dropping the other prefix.
+
+⚠️ **`date` must be written `'date'` in DAX, with single quotes.** `DATE` is a
+DAX function, so a bare `ALL ( date )` or `date[quarter_label]` puts a table
+name where the parser expects a function call. Single quotes around a table
+name are always valid in DAX, whether or not they are required, so every
+reference in `report-design.md` carries them. This is the one cost of dropping
+the prefix, and it is a small one.
+
+⚠️ **`Census_Tract` carries an underscore, not a space.** It is a Power Query
+name, and a DAX formula written `'Census Tract'` will not resolve.
 
 `bridge_census_tract_apciq_sector` is deliberately **not** imported.
 `fact_affordability` already carries every column a visual needs from it —
 `assignment_method`, `tract_is_shared`, `population_weight` — so importing the
 bridge would add a table and no answer.
 
-### dim_geography must become two tables
+### `marts.dim_geography` must become two tables
 
 `dim_geography` holds five geography types in one table. Loaded as one
 dimension it cannot work: the market facts are keyed on an APCIQ sector, the
@@ -116,7 +136,7 @@ Duplicate the query in Power Query and filter each copy:
 | Query name | Filter on `geography_type` | Rows |
 |---|---|---|
 | `Sector` | `apciq_sector` or `island` | 19 |
-| `Census Tract` | `census_tract` | 541 |
+| `Census_Tract` | `census_tract` | 541 |
 
 `Sector` keeps the island row on purpose. The island is a real published area,
 not a total to be recomputed, and hiding it would mean losing the only figure
@@ -143,24 +163,24 @@ one of them appear to.
 
 | From (one) | To (many) | On |
 |---|---|---|
-| `dim_date[date_key]` | `fact_market` | `quarter_start_date` |
-| `dim_date[date_key]` | `fact_market_trailing_12m` | `edition_quarter_start_date` |
-| `dim_date[date_key]` | `fact_mortgage_scenario` | `quarter_start_date` |
-| `dim_date[date_key]` | `fact_affordability` | `quarter_start_date` |
-| `dim_date[date_key]` | `fact_interest_rate` | `observation_date` |
+| `'date'[date_key]` | `fact_market` | `quarter_start_date` |
+| `'date'[date_key]` | `fact_market_trailing_12m` | `edition_quarter_start_date` |
+| `'date'[date_key]` | `fact_mortgage_scenario` | `quarter_start_date` |
+| `'date'[date_key]` | `fact_affordability` | `quarter_start_date` |
+| `'date'[date_key]` | `fact_interest_rate` | `observation_date` |
 | `Sector[geography_key]` | `fact_market` | `geography_key` |
 | `Sector[geography_key]` | `fact_market_trailing_12m` | `geography_key` |
 | `Sector[geography_key]` | `fact_mortgage_scenario` | `geography_key` |
 | `Sector[geography_key]` | `fact_affordability` | `apciq_geography_key` |
-| `Census Tract[geography_key]` | `fact_affordability` | `census_tract_geography_key` |
-| `dim_property_type[property_type_code]` | the four market and affordability facts | `property_type_code` |
-| `dim_household_profile[household_profile_code]` | `fact_affordability` | `household_profile_code` |
-| `dim_interest_rate_series[series_id]` | `fact_interest_rate` | `series_id` |
+| `Census_Tract[geography_key]` | `fact_affordability` | `census_tract_geography_key` |
+| `property_type[property_type_code]` | the four market and affordability facts | `property_type_code` |
+| `household_profile[household_profile_code]` | `fact_affordability` | `household_profile_code` |
+| `interest_rate_series[series_id]` | `fact_interest_rate` | `series_id` |
 
 ### A missing relationship raises nothing — it answers
 
 One of these thirteen was absent when page 2 was built on 2026-08-29:
-`dim_property_type` reached `fact_market`, so page 1 worked, but it did not
+`property_type` reached `fact_market`, so page 1 worked, but it did not
 reach `fact_affordability`. Power BI reported no error. The slicer moved, the
 visuals redrew, and every figure on the page was the average of condominium,
 plex and single-family together: the mean required income came out roughly half
@@ -182,7 +202,7 @@ gets debugged in the wrong place.
 
 ### The one that needs explaining
 
-`fact_market_trailing_12m` joins `dim_date` on **`edition_quarter_start_date`**,
+`fact_market_trailing_12m` joins `date` on **`edition_quarter_start_date`**,
 not on `period_start_date`.
 
 A 12-month window ends at its edition quarter and starts nine months earlier.
@@ -239,11 +259,11 @@ as the upstream guarantee that the scenario table's dimension keys agree with
 the market table's. The database asserts integrity; Power BI propagates
 filters. Those are two jobs, and only the first one needs this edge.
 
-### Mark dim_date as a date table
+### Mark date as a date table
 
 **Table tools > Mark as date table**, date column `date_key`. Without it, time
 intelligence silently uses Power BI's own auto date hierarchies, which would
-give the model a second, invisible calendar. `dim_date` is contiguous by
+give the model a second, invisible calendar. `date` is contiguous by
 construction and a dbt test asserts it, which is the condition Power BI
 requires.
 
