@@ -86,7 +86,8 @@ CREATE TABLE bridge_census_tract_apciq_sector (
     neighbourhood_names        TEXT,
     tract_is_shared            BOOLEAN NOT NULL,
     sectors_touched            BIGINT,
-    includes_corrected_point   BOOLEAN NOT NULL
+    includes_corrected_point   BOOLEAN NOT NULL,
+    is_drawn_in_this_sector    BOOLEAN NOT NULL
 );
 
 CREATE TABLE fact_market (
@@ -196,45 +197,53 @@ CREATE TABLE fact_mortgage_scenario (
 );
 
 CREATE TABLE fact_affordability (
-    affordability_key               TEXT NOT NULL,
-    quarter_start_date              DATE,
-    quarter_end_date                DATE,
-    edition_year                    INTEGER,
-    edition_quarter                 INTEGER,
-    edition_label                   TEXT,
-    census_tract_geography_key      TEXT NOT NULL,
-    ct_uid                          TEXT NOT NULL,
-    property_type_code              TEXT NOT NULL,
-    household_profile_code          TEXT NOT NULL,
-    household_profile_sort_order    INTEGER,
-    apciq_geography_key             TEXT,
-    apciq_sector_number             INTEGER,
-    area_code                       TEXT,
-    assignment_method               TEXT NOT NULL,
-    neighbourhood_names             TEXT,
-    tract_is_shared                 BOOLEAN,
-    population_weight               NUMERIC,
-    weight_basis                    TEXT,
-    tract_population                NUMERIC,
-    median_price                    BIGINT,
-    median_price_value_status       TEXT,
-    price_basis                     TEXT NOT NULL,
-    household_income                NUMERIC,
-    household_income_status         TEXT,
-    household_count                 INTEGER,
-    household_count_status          TEXT,
-    income_year                     INTEGER NOT NULL,
-    price_year_minus_income_year    INTEGER,
-    contract_rate_percent           NUMERIC,
-    qualifying_rate_percent         NUMERIC,
-    amortization_years              NUMERIC,
-    monthly_payment_qualifying_rate NUMERIC,
-    income_required_lower_bound     NUMERIC,
-    income_required_basis           TEXT,
-    insurance_status                TEXT,
-    price_to_income_ratio           NUMERIC,
-    income_shortfall                NUMERIC,
-    meets_income_requirement        BOOLEAN,
+    affordability_key                TEXT NOT NULL,
+    quarter_start_date               DATE,
+    quarter_end_date                 DATE,
+    edition_year                     INTEGER,
+    edition_quarter                  INTEGER,
+    edition_label                    TEXT,
+    census_tract_geography_key       TEXT NOT NULL,
+    ct_uid                           TEXT NOT NULL,
+    property_type_code               TEXT NOT NULL,
+    household_profile_code           TEXT NOT NULL,
+    household_profile_sort_order     INTEGER,
+    apciq_geography_key              TEXT,
+    apciq_sector_number              INTEGER,
+    area_code                        TEXT,
+    assignment_method                TEXT NOT NULL,
+    neighbourhood_names              TEXT,
+    tract_is_shared                  BOOLEAN,
+    population_weight                NUMERIC,
+    weight_basis                     TEXT,
+    tract_population                 NUMERIC,
+    median_price                     BIGINT,
+    median_price_value_status        TEXT,
+    price_basis                      TEXT NOT NULL,
+    household_income                 NUMERIC,
+    household_income_status          TEXT,
+    household_count                  INTEGER,
+    household_count_status           TEXT,
+    income_year                      INTEGER NOT NULL,
+    price_year_minus_income_year     INTEGER,
+    income_index_factor              NUMERIC,
+    income_index_base_year           INTEGER,
+    income_index_basis               TEXT,
+    income_not_indexed_reason        TEXT,
+    household_income_indexed         NUMERIC,
+    contract_rate_percent            NUMERIC,
+    qualifying_rate_percent          NUMERIC,
+    amortization_years               NUMERIC,
+    monthly_payment_qualifying_rate  NUMERIC,
+    income_required_lower_bound      NUMERIC,
+    income_required_basis            TEXT,
+    insurance_status                 TEXT,
+    price_to_income_ratio            NUMERIC,
+    income_shortfall                 NUMERIC,
+    meets_income_requirement         BOOLEAN,
+    price_to_income_ratio_indexed    NUMERIC,
+    income_shortfall_indexed         NUMERIC,
+    meets_income_requirement_indexed BOOLEAN,
     PRIMARY KEY (affordability_key)
 );
 
@@ -261,6 +270,30 @@ CREATE TABLE apciq_sector_neighbourhood (
     neighbourhood_name_source TEXT,
     borough_codemamh          TEXT,
     apciq_sector_number       INTEGER
+);
+
+CREATE TABLE dim_interest_rate_series (
+    series_id        TEXT NOT NULL,
+    sort_order       INTEGER NOT NULL,
+    series_label     TEXT NOT NULL,
+    rate_kind        TEXT NOT NULL,
+    frequency        TEXT NOT NULL,
+    is_mortgage_rate BOOLEAN NOT NULL,
+    what_it_is       TEXT,
+    PRIMARY KEY (series_id),
+    UNIQUE (series_label),
+    UNIQUE (sort_order)
+);
+
+CREATE TABLE fact_interest_rate (
+    interest_rate_key TEXT NOT NULL,
+    series_id         TEXT NOT NULL,
+    observation_date  DATE NOT NULL,
+    rate_percent      NUMERIC NOT NULL,
+    source_url        TEXT,
+    first_seen_at     TIMESTAMP,
+    updated_at        TIMESTAMP,
+    PRIMARY KEY (interest_rate_key)
 );
 
 CREATE TABLE mortgage_down_payment_bracket (
@@ -329,6 +362,8 @@ ALTER TABLE fact_mortgage_scenario ADD CONSTRAINT tested_one_scenario_per_market
 ALTER TABLE fact_affordability ADD CONSTRAINT tested_affordability_is_split_by_property_type FOREIGN KEY (property_type_code) REFERENCES dim_property_type(property_type_code);
 ALTER TABLE fact_affordability ADD CONSTRAINT tested_affordability_is_split_by_household FOREIGN KEY (household_profile_code) REFERENCES dim_household_profile(household_profile_code);
 ALTER TABLE fact_affordability ADD CONSTRAINT tested_affordability_is_measured_in_a_tract FOREIGN KEY (census_tract_geography_key) REFERENCES dim_geography(geography_key);
+ALTER TABLE fact_interest_rate ADD CONSTRAINT tested_fact_interest_rate__series_id FOREIGN KEY (series_id) REFERENCES dim_interest_rate_series(series_id);
+ALTER TABLE fact_interest_rate ADD CONSTRAINT tested_fact_interest_rate__observation_date FOREIGN KEY (observation_date) REFERENCES dim_date(date_key);
 
 -- Star-schema edges Power BI needs, asserted one table upstream.
 

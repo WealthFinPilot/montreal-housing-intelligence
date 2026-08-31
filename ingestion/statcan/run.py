@@ -36,7 +36,7 @@ import time
 
 import requests
 
-from ingestion.statcan import datasets, download, load, parse
+from ingestion.statcan import datasets, download, load, parse, wds
 from src import db, pipeline_log
 
 
@@ -49,8 +49,8 @@ def _parse_args(argv=None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--only",
-        choices=[dataset.key for dataset in datasets.DATASETS],
-        help="run a single step instead of all three",
+        choices=[step.key for step in datasets.ALL_STEPS],
+        help="run a single step instead of all of them",
     )
     return parser.parse_args(argv)
 
@@ -68,8 +68,61 @@ def _report(dataset: datasets.Dataset, count: int) -> None:
         )
 
 
+def _series_step(conn, dataset, session: requests.Session, *, dry_run: bool):
+    """Fetch, parse and load one WDS series.
+
+    Split from _step because the transport is not a file: nothing is
+    downloaded or unzipped, and the checks that matter are on the coordinate
+    rather than on a filename -- see wds.py.
+    """
+    response = wds.fetch_series(dataset, session=session)
+    print(f"  source   : {response.source_url}")
+    print(f"  vector   : {response.vector_id}  ({dataset.geo_name}, {dataset.product_name})")
+    print(f"  unit     : {response.uom_code} = {response.uom}")
+    print(f"  published: up to {response.cube_end_date}")
+
+    records = parse.cpi_observations(response, dataset)
+    print(f"  parsed   : {len(records):,} monthly observations")
+    if len(records) < dataset.expected_min_rows:
+        # A note, not a failure: a living series grows, it does not shrink.
+        # Shrinking means the range came back short, which is worth saying.
+        print(
+            f"  NOTE     : expected at least {dataset.expected_min_rows:,}. "
+            "The range came back shorter than when this was catalogued."
+        )
+
+    _report_series_quality(records)
+
+    if dry_run:
+        return len(records), None
+    return len(records), load.load_cpi(
+        conn, records, source_file=response.source_url
+    )
+
+
+def _report_series_quality(records) -> None:
+    """Say out loud what the codes assert, instead of averaging them silently.
+
+    Every point retrieved on 2026-08-31 carried status 0 and symbol 0. This
+    prints anything that does not, because a preliminary or revised index is
+    a figure the source expects to change, and a downstream quarterly average
+    would absorb it without a word.
+    """
+    odd = [r for r in records if r.status_code != "0" or r.symbol_code != "0"]
+    empty = [r for r in records if not r.value]
+    print(f"  codes    : {len(records) - len(odd):,} normal, {len(odd):,} flagged, {len(empty):,} with no value")
+    for record in odd[:5]:
+        print(
+            f"             {record.ref_period}: status {record.status_code}, "
+            f"symbol {record.symbol_code}"
+        )
+
+
 def _step(conn, dataset: datasets.Dataset, session: requests.Session, *, dry_run: bool):
     """Fetch, parse and load one dataset. Returns (rows_parsed, LoadResult)."""
+    if isinstance(dataset, datasets.SeriesDataset):
+        return _series_step(conn, dataset, session, dry_run=dry_run)
+
     payload, url = download.fetch(dataset, session=session)
     print(f"  source   : {url}")
     print(f"  bytes    : {len(payload):,}")
@@ -135,7 +188,7 @@ def _check_cube_shape(records) -> None:
 def main(argv=None) -> int:
     args = _parse_args(argv)
     selected = (
-        [datasets.BY_KEY[args.only]] if args.only else list(datasets.DATASETS)
+        [datasets.BY_KEY[args.only]] if args.only else list(datasets.ALL_STEPS)
     )
 
     print(f"Licences : {datasets.STATCAN_LICENCE} -- {datasets.STATCAN_LICENCE_URL}")

@@ -196,9 +196,40 @@ so a thin quarter cannot pass for a full one.
    rather than approximated.
 2. **Do not divide 2026 by 2020 without saying so.** The income is census
    income year 2020, in 2020 constant dollars; the prices run to 2026 Q2.
-   Nothing is indexed — no series was downloaded to bridge the six years, and
-   inventing the missing years is forbidden. `income_year` and
-   `price_year_minus_income_year` are on every row.
+   `income_year` and `price_year_minus_income_year` are on every row.
+
+   **Since 2026-08-31 the gap is corrected as well as declared**, and the
+   correction is a calculation, never an observation. The Montréal CPI (table
+   `18100004`, CMA 462, All-items) restates the 2020 income into dollars of the
+   displayed quarter, giving `household_income_indexed` — a **theoretical
+   median income**. `household_income` is untouched and remains the reference.
+
+   Three things about that correction, none of them optional to state:
+
+   - **No source publishes income below the CMA after 2021.** The full
+     Statistics Canada catalogue was swept on 2026-08-31: 8 267 cubes, and the
+     27 carrying "census tract" all end in 2021. The T1FF reaches income year
+     2023 but stops at CMA 462, which is not the Island. So today's income
+     cannot be observed at this grain by anyone, at any price.
+   - **The assumption is that incomes followed consumer prices, and it is
+     wrong by a measured amount.** Checked once against the Canadian Income
+     Survey (`11100190`, CMA 462, 2024 constant dollars): the error is between
+     **−0.4 % and +1.3 % over 2021-2024**, and **+7.8 % on 2019**, where the
+     cause is named — 2020 was the peak of pandemic transfers, not a normal
+     year. That series is a control, measured once and written down here; it
+     is not ingested and nothing depends on it.
+   - **Indexing does not repair the median-of-medians problem, and does not
+     pretend to.** The CPI moves the whole island by one factor, so a tract
+     that gentrified since 2020 is invisible to it. Cost measured on the 529
+     tracts publishing both 2015 and 2020: **4.2 % on the median tract**, 12.1 %
+     at the 90th percentile, 10 tracts of 529 beyond 20 %. Compare with the
+     10.6 % median error that made J4.1 refuse a sector-grain income — two and
+     a half times less damaging, and it corrects a known error rather than
+     creating one.
+
+   A quarter without three published CPI months has **no factor at all**:
+   `income_index_basis` reads `not_indexed`, `household_income_indexed` is
+   null, and it is never 1.0. 2026 Q3 is already in that state.
 3. **Do not sum anything that depends only on the price.** The rate, the
    payment and the required income repeat across the three profiles by
    construction.

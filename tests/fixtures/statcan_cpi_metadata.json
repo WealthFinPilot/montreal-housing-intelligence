@@ -1,0 +1,74 @@
+[
+ {
+  "status": "SUCCESS",
+  "object": {
+   "productId": "18100004",
+   "cubeTitleEn": "Consumer Price Index, monthly, not seasonally adjusted",
+   "cubeStartDate": "1914-01-01",
+   "cubeEndDate": "2026-07-01",
+   "frequencyCode": 6,
+   "dimension": [
+    {
+     "dimensionPositionId": 1,
+     "dimensionNameEn": "Geography",
+     "member": [
+      {
+       "memberId": 11,
+       "parentMemberId": 2,
+       "memberNameEn": "Quebec",
+       "memberNameFr": "Québec",
+       "classificationCode": "24",
+       "classificationTypeCode": "1",
+       "geoLevel": 2,
+       "vintage": 2016,
+       "terminated": 0,
+       "memberUomCode": null
+      },
+      {
+       "memberId": 13,
+       "parentMemberId": 11,
+       "memberNameEn": "Montréal, Quebec",
+       "memberNameFr": "Montréal, Québec",
+       "classificationCode": "462",
+       "classificationTypeCode": "1",
+       "geoLevel": 503,
+       "vintage": 2011,
+       "terminated": 0,
+       "memberUomCode": null
+      }
+     ]
+    },
+    {
+     "dimensionPositionId": 2,
+     "dimensionNameEn": "Products and product groups",
+     "member": [
+      {
+       "memberId": 2,
+       "parentMemberId": null,
+       "memberNameEn": "All-items",
+       "memberNameFr": "Ensemble",
+       "classificationCode": null,
+       "classificationTypeCode": null,
+       "geoLevel": null,
+       "vintage": null,
+       "terminated": 0,
+       "memberUomCode": 17
+      },
+      {
+       "memberId": 9,
+       "parentMemberId": 6,
+       "memberNameEn": "Other fresh or frozen meat (excluding poultry)",
+       "memberNameFr": "Autres viandes fraîches ou surgelées (excluant la volaille)",
+       "classificationCode": null,
+       "classificationTypeCode": null,
+       "geoLevel": null,
+       "vintage": null,
+       "terminated": 0,
+       "memberUomCode": 17
+      }
+     ]
+    }
+   ]
+  }
+ }
+]

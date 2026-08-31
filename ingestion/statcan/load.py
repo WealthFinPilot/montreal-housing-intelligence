@@ -225,3 +225,46 @@ def island_tract_uids(conn: psycopg.Connection) -> set[str]:
             "WHERE ct_uid <> ''"
         )
         return {row[0] for row in cur.fetchall()}
+
+
+CPI_DATA_COLUMNS = (
+    "product_id", "coordinate", "geo_name", "product_name",
+    "value", "decimals",
+    "status_code", "symbol_code", "scalar_factor_code",
+    "security_level_code", "frequency_code",
+    "uom_code", "uom", "release_time",
+    "source_url",
+)
+
+
+def load_cpi(
+    conn: psycopg.Connection,
+    rows: Iterable[parse.CpiRecord],
+    *,
+    source_file: str,
+) -> LoadResult:
+    """Merge Consumer Price Index observations.
+
+    Keyed on (vector_id, ref_period): one series, one month, one row. A
+    revised index for a month already loaded updates that row -- the same
+    revision policy as raw.boc_observation, and for the same reason: this
+    project analyses the market, it does not audit Statistics Canada.
+    """
+    return _merge(
+        conn,
+        table="raw.statcan_cpi_observation",
+        key_columns=("vector_id", "ref_period"),
+        data_columns=CPI_DATA_COLUMNS,
+        rows=(
+            (
+                r.vector_id, r.ref_period,
+                r.product_id, r.coordinate, r.geo_name, r.product_name,
+                r.value, r.decimals,
+                r.status_code, r.symbol_code, r.scalar_factor_code,
+                r.security_level_code, r.frequency_code,
+                r.uom_code, r.uom, r.release_time,
+                source_file,
+            )
+            for r in rows
+        ),
+    )

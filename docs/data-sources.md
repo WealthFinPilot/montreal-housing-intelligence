@@ -44,6 +44,7 @@ resolved at runtime through the CKAN API: `GET /api/3/action/package_show?id={da
 the portal can reissue resource ids.
 
 ---
+| 12 | Statistics Canada | Table `18100004` — Consumer Price Index, monthly, not seasonally adjusted | All-items index. Vector `41692876`, coordinate `13.2.0.0.0.0.0.0.0.0`, unit `2002=100`, `statusCode`, `symbolCode` | **Census metropolitan area 462** — wider than the Island (Laval, Longueuil, both shores). No finer geography exists for this series | **Monthly** | 1914-01 to **2026-07** (tested 2026-08-31, released 2026-08-17); loaded from 2014-01 = 151 points | JSON | `POST /t1/wds/rest/getCubeMetadata` then `GET /t1/wds/rest/getDataFromVectorByReferencePeriodRange` with `vectorIds`, `startRefPeriod` and `endReferencePeriod` — all **HTTP 200**. `endReferencePeriod` is mandatory: without it the API answers **406** | None | Monthly, about three weeks after the month ends | [Statistics Canada Open Licence](https://www.statcan.gc.ca/en/reference/licence) — "use, reproduce, publish, freely distribute, or sell". **Redistribution allowed** | **1**/5 | **P1 — restates the 2020 census income, see 2.10** | `fact_affordability` |
 
 ## 2. Source risks
 
@@ -376,6 +377,50 @@ falls in. That is a J3.4 question, and it now rests on building the sector polyg
 
 ---
 
+### 2.10 The Consumer Price Index — an index, never a replacement for income
+
+**The question asked on 2026-08-31 was whether a household income newer than
+the 2020 census exists at the census tract. It does not, and that is a
+measured verdict rather than a failure to look.** `getAllCubesListLite`
+returned the whole catalogue — **HTTP 200, 5 044 399 bytes, 8 267 cubes** — and
+the 27 whose title carries "census tract" all end in 2021. The tax-filer series
+`11100017` reaches income year 2023 and stops at CMA 462; `11100190` reaches
+2024 and stops there too. **CMA 462 is not the Island**, a fact this project
+established in J3.3 and did not have to rediscover.
+
+So the choice was never "which newer income", it was **"index, or keep dividing
+2026 by 2020"**. The CPI was chosen over restating the CMA income series for
+one decisive reason: **it is the only candidate that reaches the last published
+quarter.** The income series stops at 2024; the CPI reaches 2026-07.
+
+**The two candidates were both built before choosing.** Restating the CMA
+income in nominal terms and using the CPI alone agree to within **1.3 % over
+2021-2024** and diverge by **7.8 % on 2019** — the isolated peak of 2020
+pandemic transfers. The income series therefore survives as a **control that
+bounds the error**, measured once and recorded in `affordability.md`, rather
+than as a second ingested dependency.
+
+**One result worth stating plainly, because it is counter-intuitive**: in real
+terms the median income of CMA 462 has **not risen since 2020** — 82 100 $ in
+2020, the peak of the series, against 81 100 $ in 2024, both in 2024 constant
+dollars (`memberUomCode 455`). What grew was the number of dollars. The entire
+error in the affordability ratio was therefore nominal, which is exactly why it
+was large.
+
+**The RMR-to-Island assumption was tested rather than asserted.** The census
+publishes tract income for both 2015 and 2020, so the assumption is falsifiable.
+Real growth 2015 → 2020, measured three ways: census CMA aggregate **×1.1343**,
+census Island (529 tracts grouped) **×1.1437**, income survey CMA **×1.1466**.
+Two surveys, two units of account, three figures within 1.1 % of each other.
+The probe could have failed; it passed.
+
+**Access notes worth keeping.** A coordinate is a position in a cube, not a
+name: the neighbouring geography member is the **province** of Quebec, which
+would load without error and quietly restate every Montréal income by the wrong
+factor. The loader therefore checks the coordinate against the published
+`classificationCode` and the resolved `vectorId` before reading a single point
+— four positive controls in `tests/test_statcan_cpi.py`, all firing.
+
 ## 3. Rejected sources
 
 | Source | Why |
@@ -397,4 +442,5 @@ falls in. That is a J3.4 question, and it now rests on building the sector polyg
 | `sample_data/mtl_limites_administratives.geojson` | 34 features | Full file, 1 258 670 B |
 | `sample_data/statcan_gaf_2021_island_ct.csv` | 541 (one per Island census tract) | Aggregated from the 13 844 Island dissemination blocks of the Geographic Attribute File (row 10). Carries the CT → municipality correspondence, the MAMH code, population, dwellings, land area, and whether the tract has a 2020 income. **This file is the evidence behind 2.9** — it lets a reader re-check the verdict without downloading 298 MB |
 
+| `sample_data/statcan_18100004_montreal_cpi.csv` | 151 (one per month, 2014-01 to 2026-07) | The whole loaded series, with the quarterly factor beside each month. **This file is the evidence behind 2.10**: the last row shows 2026 Q3 with one month of three, an empty factor and `not_indexed` — which is what the guard against a partial quarter looks like from outside |
 APCIQ PDFs are deliberately **not** committed — see 2.2.

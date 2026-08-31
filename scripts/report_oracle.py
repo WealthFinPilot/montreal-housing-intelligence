@@ -455,6 +455,65 @@ def main() -> int:
             (year, quarter),
         )
 
+        table(
+            cur,
+            "PAGE 2 -- The theoretical income, and what it changes",
+            "Added in J4.2-3/4 step 1. The report now shows the THEORETICAL\n"
+            "income: the 2020 census median restated into dollars of the quarter\n"
+            "by the Montreal CPI. The second share is what the report displayed\n"
+            "before, and the gap between them is the result of that session.\n"
+            "\n"
+            "COUNT DISTINCT TRACTS, NOT ROWS. The shared tract 4620511.02 is one\n"
+            "tract and two rows: a row count returns 513 where a tract count\n"
+            "returns 512, and both are right about different questions.",
+            """
+            select edition_label,
+                   count(distinct ct_uid)
+                       filter (where meets_income_requirement_indexed is not null)
+                                                                    as evaluated,
+                   round(100.0 * count(distinct ct_uid)
+                       filter (where meets_income_requirement_indexed)
+                       / nullif(count(distinct ct_uid)
+                       filter (where meets_income_requirement_indexed is not null), 0), 1)
+                                                                    as share_theoretical_pct,
+                   round(100.0 * count(distinct ct_uid)
+                       filter (where meets_income_requirement)
+                       / nullif(count(distinct ct_uid)
+                       filter (where meets_income_requirement is not null), 0), 1)
+                                                                    as share_2020_dollars_pct
+            from marts.fact_affordability
+            where property_type_code = 'condo'
+              and household_profile_code = 'couple'
+              and (edition_year, edition_quarter) in
+                  ((2019,2),(2022,2),(2023,4),(2026,2))
+            group by edition_label, edition_year, edition_quarter
+            order by edition_year, edition_quarter
+            """,
+        )
+
+        table(
+            cur,
+            "PAGE 2 -- The CPI factor behind the theoretical income",
+            "What the Income basis note card must show. Below 1.0 before 2020:\n"
+            "the index deflates towards the past. A card reading 1.000 on every\n"
+            "quarter means the measure lost its filter context.\n"
+            "\n"
+            "A quarter without its three months has NO factor and reads\n"
+            "not_indexed -- never 1.0, which would assert that no inflation had\n"
+            "occurred. 2026 Q3 is already in that state.",
+            """
+            select ref_year || ' Q' || ref_quarter    as quarter,
+                   months_observed,
+                   round(index_factor, 4)             as factor,
+                   index_basis,
+                   coalesce(not_indexed_reason, '')   as reason
+            from staging.int_statcan__cpi_quarterly_index
+            where (ref_year, ref_quarter) in
+                  ((2019,2),(2022,2),(2023,4),(2026,1),(2026,2),(2026,3))
+            order by ref_year, ref_quarter
+            """,
+        )
+
         print(f"\n{'=' * 78}")
         print("Every figure above is read from marts at run time. If a Power BI card")
         print("disagrees with one of them, the card is wrong -- not this script.")

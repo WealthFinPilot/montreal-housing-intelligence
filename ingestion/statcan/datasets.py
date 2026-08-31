@@ -86,6 +86,14 @@ OGL_LICENCE = "Open Government Licence - Canada"
 OGL_LICENCE_URL = "https://open.canada.ca/en/open-government-licence-canada"
 
 ATTRIBUTION = (
+    "Source: Statistics Canada. Reproduced and distributed on an as-is basis "
+    "with the permission of Statistics Canada."
+)
+
+# The census files carry a more specific wording. Kept separate rather than
+# printed over every run: the Consumer Price Index is not a census product,
+# and saying so would be a small untruth on every line of the log.
+CENSUS_ATTRIBUTION = (
     "Source: Statistics Canada, 2021 Census of Population. "
     "Reproduced and distributed on an as-is basis with the permission of "
     "Statistics Canada."
@@ -186,4 +194,84 @@ DATASETS: tuple[Dataset, ...] = (
     CENSUS_TRACT_BOUNDARIES,
 )
 
-BY_KEY = {dataset.key: dataset for dataset in DATASETS}
+BY_KEY: dict[str, object] = {dataset.key: dataset for dataset in DATASETS}
+
+
+# --------------------------------------------------------------------------
+# Series retrieved from the WDS API, rather than files behind a form
+# --------------------------------------------------------------------------
+#
+# The three datasets above are files: something is downloaded, unzipped and
+# read. The Consumer Price Index is not -- it is a series, asked for by
+# coordinate and returned as JSON. Rather than bend Dataset into covering both,
+# it gets its own shape, the way NeighbourhoodDataset did in J3.4 when the
+# Montréal open-data module met a second kind of resource.
+
+
+@dataclass(frozen=True)
+class SeriesDataset:
+    """One published time series, and how to ask for exactly that one."""
+
+    key: str
+    title: str
+    purpose: str
+    licence: str
+    licence_url: str
+
+    product_id: int
+    # A position in the cube: ten dimension member ids joined by dots. Read off
+    # getCubeMetadata on 2026-08-31, never guessed -- member 13 of dimension 1
+    # is the geography whose classificationCode is 462, member 2 of dimension 2
+    # is "All-items".
+    coordinate: str
+    geo_name: str
+    product_name: str
+
+    # The vector the coordinate must resolve to. This is the equivalent of
+    # expected_filename above, and it guards the same failure: if Statistics
+    # Canada re-cuts the cube, the coordinate keeps working and starts pointing
+    # at a different series. A silent substitution then loads the wrong index
+    # and nothing ever complains. Checked on every run.
+    expected_vector_id: str
+
+    # Where the load starts. Not the start of the series -- that is 1914 -- but
+    # far enough back to cover everything the model can ask about: the oldest
+    # economic series in this project begins 2014-01-07
+    # (FVI_MTG_RATE_5Y_FIX), and the APCIQ archive begins 2019 Q2.
+    start_period: str
+
+    # Declared, and checked loosely: a LIVING series grows by one point a
+    # month, so an exact expectation would fail every month by design.
+    expected_min_rows: int
+
+
+CONSUMER_PRICE_INDEX = SeriesDataset(
+    key="statcan_consumer_price_index",
+    title="Table 18100004 -- Consumer Price Index, monthly, not seasonally adjusted",
+    purpose=(
+        "Restate the 2020 census income in dollars of a later quarter. No "
+        "source publishes income below the CMA after 2021 -- the full WDS "
+        "catalogue was swept on 2026-08-31, and the 27 cubes carrying "
+        "'census tract' all end in 2021. So the income of today cannot be "
+        "observed, only calculated, and what it produces is a THEORETICAL "
+        "median income. Feeds the quarterly factor behind "
+        "fact_affordability.household_income_indexed."
+    ),
+    licence=STATCAN_LICENCE,
+    licence_url=STATCAN_LICENCE_URL,
+    product_id=18_100_004,
+    coordinate="13.2.0.0.0.0.0.0.0.0",
+    geo_name="Montréal, Quebec",
+    product_name="All-items",
+    expected_vector_id="41692876",
+    start_period="2014-01-01",
+    expected_min_rows=151,   # 2014-01 to 2026-07, observed on 2026-08-31
+)
+
+SERIES: tuple[SeriesDataset, ...] = (CONSUMER_PRICE_INDEX,)
+
+# Every step the runner can execute, files first because the boundary step
+# reads its perimeter from the attribute table. The CPI depends on nothing.
+ALL_STEPS: tuple[Dataset | SeriesDataset, ...] = DATASETS + SERIES
+
+BY_KEY.update({series.key: series for series in SERIES})

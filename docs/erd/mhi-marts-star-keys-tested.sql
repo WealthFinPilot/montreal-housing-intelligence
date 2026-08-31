@@ -59,7 +59,8 @@ CREATE TABLE bridge_census_tract_apciq_sector (
     weight_basis               TEXT NOT NULL,
     assignment_method          TEXT NOT NULL,
     tract_is_shared            BOOLEAN NOT NULL,
-    includes_corrected_point   BOOLEAN NOT NULL
+    includes_corrected_point   BOOLEAN NOT NULL,
+    is_drawn_in_this_sector    BOOLEAN NOT NULL
 );
 
 CREATE TABLE fact_market (
@@ -119,6 +120,26 @@ CREATE TABLE fact_affordability (
     PRIMARY KEY (affordability_key)
 );
 
+CREATE TABLE dim_interest_rate_series (
+    series_id        TEXT NOT NULL,
+    sort_order       INTEGER NOT NULL,
+    series_label     TEXT NOT NULL,
+    rate_kind        TEXT NOT NULL,
+    frequency        TEXT NOT NULL,
+    is_mortgage_rate BOOLEAN NOT NULL,
+    PRIMARY KEY (series_id),
+    UNIQUE (series_label),
+    UNIQUE (sort_order)
+);
+
+CREATE TABLE fact_interest_rate (
+    interest_rate_key TEXT NOT NULL,
+    series_id         TEXT NOT NULL,
+    observation_date  DATE NOT NULL,
+    rate_percent      NUMERIC NOT NULL,
+    PRIMARY KEY (interest_rate_key)
+);
+
 -- Referential integrity, recovered from the dbt relationships tests.
 
 ALTER TABLE dim_geography ADD CONSTRAINT tested_geography_nests_in_its_parent FOREIGN KEY (parent_geography_key) REFERENCES dim_geography(geography_key);
@@ -136,3 +157,5 @@ ALTER TABLE fact_mortgage_scenario ADD CONSTRAINT tested_one_scenario_per_market
 ALTER TABLE fact_affordability ADD CONSTRAINT tested_affordability_is_split_by_property_type FOREIGN KEY (property_type_code) REFERENCES dim_property_type(property_type_code);
 ALTER TABLE fact_affordability ADD CONSTRAINT tested_affordability_is_split_by_household FOREIGN KEY (household_profile_code) REFERENCES dim_household_profile(household_profile_code);
 ALTER TABLE fact_affordability ADD CONSTRAINT tested_affordability_is_measured_in_a_tract FOREIGN KEY (census_tract_geography_key) REFERENCES dim_geography(geography_key);
+ALTER TABLE fact_interest_rate ADD CONSTRAINT tested_fact_interest_rate__series_id FOREIGN KEY (series_id) REFERENCES dim_interest_rate_series(series_id);
+ALTER TABLE fact_interest_rate ADD CONSTRAINT tested_fact_interest_rate__observation_date FOREIGN KEY (observation_date) REFERENCES dim_date(date_key);

@@ -366,7 +366,14 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(ddl, encoding="utf-8")
 
-    print(f"Wrote {out.relative_to(REPO_ROOT)}")
+    # A relative --out is not under REPO_ROOT as far as pathlib is concerned,
+    # and relative_to then raises after the file has already been written --
+    # a crash that looks like a failure and is not one.
+    try:
+        shown = out.resolve().relative_to(REPO_ROOT)
+    except ValueError:
+        shown = out
+    print(f"Wrote {shown}")
     print(f"  tables      : {ddl.count(chr(10) + chr(10) + 'CREATE TABLE') + ddl.startswith('CREATE TABLE')} drawn (out of {len(catalog)} in scope)")
     print(f"  relationships: {len(drawn)} drawn")
     for child, col, parent, field in dropped:

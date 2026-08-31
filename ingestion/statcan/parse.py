@@ -343,3 +343,90 @@ def _single_member(archive: zipfile.ZipFile, suffix: str, *, exclude: str | None
             f"{len(names)}: {names}. Refusing to guess which one is meant."
         )
     return names[0]
+
+
+# ---------------------------------------------------------------------------
+# The Consumer Price Index series
+# ---------------------------------------------------------------------------
+#
+# Unlike the three files above, nothing is unzipped here: the API already
+# returned structured points. What is left to do is the same thing the other
+# parsers do -- turn the source's own representation into text, keeping every
+# assertion the source made, and deciding nothing.
+
+
+@dataclass(frozen=True)
+class CpiRecord:
+    """One monthly index value, with every code the source attached to it."""
+
+    vector_id: str
+    ref_period: str
+    product_id: str
+    coordinate: str
+    geo_name: str
+    product_name: str
+    value: str
+    decimals: str
+    status_code: str
+    symbol_code: str
+    scalar_factor_code: str
+    security_level_code: str
+    frequency_code: str
+    uom_code: str
+    uom: str
+    release_time: str
+
+
+def _index_value(point: dict) -> str:
+    """The index as text, at the precision the source says it publishes.
+
+    A JSON number has no precision of its own -- 169.9 and 169.90 arrive
+    identical -- but the point carries `decimals`, which is the source stating
+    how many digits it publishes. Formatting to that is therefore closer to
+    what was published than repr() would be.
+
+    A null value stays empty rather than becoming a zero. That distinction is
+    the whole reason the raw layer stores text: this project has already been
+    bitten twice by a non-value that looked like a number, by '...' in J3.3
+    and by '-' in J3.2.
+    """
+    value = point.get("value")
+    if value is None:
+        return ""
+    decimals = point.get("decimals")
+    if isinstance(decimals, int) and decimals >= 0:
+        return f"{value:.{decimals}f}"
+    return repr(value)
+
+
+def cpi_observations(response, dataset) -> list[CpiRecord]:
+    """Turn one SeriesResponse into records. Filters nothing, judges nothing."""
+    records: list[CpiRecord] = []
+    for point in response.points:
+        ref_period = str(point.get("refPer") or "")
+        if not ref_period:
+            raise ParseError(
+                "a data point carries no reference period, so it cannot be "
+                "keyed. The response shape has changed."
+            )
+        records.append(
+            CpiRecord(
+                vector_id=response.vector_id,
+                ref_period=ref_period,
+                product_id=str(dataset.product_id),
+                coordinate=dataset.coordinate,
+                geo_name=dataset.geo_name,
+                product_name=dataset.product_name,
+                value=_index_value(point),
+                decimals=str(point.get("decimals", "")),
+                status_code=str(point.get("statusCode", "")),
+                symbol_code=str(point.get("symbolCode", "")),
+                scalar_factor_code=str(point.get("scalarFactorCode", "")),
+                security_level_code=str(point.get("securityLevelCode", "")),
+                frequency_code=str(point.get("frequencyCode", "")),
+                uom_code=response.uom_code,
+                uom=response.uom,
+                release_time=str(point.get("releaseTime", "")),
+            )
+        )
+    return records

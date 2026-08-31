@@ -39,6 +39,19 @@ models:
       # macros/generate_schema_name.sql for why that needs an override.
       +schema: staging
 
+    intermediate:
+      # The layer section 35 of the brief provides for, opened here for the
+      # first time. It holds one model: a calculation that is neither a
+      # cleaned copy of a source (staging) nor something Power BI reads
+      # (marts) -- the quarterly price index factor.
+      #
+      # A view, and deliberately in the STAGING schema rather than a fourth
+      # one of its own. Giving it a schema would mean a migration, a grant and
+      # a line in every tool's search path, for a single model nothing outside
+      # dbt reads.
+      +materialized: view
+      +schema: staging
+
     marts:
       # A table, unlike staging. Two reasons, and neither is performance at
       # this size: Power BI imports these, and an imported view that silently

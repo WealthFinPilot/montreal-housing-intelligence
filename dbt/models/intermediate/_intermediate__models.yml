@@ -1,0 +1,68 @@
+version: 2
+
+# The intermediate layer, opened in J4.2¾ · 1. Section 35 of the brief
+# provides for it; this is the first model that belongs in it -- a
+# calculation that is neither a cleaned source nor something Power BI reads.
+
+models:
+  - name: int_statcan__cpi_quarterly_index
+    description: >
+      One row per calendar quarter, carrying the factor that restates a 2020
+      dollar into a dollar of that quarter.
+
+      A quarter without its three months has NO factor: index_factor is null
+      and index_basis says 'not_indexed'. It is never 1.0, which would
+      silently assert that no inflation had occurred. This is not
+      hypothetical: 2026 Q3 already exists with one month of three.
+    columns:
+      - name: ref_year
+        data_tests:
+          - not_null
+
+      - name: ref_quarter
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+                quote: false
+
+      - name: months_observed
+        description: >
+          How many of the quarter's three months are published. Only 3 yields
+          a factor.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3]
+                quote: false
+
+      - name: base_year
+        description: >
+          The census income year the factor restates FROM. Fixed by the
+          observation being restated, not chosen: 2020 is the income year of
+          the 2021 census. Asserted against fact_affordability.income_year by
+          a singular test, so the two cannot drift apart.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [2020]
+                quote: false
+
+      - name: index_basis
+        description: >
+          The assumption, carried as a column so it travels with every row
+          that uses it -- the same device as price_basis and is_posted_rate.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['cpi_rmr462', 'not_indexed']
+
+      - name: index_factor
+        description: >
+          Quarter mean CPI divided by the mean CPI of the twelve months of
+          2020. NULL when the quarter is incomplete -- deliberately, and
+          never 1.0.

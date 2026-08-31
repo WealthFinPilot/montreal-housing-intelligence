@@ -88,6 +88,53 @@ sources:
               latitude/longitude, and reprojecting one lands on the other
               within 5 cm.
 
+      - name: statcan_cpi_observation
+        description: >
+          Consumer Price Index, monthly, not seasonally adjusted, for the
+          Montréal census metropolitan area (classification 462), All-items.
+          Table 18100004, vector 41692876. One row per month.
+
+          NOT a census product and not an income: a general consumer basket
+          for an area wider than the Island. It exists so a 2020 census
+          income can be restated in dollars of a later quarter, which
+          produces a THEORETICAL income, never an observation.
+        loaded_at_field: first_seen_at
+        freshness:
+          # Monthly, unlike the census tables above: Statistics Canada
+          # publishes roughly three weeks after the month ends. Thresholds in
+          # days, therefore, not in years.
+          warn_after: {count: 45, period: day}
+          error_after: {count: 100, period: day}
+        columns:
+          - name: vector_id
+            description: >
+              The published series identifier, and the stable one. Half of
+              the primary key. A coordinate is a position in a cube and can
+              be re-cut; a vector is what Statistics Canada guarantees.
+          - name: ref_period
+            description: >
+              First day of the month described, verbatim from refPer. The
+              other half of the primary key.
+          - name: value
+            description: >
+              The index, as text. An index level, never a dollar amount and
+              never to be displayed as one -- meaningful only as a ratio
+              against another month of the same series.
+          - name: status_code
+            description: >
+              0 normal, 1 not available for this reference period, 2 rounded
+              to zero where a true zero is meaningful. Read from getCodeSets
+              on 2026-08-31. All 151 points loaded that day carried 0.
+          - name: symbol_code
+            description: >
+              0 none, 1 preliminary, 3 revised. A preliminary index is a
+              figure the source expects to change.
+          - name: uom
+            description: >
+              The base of the index, "2002=100". Recorded, but nothing
+              downstream depends on it: every use is a ratio, so the base
+              cancels and a rebasing upstream moves no figure in the marts.
+
 models:
   - name: stg_statcan__census_tracts
     description: >
@@ -290,3 +337,48 @@ models:
           2021 census population, summed from the area's blocks. The weight
           that splits a tract's income between two sectors. 9 of the 3 228 areas
           hold none, and that is data rather than a gap.
+
+  - name: stg_statcan__consumer_price_index
+    description: >
+      The Montréal CMA All-items Consumer Price Index, one row per month,
+      typed and with the source's status codes turned into words.
+
+      Rows with no published value are excluded, the same choice made for the
+      Bank of Canada series in J2: an empty cell means nothing was published,
+      which is neither a zero nor an index of zero. After that filter,
+      not_null on index_value is an alarm with no false positives.
+    columns:
+      - name: ref_month
+        description: First day of the month described. One row per month.
+        data_tests:
+          - not_null
+
+      - name: index_value
+        description: >
+          The index level. An index, not a dollar amount. Only ever used as a
+          ratio against another month of the same series, which is why the
+          published base (2002=100) never reaches the marts.
+        data_tests:
+          - not_null
+
+      - name: index_status
+        description: >
+          What the source asserts about this figure, from its status and
+          symbol codes. 'final' on all 151 points loaded on 2026-08-31; the
+          other values exist so a preliminary or revised figure is visible
+          rather than silently averaged into a quarter.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['final', 'preliminary', 'revised', 'not_normal',
+                         'unknown_symbol']
+
+      - name: ref_quarter
+        description: Calendar quarter of ref_month, derived arithmetically.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+                quote: false

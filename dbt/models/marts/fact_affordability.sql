@@ -152,6 +152,25 @@ income as (
 
 ),
 
+price_index as (
+
+    /*
+        The factor that restates a 2020 dollar into a dollar of the quarter
+        being displayed. One row per quarter -- see
+        int_statcan__cpi_quarterly_index for why an incomplete quarter has no
+        factor at all rather than a factor of 1.0.
+    */
+    select
+        ref_year,
+        ref_quarter,
+        index_factor,
+        index_basis,
+        base_year as index_base_year,
+        not_indexed_reason
+    from {{ ref('int_statcan__cpi_quarterly_index') }}
+
+),
+
 joined as (
 
     select
@@ -189,7 +208,12 @@ joined as (
         income.median_total_income_2020        as household_income,
         income.median_total_income_2020_status as household_income_status,
         income.households_2021                 as household_count,
-        income.households_2021_status          as household_count_status
+        income.households_2021_status          as household_count_status,
+
+        price_index.index_factor,
+        price_index.index_basis,
+        price_index.index_base_year,
+        price_index.not_indexed_reason
 
     from bridge
     join scenario on scenario.geography_key = bridge.apciq_geography_key
@@ -203,6 +227,16 @@ joined as (
            on income.ct_uid = bridge.ct_uid
           and income.household_size = profile.household_size_label
           and income.household_type = profile.household_type_label
+    /*
+        LEFT as well, and for a different reason than the income join above.
+        A quarter with no complete CPI has no factor, and that must produce a
+        missing indexed income -- not a missing ROW. Dropping the quarter
+        would remove real prices and real 2020 incomes from the model because
+        a consumer price index was late.
+    */
+    left join price_index
+           on price_index.ref_year    = scenario.edition_year
+          and price_index.ref_quarter = scenario.edition_quarter
 
 )
 
@@ -254,6 +288,38 @@ select
     2020                                                    as income_year,
     edition_year - 2020                                     as price_year_minus_income_year,
 
+    /*
+        DERIVED, not observed. Everything from here to meets_income_requirement
+        _indexed restates the 2020 census income in dollars of this quarter,
+        and the result is a THEORETICAL median income. It is not what anyone
+        in this tract earned in this quarter, and no source publishes that:
+        the full WDS catalogue was swept on 2026-08-31 and the 27 cubes
+        carrying "census tract" all end in 2021.
+
+        The assumption is that household incomes moved with consumer prices.
+        It is wrong by a measured amount -- between -0.4 % and +1.3 % over
+        2021-2024, +7.8 % on 2019 -- checked once against the Canadian Income
+        Survey and written down in docs/limitations.md. Bounded, not unknown.
+
+        A second thing indexing does not repair: the income is still a 2020
+        median with the 2020 SHAPE of each neighbourhood. If a tract has
+        gentrified since, the CPI cannot see it -- it moves the whole island
+        by one factor. Measured at 4.2 % on the median tract, against the
+        10.6 % that made J4.1 refuse a sector-grain income.
+    */
+    index_factor                                            as income_index_factor,
+    index_base_year                                         as income_index_base_year,
+    coalesce(index_basis, 'not_indexed')                    as income_index_basis,
+    not_indexed_reason                                      as income_not_indexed_reason,
+
+    /*
+        Null when there is no factor, and never a fallback to the 2020 figure.
+        Silently showing an unindexed income under an indexed column heading
+        is precisely the blank-versus-zero failure this project has now met
+        five times -- it would read as "no inflation since 2020".
+    */
+    round(household_income * index_factor, 0)               as household_income_indexed,
+
     -- Derived, and repeated across the three profiles. Never sum these two.
     contract_rate_percent,
     qualifying_rate_percent,
@@ -276,6 +342,34 @@ select
     case
         when median_price is null or household_income is null then null
         else household_income >= income_required_lower_bound
-    end                                                     as meets_income_requirement
+    end                                                     as meets_income_requirement,
+
+    /*
+        The same three measures against the theoretical income, computed HERE
+        rather than left to DAX.
+
+        The reason is a fault found on 2026-08-30: page 3 carried two
+        definitions of one threshold -- a map testing `required <= income` and
+        a table testing `income >= required * 1.10` -- and they disagreed on
+        44 of 87 slices. One definition in one place cannot do that. The cost
+        is three columns; the alternative was the same arithmetic written
+        twice in a language with no tests.
+
+        Each is null whenever either side is null, so a quarter with no
+        factor yields no verdict rather than a verdict computed against
+        a missing income.
+    */
+    round(median_price / nullif(round(household_income * index_factor, 0), 0), 3)
+                                                            as price_to_income_ratio_indexed,
+
+    round(income_required_lower_bound - round(household_income * index_factor, 0), 2)
+                                                            as income_shortfall_indexed,
+
+    case
+        when median_price is null
+          or household_income is null
+          or index_factor is null then null
+        else round(household_income * index_factor, 0) >= income_required_lower_bound
+    end                                                     as meets_income_requirement_indexed
 
 from joined

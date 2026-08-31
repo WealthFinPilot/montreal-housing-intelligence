@@ -1127,6 +1127,7 @@ step with it.
 |---|---|---|---|---|---|
 | Guards | `Grain warning` | `_Measures` | filter state of `Census Tract` | Text | 2, 3 |
 | Guards | `Income vintage warning` | `_Measures` | `fact_affordability` | Text | 2 |
+| Guards | `Income basis note` | `_Measures` | `fact_affordability` | Text | 2 |
 | Guards | `Slice warning` | `_Measures` | `dim_property_type`, `fact_affordability` | Text | 2, 3 |
 | Market | `Sales (island, as published)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1 |
 | Market | `Sales (sectors)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1, 4 |
@@ -1143,6 +1144,8 @@ step with it.
 | Market | `Trailing window` | `_Measures` | `fact_market_trailing_12m` | Text | 4 |
 | Affordability | `Tracts evaluated` | `_Measures` | `fact_affordability` | Whole number | 2 |
 | Affordability | `Tracts affordable` | `_Measures` | `fact_affordability` | Whole number | 2 |
+| Affordability | `Household income (theoretical)` | `_Measures` | `fact_affordability` | Currency, 0 dp | 2 |
+| Affordability | `Share of tracts affordable (2020 dollars)` | `_Measures` | `fact_affordability` | Percentage | 2 |
 | Affordability | `Share of tracts affordable` | `_Measures` | the two `Tracts` measures | Percentage, 1 dec. | 2 |
 | Affordability | `Income required, lower bound (mean)` | `_Measures` | `fact_affordability` | Currency, 0 dec., thousands sep. | 2, 3 |
 | Affordability | `Household income (2020 census)` | `_Measures` | `fact_affordability` | Currency, 0 dec., thousands sep. | 2 |
@@ -2223,3 +2226,215 @@ belongs to J5.
 
 ## 7. Why this file exists
 
+
+---
+
+# 8. J4.2¾ · 1 — The theoretical income
+
+**Built on 2026-08-31.** Read this before touching page 2: five existing
+measures now read a different column, and the reason is not cosmetic.
+
+## 8.1 What happened, in one paragraph
+
+Until now the report divided a 2026 price by a 2020 income and showed the
+result as the state of the market. Three quarters of the fall it displayed was
+not the market — it was the income standing still for six years. No source
+publishes income below the metropolitan area after 2021 (the full Statistics
+Canada catalogue was swept on 2026-08-31: 8 267 cubes, and the 27 carrying
+"census tract" all end in 2021), so today's income cannot be **observed**. It
+can only be **calculated**: the 2020 census income restated in dollars of the
+quarter being displayed, using the Montréal CPI.
+
+That figure is a **theoretical median income**. The word is not caution, it is
+the description. It goes in the measure name, in the column header and on a
+permanent card — not only in `methodology.md`, which nobody opens while
+reading a chart.
+
+## 8.2 The decision of 2026-08-31
+
+**The theoretical income is what the page shows. The 2020 observation stays in
+the model, in second position** — by decision. There is no toggle
+slicer: the measures below read the indexed columns outright, and the
+`(2020 dollars)` measure exists for whoever wants the comparison back on
+screen.
+
+⚠️ **A toggle was considered and rejected**, and the reason is worth keeping.
+It would have rested on `SELECTEDVALUE ( Basis[Basis], "theoretical" )` — a
+default that applies both when nothing is selected *and* when several things
+are. That is the blank-versus-zero trap in its DAX form, and this project has
+now met it five times. No toggle, no trap.
+
+## 8.3 What the mart now carries
+
+Six columns on `fact_affordability`, all derived, none observed:
+
+| Column | What it is |
+|---|---|
+| `income_index_factor` | quarter CPI ÷ mean CPI of the twelve months of 2020 |
+| `income_index_base_year` | 2020 — fixed by the census, not chosen |
+| `income_index_basis` | `cpi_rmr462` or `not_indexed` |
+| `income_not_indexed_reason` | in words, when there is no factor |
+| `household_income_indexed` | the theoretical income. **Null when there is no factor — never the 2020 figure wearing a newer label** |
+| `price_to_income_ratio_indexed`, `income_shortfall_indexed`, `meets_income_requirement_indexed` | the three derived measures against it |
+
+**Why the verdict is computed in SQL and not in DAX.** On 2026-08-30 page 3
+carried two definitions of one threshold — a map testing `required <= income`,
+a table testing `income >= required * 1.10` — and they disagreed on 44 of 87
+slices. Writing the indexed verdict in DAX would have set that up again, in a
+language with no tests. One definition, in one place, with a positive control
+that fires.
+
+## 8.4 The three new measures
+
+```dax
+Household income (theoretical) =
+VAR Tracts = DISTINCTCOUNT ( fact_affordability[ct_uid] )
+RETURN
+    IF ( Tracts = 1, MAX ( fact_affordability[household_income_indexed] ) )
+```
+
+**The `IF` is verrou n° 1 of J4, and it is the same guard as
+`Household income (2020 census)`.** At one census tract there is one income;
+above that, aggregating forty tract medians into a sector income is wrong
+whether or not it is weighted. Indexing does not repair that — it multiplies
+every tract by the same factor, so a median of medians stays a median of
+medians. Blank above a single tract.
+
+**Name the table column *Theoretical median income (2020 census, indexed)*.**
+The parenthesis is the whole point: it names both what was observed and what
+was done to it, in the one place a reader is looking when they read the number.
+
+```dax
+Income basis note =
+VAR Basis = SELECTEDVALUE ( fact_affordability[income_index_basis] )
+VAR Factor = SELECTEDVALUE ( fact_affordability[income_index_factor] )
+VAR Reason = SELECTEDVALUE ( fact_affordability[income_not_indexed_reason] )
+RETURN
+    SWITCH (
+        TRUE (),
+        Basis = "not_indexed",
+            "Income shown: 2020 census, NOT restated — " & Reason,
+        NOT ISBLANK ( Factor ),
+            "Theoretical income: the 2020 census median, restated in dollars of this "
+                & "quarter by the Montréal CPI (× " & FORMAT ( Factor, "0.000" ) & "). "
+                & "A calculated figure, not an observation.",
+        "Theoretical income: the 2020 census median restated by the Montréal CPI. "
+            & "Select one quarter to see the factor."
+    )
+```
+
+⚠️ **This card is permanent, like `Down payment assumption`.** Three things
+must be on screen at all times: the income is the 2020 census · it has been
+restated into dollars of the displayed quarter · the instrument is the Montréal
+CPI. A reader who takes the number for an observation has been misled by the
+page, not by their own carelessness.
+
+⚠️ **It must also handle the un-indexed case, and that case is not
+hypothetical.** On 2026-08-31 the CPI reached 2026-07, so 2026 Q3 exists with
+one month of three and has no factor. `fact_market` stops at 2026 Q2 today, but
+the next APCIQ edition will land before the September CPI. When it does, this
+card says so and `assert_every_priced_quarter_can_be_indexed` fails.
+
+```dax
+Share of tracts affordable (2020 dollars) =
+VAR Evaluated =
+    CALCULATE (
+        DISTINCTCOUNT ( fact_affordability[ct_uid] ),
+        NOT ISBLANK ( fact_affordability[meets_income_requirement] )
+    )
+VAR Affordable =
+    CALCULATE (
+        DISTINCTCOUNT ( fact_affordability[ct_uid] ),
+        fact_affordability[meets_income_requirement] = TRUE ()
+    )
+RETURN
+    IF ( NOT ISBLANK ( Evaluated ), DIVIDE ( Affordable + 0, Evaluated ) )
+```
+
+**This is the second-position measure, and it is not decoration.** Put it
+beside `Share of tracts affordable` and the gap between the two *is* the result
+of this session: 93.2 % → 35.0 % as displayed until now, 92.5 % → 78.1 %
+restated. The 2022 Q2 break survives the restatement (−9.6 points instead of
+−15.6): **the break is the market, the slope was the vintage.**
+
+## 8.5 The five measures that now read indexed columns
+
+Change the column, keep every guard. The blank-versus-zero protections in
+`Tracts affordable` and `Tracts evaluated` are unchanged and still necessary.
+
+| Measure | Was | Now |
+|---|---|---|
+| `Tracts evaluated` | `NOT ISBLANK ( meets_income_requirement )` | `NOT ISBLANK ( meets_income_requirement_indexed )` |
+| `Tracts affordable` | `meets_income_requirement = TRUE ()` | `meets_income_requirement_indexed = TRUE ()` |
+| `Price to income (median)` | `MEDIAN ( price_to_income_ratio )` | `MEDIAN ( price_to_income_ratio_indexed )` |
+| `Income shortfall (mean)` | `AVERAGE ( income_shortfall )` | `AVERAGE ( income_shortfall_indexed )` |
+| `Verdict` | reads `meets_income_requirement` | reads `meets_income_requirement_indexed` |
+
+⚠️ **`Tracts evaluated` must move too, and it is the one that could quietly be
+left behind.** It is the denominator of `Share of tracts affordable`. If it
+kept counting rows evaluable against the 2020 income while the numerator
+counted rows affordable against the theoretical one, the two would rest on
+different tracts the day a quarter has no CPI factor — and the percentage would
+still look perfectly reasonable. They are identical today because every quarter
+of the archive is indexed. That is exactly why it would go unnoticed.
+
+## 8.6 `Income vintage warning` — rewritten, not removed
+
+The six-year gap is still true. It is now *corrected* rather than *suffered*,
+so the sentence changes and the card stays.
+
+```dax
+Income vintage warning =
+VAR Gap = SELECTEDVALUE ( fact_affordability[price_year_minus_income_year] )
+VAR IncomeYear = SELECTEDVALUE ( fact_affordability[income_year] )
+VAR Basis = SELECTEDVALUE ( fact_affordability[income_index_basis] )
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Gap ), BLANK (),
+        Basis = "not_indexed",
+            "Income is the " & IncomeYear & " census and could NOT be restated for this quarter. "
+                & "The price is " & Gap & " year(s) later.",
+        Gap = 0,
+            "Income is the " & IncomeYear & " census, restated to this quarter by the CPI.",
+        "Income is the " & IncomeYear & " census, restated into dollars of this quarter "
+            & "(" & Gap & " year(s) later) by the CPI. Prices and incomes are in the same "
+            & "dollars; the 2020 distribution between tracts is unchanged."
+    )
+```
+
+**The last clause is the limitation indexing does NOT remove**, and it belongs
+on screen rather than only in `limitations.md`. The CPI moves the whole island
+by one factor. If a tract has gentrified since 2020, nothing here can see it.
+Measured cost: **4.2 % on the median tract**, against the 10.6 % that made J4.1
+refuse a sector-grain income — two and a half times less damaging than an error
+the project has already rejected.
+
+## 8.7 Acceptance, and it is checkable
+
+`scripts/report_oracle.py` prints these. Condominium, couple:
+
+| Slice | `Share of tracts affordable` | `(2020 dollars)` |
+|---|---|---|
+| 2019 Q2 | **92.5 %** | 93.2 % |
+| 2022 Q2 | **71.1 %** | 54.7 % |
+| 2023 Q4 | **56.3 %** | 29.7 % |
+| 2026 Q2 | **78.1 %** | 35.0 % |
+
+⚠️ **Count distinct tracts, not rows.** The shared tract `4620511.02` is one
+tract and two rows, so a row count returns 513 where a tract count returns 512.
+Both are right about different questions — the same trap as *512 shapes ≠ 513
+rows* on the page 2 map.
+
+⚠️ **2023 Q4 is exactly 288 / 512 = 56.25 %, a value sitting precisely on the
+rounding boundary.** PostgreSQL rounds it half-up to 56.3, Python rounds it
+half-to-even to 56.2, and the feasibility study printed 56.2 for that reason.
+Neither is wrong and neither is a discrepancy in the data. Take the oracle's
+figure at acceptance, so the report and its check do not disagree over a
+half-unit — the same class of false disagreement as `rank()` versus
+`RANKX ( .., DENSE )` on page 1.
+
+**The factor to check the card against:** 2026 Q2 is **× 1.2616**, and the base
+is the mean of the twelve 2020 months. 2019 Q2 is **× 0.9901** — below one,
+because the index deflates towards the past. A card showing 1.000 everywhere
+means the measure lost its filter context.
