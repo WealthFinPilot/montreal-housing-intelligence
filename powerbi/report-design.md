@@ -1162,6 +1162,7 @@ step with it.
 | Affordability | `Tracts affordable` | `_Measures` | `fact_affordability` | Whole number | 2 |
 | Affordability | `Household income (theoretical)` | `_Measures` | `fact_affordability` | Currency, 0 dp | 2 |
 | Affordability | `Share of tracts affordable (2020 dollars)` | `_Measures` | `fact_affordability` | Percentage | 2 |
+| Affordability | `Vintage effect (points)` | `_Measures` | `Share of tracts affordable`, `… (2020 dollars)` | Percentage, 1 dec. | 2 |
 | Affordability | `Share of tracts affordable` | `_Measures` | the two `Tracts` measures | Percentage, 1 dec. | 2 |
 | Affordability | `Income required, lower bound (mean)` | `_Measures` | `fact_affordability` | Currency, 0 dec., thousands sep. | 2, 3 |
 | Affordability | `Household income (2020 census)` | `_Measures` | `fact_affordability` | Currency, 0 dec., thousands sep. | 2 |
@@ -2385,7 +2386,41 @@ Change the column, keep every guard. The blank-versus-zero protections in
 | `Tracts affordable` | `meets_income_requirement = TRUE ()` | `meets_income_requirement_indexed = TRUE ()` |
 | `Price to income (median)` | `MEDIAN ( price_to_income_ratio )` | `MEDIAN ( price_to_income_ratio_indexed )` |
 | `Income shortfall (mean)` | `AVERAGE ( income_shortfall )` | `AVERAGE ( income_shortfall_indexed )` |
-| `Verdict` | reads `meets_income_requirement` | reads `meets_income_requirement_indexed` |
+| `Verdict` | reads `meets_income_requirement` | reads `meets_income_requirement_indexed`, **and gains a sixth case** — see below |
+
+⚠️ **`Verdict` needs a case the specification did not foresee, found while
+applying it on 2026-08-31.** Switching to the indexed column makes `Meets` blank
+on a quarter with no CPI factor **while the price and the 2020 income both
+exist**. The old `SWITCH` then fell through to `"Not evaluated"`, a catch-all
+that names nothing.
+
+```dax
+Verdict =
+VAR Sectors = DISTINCTCOUNT ( fact_affordability[apciq_sector_number] )
+VAR Meets = SELECTEDVALUE ( fact_affordability[meets_income_requirement_indexed] )
+VAR HasPrice = NOT ISBLANK ( SELECTEDVALUE ( fact_affordability[median_price] ) )
+VAR HasIncome = NOT ISBLANK ( SELECTEDVALUE ( fact_affordability[household_income] ) )
+VAR Restated = SELECTEDVALUE ( fact_affordability[income_index_basis] ) = "cpi_rmr462"
+RETURN
+    SWITCH (
+        TRUE (),
+        Sectors > 1, "Shared between two sectors",
+        NOT ISBLANK ( Meets ) && Meets, "Within reach",
+        NOT ISBLANK ( Meets ), "Out of reach",
+        NOT HasPrice, "No published price",
+        NOT HasIncome, "No published income",
+        NOT Restated, "Income not restated for this quarter",
+        "Not evaluated"
+    )
+```
+
+**Its position in the `SWITCH` is load-bearing**: after the two source
+absences, because a sector with no published price stays *No published price*
+even when the CPI is also missing.
+
+⚠️ **It is unreachable today** — all 29 archived quarters are indexed — and
+J4.2½ applies: *a branch predicted unreachable is not a control until something
+has tried to reach it*. It is written, not verified.
 
 ⚠️ **`Tracts evaluated` must move too, and it is the one that could quietly be
 left behind.** It is the denominator of `Share of tracts affordable`. If it
@@ -2426,6 +2461,63 @@ by one factor. If a tract has gentrified since 2020, nothing here can see it.
 Measured cost: **4.2 % on the median tract**, against the 10.6 % that made J4.1
 refuse a sector-grain income — two and a half times less damaging than an error
 the project has already rejected.
+
+## 8.6 bis How the reader reaches the 2020 figure
+
+**The decision said "theoretical on screen, observed in second position",
+and this file did not say by what gesture.** Asked on 2026-08-31 while building;
+the answer has two layers.
+
+**Layer one, free and always on: the tooltip and the column.** Put
+`Share of tracts affordable (2020 dollars)` in the line chart's **Tooltips**
+well, and as a column in the table beside the theoretical share. The reader
+hovers a quarter and reads both. No object is added to the page and no control
+can be mis-set.
+
+**And name the gap, rather than leaving it to be subtracted mentally** — the
+gap *is* the finding of the session:
+
+```dax
+Vintage effect (points) =
+VAR Restated = [Share of tracts affordable]
+VAR AsPublished = [Share of tracts affordable (2020 dollars)]
+RETURN
+    IF (
+        NOT ISBLANK ( Restated ) && NOT ISBLANK ( AsPublished ),
+        Restated - AsPublished
+    )
+```
+
+Affordability group, percentage with one decimal. **+43.1 points on 2026 Q2** —
+the share of the displayed collapse that was not the market. **−0.7 point on
+2019 Q2**, negative because the index deflates towards the past, which is the
+control showing it does not always point one way.
+
+⚠️ **The two `ISBLANK` are not padding.** Without them an unindexed quarter
+yields `BLANK − 35.0 = −35.0`, a gap invented out of nothing. Sixth appearance
+of the same mechanism.
+
+**Layer two, deferred on 2026-08-31: two focus views driven by bookmarks.**
+Requested, and postponed because the page design is not final. Recorded
+so it is not redesigned from scratch:
+
+- Bookmarks are **better than a toggle slicer here**, and for a reason worth
+  keeping: a bookmark does not touch DAX, so there is no implicit default to
+  get wrong. The blank-versus-zero trap does not exist in this route.
+- ⚠️ **Uncheck *Data* on both bookmarks.** Captured by default, it would freeze
+  the property-type, quarter and place slicers, so switching view would silently
+  restore whatever was selected the day the bookmark was made.
+- ⚠️ **A bookmark cannot change what a measure knows.** `Income basis note`
+  reads `income_index_basis` and will keep saying *theoretical* in the vintage
+  view. Anything that *names* the view must therefore exist twice, superimposed,
+  one visible per bookmark: the line chart, the share card, the assumption card
+  and the visual title.
+- **What must NOT be duplicated**: the table keeps both columns and
+  `Vintage effect (points)` in either view — it is the one place the gap reads
+  without switching.
+- Two buttons with a differentiated **Selected** state, so the active view is
+  visible. **Save the file on the `Theoretical` view**: a `.pbix` reopens on the
+  state it was saved in, and the decision made theoretical the default.
 
 ## 8.7 Acceptance, and it is checkable
 
