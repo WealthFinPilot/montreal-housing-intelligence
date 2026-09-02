@@ -2550,7 +2550,14 @@ means the measure lost its filter context.
 
 ---
 
-# 9. J4.2¾ · 2 — The place filter
+# 9. J4.2¾ · 2 — The place filter (SUPERSEDED 2026-09-01)
+
+> ⚠️ **Kept as the record of a decision that was reversed, not as the
+> design.** On 2026-09-01 page 1 was narrowed to the APCIQ sector:
+> 18 published prices, so a control offering 34 names promises a figure
+> that does not exist. **Section 11 says what survives of this and what
+> goes.** The measurement in 9.1 stays true and still explains why a
+> sector name is not a place a reader recognises.
 
 **Specified on 2026-08-31.** One slicer, and it changes what three pages mean.
 Read 9.1 before anything else: it corrects a figure the feasibility study got
@@ -2706,8 +2713,28 @@ RETURN
     )
 ```
 
-`Active listings (selected area)` is the same shape on
-`fact_market[active_listings]`.
+```dax
+Active listings (selected area) =
+VAR PlaceChosen =
+    ISFILTERED ( Place[admin_name] ) || ISFILTERED ( Place[apciq_sector_name] )
+RETURN
+    IF (
+        PlaceChosen,
+        CALCULATE (
+            SUM ( fact_market[active_listings] ),
+            fact_market[is_island_aggregate] = FALSE ()
+        ),
+        CALCULATE (
+            SUM ( fact_market[active_listings] ),
+            fact_market[is_island_aggregate] = TRUE ()
+        )
+    )
+```
+
+It is written out in full rather than left as *the same shape as the measure
+above*. Two measures that must stay identical are worth two blocks: a reader
+translating "the same shape" is a reader who can translate it wrong, and this
+one differs from `Sales (selected area)` by exactly one column name.
 
 ⚠️ **Both branches of `ISFILTERED` are needed, and testing only `admin_name`
 is the mistake waiting to happen.** The slicer is a hierarchy: selecting at the
@@ -2747,6 +2774,101 @@ RETURN
 refused since J3.1.** The title must read the *same* filter state as the value
 measures, never its own — the fault `Sector price colour` already avoided by
 reading `Price relative to the island` instead of recomputing the comparison.
+
+### The visual-level `is island` filter has to go, and four measures go with it
+
+**Found on 2026-09-01, applying B5.** The two measures above are necessary and
+they are not sufficient, and the reason is not in them.
+
+The KPI row carries a visual-level filter `Sector[geography_type] is island` —
+`Median price`, `Days on market`, `Price status` and `Price context` need it,
+because one property type and one quarter still leave nineteen rows and
+`Median price` blanks on anything but a single published cell. With a place
+selected, `Sector` is filtered to that place's sector, and
+`{sector} INTERSECT {island}` is **empty**. Every card in the row blanks,
+including `Sales (selected area)`: a measure that switches on
+`is_island_aggregate` still reads whatever rows the visual filter leaves, and
+that is none.
+
+So the filter comes off the row — and the four measures that relied on it have
+to carry the switch themselves, exactly as the two above do:
+
+```dax
+Median price (selected area) =
+VAR PlaceChosen =
+    ISFILTERED ( Place[admin_name] ) || ISFILTERED ( Place[apciq_sector_name] )
+RETURN
+    IF (
+        PlaceChosen,
+        CALCULATE ( [Median price], fact_market[is_island_aggregate] = FALSE () ),
+        CALCULATE ( [Median price], fact_market[is_island_aggregate] = TRUE () )
+    )
+```
+
+```dax
+Days on market (selected area) =
+VAR PlaceChosen =
+    ISFILTERED ( Place[admin_name] ) || ISFILTERED ( Place[apciq_sector_name] )
+RETURN
+    IF (
+        PlaceChosen,
+        CALCULATE ( [Days on market], fact_market[is_island_aggregate] = FALSE () ),
+        CALCULATE ( [Days on market], fact_market[is_island_aggregate] = TRUE () )
+    )
+```
+
+```dax
+Price status (selected area) =
+VAR PlaceChosen =
+    ISFILTERED ( Place[admin_name] ) || ISFILTERED ( Place[apciq_sector_name] )
+RETURN
+    IF (
+        PlaceChosen,
+        CALCULATE ( [Price status], fact_market[is_island_aggregate] = FALSE () ),
+        CALCULATE ( [Price status], fact_market[is_island_aggregate] = TRUE () )
+    )
+```
+
+```dax
+Price context (selected area) =
+VAR PlaceChosen =
+    ISFILTERED ( Place[admin_name] ) || ISFILTERED ( Place[apciq_sector_name] )
+RETURN
+    IF (
+        PlaceChosen,
+        CALCULATE ( [Price context], fact_market[is_island_aggregate] = FALSE () ),
+        CALCULATE ( [Price context], fact_market[is_island_aggregate] = TRUE () )
+    )
+```
+
+**All four are written out, and that is not padding.** The first draft of this
+section left three of them as *the same four lines around* the other measures —
+the identical shortcut this file had just removed from
+`Active listings (selected area)` a few pages up. Four measures that must stay
+identical are worth four blocks; the difference between them is one measure
+name, which is precisely the kind of difference a reader retypes wrong.
+
+**Each wraps the original measure instead of restating it.** "A median cannot be
+averaged" stays written in exactly one place, in `Median price`; the wrapper
+only decides which rows that rule is applied to. This is the discipline
+`Sector price colour` and `Verdict for the selected place` already follow, and
+here it also keeps the sector bar and the sector table working: they filter
+`is apciq_sector` themselves and go on reading the **unwrapped** measures. That
+is why the switch is a new measure and not a rewrite of the old one — rewriting
+`Median price` would empty the table beside it.
+
+**What each state then shows, and both are correct:**
+
+| Selection | `Median price (selected area)` |
+|---|---|
+| none | the island's published median — the row reads as it does today |
+| one place, one sector | that sector's median |
+| Verdun, or any multi-selection | blank, and `Price context (selected area)` prints its sentence |
+
+The third row is the decision of 2026-08-31 — *multi-select stays allowed,
+`Median price` blanks with its sentence* — working as intended rather than
+failing. Two sectors are two published cells, and there is no median of two
+medians.
 
 ⚠️ **Promote `Price status` into the KPI row.** 430 of the 1 566 sector cells
 have no published price — 27.5 % overall, **48.1 % on plex**, 30.1 % on
@@ -2834,7 +2956,7 @@ comparison against `report_oracle.py`, not a visual inspection.
 
 | Case | What must happen |
 |---|---|
-| **No selection** | page 1 KPI row identical to today; `Area title` reads *Island of Montréal*; page 3 cards read 6 / 1 / 10 / 18 at 95 000 $ |
+| **No selection** | page 1 KPI row identical to today; `Area title` reads *Island of Montréal*; the three page-3 cards read 6 / 1 / 17 at 95 000 $ (the map's four colour classes are what total 18: 6 + 1 + 10 + 1) |
 | **Rosemont** (clean place) | disclosure says *APCIQ publishes this area on its own*; no extra places named |
 | **Westmount** | disclosure names **Centre** and the three other places; page 1 figures are the sector's |
 | **Beaconsfield** | disclosure names **six** other municipalities — the worst case |
@@ -2849,3 +2971,311 @@ but its `Le Sud-Ouest` row has all 29 — so choosing Verdun does not produce an
 empty screen. Both figures are right about different questions, and **16 is the
 one this page is accepted against**. Same class of distinction as *512 shapes ≠
 513 rows* on the page 2 map.
+
+
+# 10. J4.2¾ · 2 bis — The place map
+
+**Built 2026-09-01.** Page 1 draws **36 shapes** — 32 administrative entities
+plus the four halves of the two boroughs APCIQ splits — instead of the 18
+sector outlines, so a reader can find the place they
+live in. `marts.map_place` and `powerbi/shapes/admin_place_island.geojson` hold
+it; read the model header before changing anything.
+
+## 10.1 What the map is allowed to claim
+
+**Nothing new.** APCIQ publishes 18 prices and this map draws 36 shapes, so
+several shapes carry the same figure — the seven municipalities of sector 1 are
+one published number, not seven. That is a readability trade, never a grain.
+Nothing joins a fact to `place_key`, and nothing ever should.
+
+**Why 36 and not 34.** The first version drew the 34 administrative entities
+and lost a whole published sector: L'Île-des-Sœurs is APCIQ sector 10 and is
+not an administrative entity, so nothing drew it. Verdun and CDN–NDG are
+therefore cut along the neighbourhood lines the seed `apciq_sector_neighbourhood`
+already declares — the same declaration J3.4 uses to place census tracts.
+
+⚠️ **One of those two lines is an assumption.** APCIQ publishes no boundary
+between sectors 7 and 8; the city's 2014 sociological line stands in for it,
+over 40 tracts and 170 583 people. `boundary_is_assumed` carries it on those
+two shapes and the tooltip says so. Verdun is cut on water, which is not an
+assumption — and conflating the two would hide the only assumed line on the map.
+
+⚠️ **The relationship `Place_map[apciq_geography_key]` → `Sector[geography_key]`
+must be BIDIRECTIONAL.** Many-to-one propagates from the one side to the many:
+`Sector` filters `Place_map`, not the reverse. In single direction the map
+groups by place, that grouping never reaches `fact_market`, `Median price` sees
+nineteen geographies instead of one and returns blank — **and the whole map
+comes out grey, which looks exactly like a shape file that failed to join.**
+Diagnosed on the first build, 2026-09-01.
+
+## 10.2 The acceptance cases
+
+Coloured + grey must always total **36**. Measured on 2026 Q2:
+
+| Property type | Coloured | Grey |
+|---|---|---|
+| Condominium | 35 | 1 |
+| **Plex** | **12** | **24** |
+| Single-family | 32 | 4 |
+
+**Accept on plex**, not condominium: 24 grey shapes out of 36 is the only case
+that shows whether absence reads as absence. Same reasoning as the 216 grey
+tracts on page 2.
+
+**The four cut shapes are all coloured on condominium 2026 Q2** — *Verdun
+(L'Île-des-Sœurs)*, *Verdun (Le Sud-Ouest)*, *CDN–NDG (CDN/CSL)*, *CDN–NDG
+(NDG/Montréal-Ouest)*. If any of them is grey, the cut lost its sector key.
+
+⚠️ **Compare against the old sector map once, on purpose.** Every sector that
+had a colour there must have one here. That is how the missing Île-des-Sœurs
+was found, and it is now also a dbt test — but the eye found it first.
+
+## 10.3 The tooltip, and the note that replaced a measure
+
+**The tooltip carries two fields: the place name and
+its APCIQ sector.** That answers the question the map raises — *where does this
+figure come from* — and no measure was needed for it.
+
+A `Place map tooltip` measure was written, then dropped on 2026-09-01. It
+restated in words what those two fields already show, and it listed the other
+places sharing a sector — which the map shows better than any sentence: four
+shapes of the same colour, side by side. **A tooltip is read while moving a
+mouse; anything past a line is not read at all.**
+
+### What a tooltip could not carry, and where it went instead
+
+Two of the 36 shapes — the halves of Côte-des-Neiges–Notre-Dame-de-Grâce — are
+separated by a line **APCIQ does not publish**. The city's 2014 sociological
+boundary stands in for it. On screen those two shapes look exactly like the 34
+others, which are official administrative limits: **an assumption drawn as a
+measurement**, which is the one thing this project does not leave standing.
+
+Decided: a **static text box** under the map, not a measure.
+
+```text
+Each shape is coloured by the median of its APCIQ sector, so neighbouring
+shapes can share one published figure. The line dividing Côte-des-Neiges from
+Notre-Dame-de-Grâce is not published by APCIQ: the city's 2014 sociological
+boundary stands in for it.
+```
+
+⚠️ **No figure, no count, and no quarter in that box, ever.** A text box is
+filtered by nothing and refreshes never — the same rule that removed "over
+these 29 quarters" from the page 4 caveat on 2026-08-29. Everything above is
+structural: it stays true whatever the slicers do and whatever the next APCIQ
+edition brings.
+
+⚠️ **The full version of this limitation still belongs in `limitations.md` in
+J4.4** — 40 census tracts and 170 583 people are placed by that line. The box
+is the warning at the point of reading, not the record.
+
+⚠️ **`Place_map` is a provisional name.** The model also holds `Place`, the
+36-row bridge imported for the place slicer of section 9, which is on hold. One
+of the two has to go.
+
+
+# 11. The clean-up after the grain was rewritten
+
+**2026-09-01.** Section 9 specified a slicer over 34 places. The grain changed
+the same day: page 1 speaks **APCIQ sectors**, because there are 18
+published prices and a control offering 34 names promises a figure that does
+not exist. Section 9 is kept as the record of a decision that was reversed, and
+is **not** the design any more.
+
+This section says what survives, what goes, and in which order — because the
+order matters: deleting the `Place` table first would break seven measures at
+once.
+
+## 11.1 What goes
+
+| Object | Why |
+|---|---|
+| table **`Place`** (the 36-row bridge) | It existed to feed a slicer of places. There is no slicer of places. `Place_map` carries the same relationships with one row per drawn shape, which the bridge could not |
+| **`Selected area disclosure`** | It names *the extra places shown beyond the one you picked*. With a sector-level control there is no "one you picked" below the sector, and `Place map tooltip` already names what a shape covers — better, because it fires where the reader is looking |
+
+## 11.2 What survives, and the one line each of them changes
+
+Seven measures branch on `ISFILTERED ( Place[admin_name] ) || ISFILTERED (
+Place[apciq_sector_name] )`. That test dies with the table. It is replaced by a
+single measure both more robust and written once:
+
+```dax
+Area is narrowed =
+VAR SectorsShown =
+    CALCULATE ( COUNTROWS ( Sector ), Sector[geography_type] = "apciq_sector" )
+VAR SectorsAll =
+    CALCULATE (
+        COUNTROWS ( Sector ),
+        REMOVEFILTERS ( Sector ),
+        Sector[geography_type] = "apciq_sector"
+    )
+RETURN INT ( NOT ISBLANK ( SectorsShown ) && SectorsShown < SectorsAll )
+```
+
+**Why a count rather than `ISFILTERED`, and it is not a matter of taste.**
+`ISFILTERED` only sees a filter placed *directly* on the column it names. A
+reader clicking a shape on the map filters `Place_map`, which reaches `Sector`
+by propagation — `ISFILTERED ( Sector[name] )` stays FALSE, and the KPI row
+would go on showing the island under a map that clearly shows one sector.
+Counting what survives asks the only question that matters — *is the view
+narrower than the whole island?* — and answers it the same way whatever did the
+narrowing: the slicer, the map, a bar, or a page filter.
+
+It returns `1` / `0` rather than TRUE/FALSE so it can be read as a number in
+any context without a conversion surprise. ⚠️ **The `NOT ISBLANK` guard is
+not decoration** — section 12.2 says which row of `Sector` it protects against
+and why the measure would have looked correct without it.
+
+Each of the seven then swaps one line:
+
+```dax
+-- before
+VAR PlaceChosen =
+    ISFILTERED ( Place[admin_name] ) || ISFILTERED ( Place[apciq_sector_name] )
+-- after
+VAR PlaceChosen = [Area is narrowed] = 1
+```
+
+That covers `Sales (selected area)`, `Active listings (selected area)`,
+`Median price (selected area)`, `Days on market (selected area)`,
+`Price status (selected area)` and `Price context (selected area)`.
+
+**`Area title` changes more than one line**, because it also *names* the area:
+
+```dax
+Area title =
+VAR Areas = CALCULATETABLE (
+                VALUES ( Sector[name] ),
+                Sector[geography_type] = "apciq_sector"
+            )
+VAR HowMany = COUNTROWS ( Areas )
+RETURN
+    SWITCH (
+        TRUE (),
+        [Area is narrowed] = 0, "Island of Montréal",
+        HowMany = 1, CONCATENATEX ( Areas, Sector[name] ),
+        HowMany & " sectors selected"
+    )
+```
+
+⚠️ **It reads the same filter state as the value measures, through the same
+measure.** A title that computed its own idea of the perimeter is exactly the
+fault this repository has refused since J3.1 — and the one `Sector price colour`
+avoided by reading `Price relative to the island` instead of recomparing.
+
+## 11.3 The order of operations
+
+1. Create `Area is narrowed`.
+2. Swap the one line in the six `(selected area)` measures, and rewrite
+   `Area title`.
+3. **Check the KPI row against `scripts/report_oracle.py`** on condominium +
+   2026 Q2 with nothing selected. The four figures are sales, listings and a
+   median from APCIQ, so they are not written in this repository -- the
+   oracle reads them from the marts at run time. Nothing should have moved: with
+   no narrowing, both the old test and the new one take the island branch.
+4. Delete `Selected area disclosure` from the three pages, then from the model.
+5. Delete the `Place` table.
+6. Re-check the same four figures.
+
+⚠️ **Do not delete first.** Power BI reports a broken measure where it is used,
+not where the table was removed, so a table deleted before its readers are
+rebranched turns one action into six error messages on three pages.
+
+⚠️ **If the four `(selected area)` wrappers are ever deleted too**, the
+visual-level filter `Sector[geography_type] is island` must go back on the KPI
+row. Without either, the row sees nineteen rows and `Median price` blanks.
+
+
+# 12. The sector slicer
+
+**2026-09-01.** The control page 1 gets is a slicer over the **18 APCIQ
+sectors** — the grain APCIQ actually publishes. It replaces the 34-place slicer
+of section 9, and it needs no new table: `Sector` is already in the model and
+already reaches all four fact tables.
+
+## 12.1 The slicer
+
+| | |
+|---|---|
+| Field | `Sector[name]` |
+| **Visual-level filter** | **`Sector[geography_type] is apciq_sector`** |
+| Selection | multiple allowed |
+| *Select all* | off |
+| Synchronised on | pages **1 and 3**. **Never page 4** — `fact_interest_rate` has no geographic column, and a synchronised control there would be inert, which is worse than no control |
+
+⚠️ **The visual-level filter is not tidiness, it is the seventh appearance of
+the blank-as-zero trap.** `Sector` holds 19 rows: the 18 sectors and the island
+aggregate. Without the filter, *Île de Montréal (agglomeration)* appears in the
+list, and selecting it leaves **no** row with
+`geography_type = "apciq_sector"` — so the count in `Area is narrowed` returns
+BLANK, DAX compares BLANK as 0, `0 < 18` is true, every measure switches to its
+sector branch, and there is no sector. **Every KPI goes blank while the slicer
+shows a perfectly reasonable selection.**
+
+The filter removes the row from the list. The guard in 12.2 removes the fault
+even if the row comes back by another route.
+
+## 12.2 `Area is narrowed` — corrected before it was ever built
+
+```dax
+Area is narrowed =
+VAR SectorsShown =
+    CALCULATE ( COUNTROWS ( Sector ), Sector[geography_type] = "apciq_sector" )
+VAR SectorsAll =
+    CALCULATE (
+        COUNTROWS ( Sector ),
+        REMOVEFILTERS ( Sector ),
+        Sector[geography_type] = "apciq_sector"
+    )
+RETURN INT ( NOT ISBLANK ( SectorsShown ) && SectorsShown < SectorsAll )
+```
+
+**`NOT ISBLANK` is the whole correction.** "No sector survives" and "one sector
+survives" are different states and must not switch the same way: the first means
+*nothing to show*, and the honest answer there is the island, not an empty
+sector branch. Written without the guard, the measure would have been correct
+on every case anyone would have thought to test, and wrong on the one row of
+`Sector` nobody thinks about.
+
+## 12.3 Page 2 is deliberately NOT synchronised
+
+`Sector` reaches `fact_affordability`, so the slicer *would* work there. It is
+left off, and the reason is measured rather than preferred.
+
+Page 2 draws **541 census tracts**. Selecting one sector colours the 30 to 40
+tracts it contains and leaves roughly 500 grey — and on that page grey already
+means *no published price* or *no 2020 income*. **A Power BI map cannot
+highlight**: a filtered-out shape and a shape with no data are the same grey,
+so the map would state an absence that is not there.
+
+The page keeps its own controls. A reader who wants one sector's tracts has
+page 1 for the sector view and the page 2 table for the detail.
+
+## 12.4 Page 3 — the three island cards get simpler
+
+Section 9.6 required `REMOVEFILTERS ( Place )` **and** `REMOVEFILTERS ( Sector )`
+on the three KPI cards, because the filter landed on `Place` and came back
+through a bidirectional relationship. **With `Place` deleted and the slicer
+sitting directly on `Sector`, `REMOVEFILTERS ( Sector )` alone is now enough** —
+and it is the only form that stays right, because there is no longer a `Place`
+table to name.
+
+`Verdict for the selected place` keeps its job and its shape; only its name is
+now inaccurate. Rename it **`Verdict for the selected sector`**, and swap its
+test to `[Area is narrowed] = 1`.
+
+## 12.5 Acceptance
+
+| Case | What must happen |
+|---|---|
+| **No selection** | all pages read exactly what they read today; `Area title` says *Island of Montréal*; page 3 cards read 6 / 1 / 17 at 95 000 $ |
+| **One sector** | the KPI row shows that sector; `Area title` names it; the map keeps all 36 shapes |
+| **Two sectors** | `Area title` reads *2 sectors selected*; `Median price` blanks and `Price context (selected area)` prints its sentence — a median of two medians does not exist |
+| **The island row, if it ever reaches the list** | the KPI row shows the island, never blank. That is the guard of 12.2 |
+| **Page 4** | slicer absent, page unchanged |
+
+⚠️ **The map must keep all 36 shapes when a sector is selected.** The slicer
+filters `Sector`, and `Place_map` hangs off `Sector` by a bidirectional
+relationship — so the filter propagates back and the map would draw one shape.
+Set **Format > Edit interactions > None** between the slicer and the map, or
+the page loses the context that makes a selection readable.

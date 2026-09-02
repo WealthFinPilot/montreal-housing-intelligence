@@ -73,6 +73,18 @@ where geography_type = %(geography_type)s
 order by geography_code
 """
 
+# The place layer does not live in dim_geography, and that is deliberate: these
+# outlines are the city's polygons cut by the tract shoreline, so they are a
+# different measurement of the same entities. marts.map_place holds them, with
+# the sector that may colour each one.
+PLACE_SHAPES = """
+select place_code,
+       st_asgeojson(geometry, %(decimals)s) as geometry_json
+from marts.map_place
+where geometry is not null
+order by place_code
+"""
+
 
 @dataclass(frozen=True)
 class Layer:
@@ -86,6 +98,9 @@ class Layer:
     # has none, so demanding one would reject a correct file.
     key_has_decimals: bool
     filename: str
+    # Layers built on dim_geography share one query; a layer with its own source
+    # names it here rather than being special-cased inside export().
+    query: str = SHAPES
 
 
 LAYERS = {
@@ -104,6 +119,22 @@ LAYERS = {
         expected=18,
         key_has_decimals=False,
         filename="apciq_sector_island.geojson",
+    ),
+    "places": Layer(
+        name="administrative places",
+        # Unused for this layer: the query names its own table.
+        geography_type="",
+        key_property="place_id",
+        # 32 entities drawn whole + the 4 halves of the two boroughs APCIQ
+        # splits. 34 would mean the cut stopped happening, and sector 10 would
+        # vanish from the map with it.
+        expected=36,
+        # REM19 for a borough, 66112 for a linked city. No decimals, but the
+        # five-digit form is exactly the case the string check exists for: as a
+        # JSON number it loads without error and joins to nothing.
+        key_has_decimals=False,
+        filename="admin_place_island.geojson",
+        query=PLACE_SHAPES,
     ),
 }
 
@@ -159,7 +190,7 @@ def check(collection: dict, layer: Layer) -> list[str]:
 
 def export(cur, layer: Layer, decimals: int, output: Path) -> int:
     """Build, check and write one layer. Returns 0 on success, 1 on refusal."""
-    cur.execute(SHAPES, {"decimals": decimals, "geography_type": layer.geography_type})
+    cur.execute(layer.query, {"decimals": decimals, "geography_type": layer.geography_type})
     collection = build_feature_collection(cur.fetchall(), layer)
 
     problems = check(collection, layer)
@@ -212,7 +243,10 @@ def main() -> int:
     if failures:
         return 1
 
-    print("In Power BI, these keys must match dim_geography[geography_code] exactly.")
+    print(
+        "In Power BI, these keys must match the model column exactly -- "
+        "geography_code for tracts and sectors, place_code for places."
+    )
     print("Check with Format visual > Map settings > View map type key.")
     return 0
 

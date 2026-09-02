@@ -1023,3 +1023,106 @@ models:
           forward.
         data_tests:
           - not_null
+
+  - name: map_place
+    description: >
+      The 36 shapes the page 1 map draws: 32 administrative entities taken
+      whole, plus the four halves of the two boroughs APCIQ splits. Each
+      carries the one sector whose published price colours it. Built for that
+      map, and for nothing else.
+
+      Read the model header before using it. Two things there are not obvious:
+      the geometry is the city's polygon CUT BY the census tract shoreline,
+      because the administrative outline runs to the middle of the river and
+      swallows a quarter of the island in water; and two places carry no sector
+      at all, because they sit in two and a shape has one colour.
+
+      NOT A GRAIN. Several shapes share one published figure -- the seven
+      municipalities of sector 1 are one number, not seven. Nothing joins a
+      fact to place_key, and nothing ever should.
+
+    columns:
+      - name: place_key
+        description: >
+          One row per drawn shape. It is the dim_geography key for the 32 whole
+          places, and that key plus ':sector-N' for the four pieces cut out of
+          the two split boroughs -- so it is NOT a dim_geography key throughout,
+          and the referential test sits on admin_geography_key instead.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: admin_geography_key
+        description: >
+          The administrative entity this shape comes from. Not unique: Verdun
+          and Côte-des-Neiges--Notre-Dame-de-Grâce each appear twice, once per
+          APCIQ sector.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: place_code
+        description: >
+          The MAMH code -- REMxx for a borough, five digits for a linked city.
+          This is the key written into the GeoJSON, so it must stay unique and
+          it must stay text: a five-digit code written as a JSON number loses
+          nothing visible and joins nothing.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: place_name
+        data_tests:
+          - not_null
+
+      - name: place_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['borough', 'municipality']
+
+      - name: apciq_geography_key
+        description: >
+          The sector whose median price colours this shape. Never null: a shape
+          with no sector would be drawn with no colour and no explanation, and
+          the first version of this model produced exactly that.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: is_cut_from_a_larger_place
+        description: >
+          True for the four pieces of Verdun and Côte-des-Neiges--Notre-Dame-de-
+          Grâce, the two boroughs APCIQ splits. False for the 32 entities drawn
+          whole. A singular test holds the count at 4.
+        data_tests:
+          - not_null
+
+      - name: boundary_is_assumed
+        description: >
+          True only for the two halves of Côte-des-Neiges--Notre-Dame-de-Grâce.
+          APCIQ publishes no line between its sectors 7 and 8, so the city's
+          2014 sociological boundary stands in for it, over 40 census tracts and
+          170 583 people. Verdun is cut on water, which is not an assumption --
+          and conflating the two would hide the only assumed line on the map.
+        data_tests:
+          - not_null
+
+      - name: area_basis
+        description: >
+          Always 'land_only' here. dim_geography carries the same column
+          because its administrative rows are measured WITH the water, and the
+          two numbers answer different questions -- 619 km² of jurisdiction
+          against 499 km² of ground.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['land_only']
