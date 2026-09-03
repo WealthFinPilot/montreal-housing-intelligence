@@ -384,10 +384,10 @@ per visual — the slicer carries a visual filter
 |---|---|
 | Slicers | property type (single select), `household_profile[name_en]`, quarter |
 | KPI | `Share of tracts affordable`, `Tracts evaluated`, `Income required, lower bound (mean)` |
-| Line | `Share of tracts affordable` by `'date'[quarter_label]` — **the finding** |
-| Bar | `Share of tracts affordable` by `Sector[name]` |
-| Table | `Sector[name]`, `Census_Tract[name]`, `Household income (2020 census)`, `Income required, lower bound (mean)`, `Income shortfall (mean)`, `Price to income (median)`, `Verdict` — sorted by shortfall ascending |
-| **Shape map** | `Census_Tract[geography_code]` in **Location**, colour by `Tract map colour` — see below |
+| Line | `Share of tracts affordable` by `'date'[quarter_label]` — **the finding**. `Share of tracts affordable (2020 dollars)` sits beside it as a **thin dotted grey second plane**: same axis, no markers, no labels — see 8.6 bis |
+| Bar | `Share of tracts affordable` by `Sector[name]`, **one series**. `(2020 dollars)` and `Tracts evaluated` go in **Tooltips** |
+| ~~Table~~ | **Removed 2026-09-02** — see below |
+| **Shape map** | `Census_Tract[geography_code]` in **Location**, colour by `Tract map colour` — see below. Tooltips carry the detail the table used to |
 | Card | `Income vintage warning` |
 | Card | `Grain warning` |
 | Card | `Map coverage note` |
@@ -395,6 +395,65 @@ per visual — the slicer carries a visual filter
 `Grain warning` prints only when a census tract is filtering, which is exactly
 when a market measure on the same page would be repeating a sector total once
 per tract. Put it in the title of any visual that mixes the two grains.
+
+#### The tract table was removed, and its detail moved into the map tooltip
+
+**Decided on 2026-09-02.** A 541-row table nobody scrolls, on a
+page whose three charts already say the same thing; and a reader looking for
+their own neighbourhood hovers the map rather than reading a list.
+
+What the tooltip carries, in this order — it reads as a sentence: *where I am ·
+what the neighbourhood earns · what it takes · the ratio · the verdict.*
+
+```
+Census_Tract[admin_place_name]         a COLUMN, not a measure -- see below
+Household income (theoretical)
+Income required, lower bound (mean)
+Price to income (median)
+Verdict
+```
+
+⚠️ **Two things the removal costs, named rather than discovered later.**
+`Income shortfall (mean)` leaves the page — it is the subtraction of the two
+lines above it, and the measure stays in the model for page 3. And **the 2020
+income is no longer readable at tract grain anywhere**: it survives at island
+grain on the line chart's second plane and in the vintage bookmark view. That
+is consistent with the decision — theoretical is what the page displays,
+2020 is a reference and not a competing reading — but it is a door closing.
+
+#### ⚠️ `Min(Sector[name])` in that tooltip was wrong on all 541 shapes
+
+Found on 2026-09-02: it printed **Ahuntsic-Cartierville** everywhere — the
+alphabetical minimum of the eighteen sectors.
+
+The map groups by `Census_Tract[geography_code]`. That filter reaches
+`fact_affordability` and **stops**: a many-to-one relationship propagates from
+the "one" side to the "many" side, so `Sector` is never filtered and `Min` sees
+all eighteen rows. It raised nothing — J4.2's central finding in its purest
+form, *a missing relationship does not fail, it answers*. The page 1 map does
+not have it, because `Place_map` → `Sector` is bidirectional; that is exactly
+what the bidirectional relationship buys there.
+
+**The fix is a column, not a measure.** `dim_geography` carries
+`admin_place_name` at census-tract level since 2026-09-02
+(`docs/geography.md` 7.4), so it sits in `Census_Tract` — the very table the
+map groups by. Same row context as the shape: no relationship to propagate, no
+DAX, and nothing that can regress when someone edits the model. Set its
+aggregation to **First**.
+
+A measure reading `fact_affordability[apciq_sector_number]` and looking the
+name up was written and **discarded**: it would have named an APCIQ sector,
+and an APCIQ sector is not a place people know.
+
+**Acceptance — hover three shapes, and they must differ:**
+
+| Tract | Must read |
+|---|---|
+| `CT 0001.00` | Mercier–Hochelaga-Maisonneuve |
+| `CT 0250.00` | Villeray–Saint-Michel–Parc-Extension |
+| `CT 0511.02` | **Pierrefonds-Roxboro**, and `Verdict` says *Shared between two sectors* |
+
+Three identical names means the old tooltip is still in place.
 
 **This page carries no geography filter, and page 1 carried one on every
 visual.** The difference is not an oversight. `fact_affordability` has no island
@@ -506,6 +565,144 @@ and 12 disagree on the verdict**, and in those 12 the original measure would
 have printed *No published price* for a tract that has two. The `Sectors > 1`
 branch fires first and names the real situation. It cannot regress the table,
 where a sector is always filtering and the count is always one.
+
+#### 2026-09-02 — the map now colours the SHORTFALL, not the ratio
+
+> ⚠️ **Everything above about the 0–15× scale and the two greys is superseded.**
+> It is kept because the reasoning still explains why `Color saturation` is
+> unusable here and why the colour has to come from a measure.
+
+**The condominium map read as uniformly pale, which raised the question of
+whether the ratio was the right basis. Two faults, and the second is the interesting one.**
+
+**Fault 1 — the scale was calibrated on a measure that changed definition.**
+The 15× ceiling was fixed on 2026-08-30 against `price_to_income_ratio`. On
+2026-08-31 `Price to income (median)` was repointed at
+`price_to_income_ratio_indexed` (8.5). Every ratio was divided by ~1.26 and the
+ceiling did not follow. Nothing failed.
+
+**Fault 2 — one fixed scale cannot serve nine distributions.** The median ratio
+spans **a factor of 4.4** across type × profile. On the 0–15
+scale, condominium · couple lives at **29 %** of the palette — everything pale —
+while plex · one person sits at **126 %**, everything saturated. At both ends the
+map stops distinguishing anything. This is the same finding the sector map
+reached on 2026-08-31 — a fixed scale shared by three types is illegible —
+arrived at one day after this page had decided otherwise.
+
+**THE MEASUREMENT THAT DECIDED THE BASIS, AND IT IS THE RESULT OF THE SESSION.**
+A price-to-income ratio contains **no interest rate**. It is a division. So it
+could not see what dominated the period:
+
+| Condo · couple | Qualifying rate | Median ratio | Share within reach |
+|---|---|---|---|
+| 2021 Q4 | 5.25 % | *(baseline)* | **82.8 %** |
+| 2022 Q4 | 7.04 % | −4.6 % | 66.5 % |
+| **2023 Q4** | **7.59 %** | **−4.4 %** | **56.1 %** |
+
+*(The ratio is shown as a change, never as a level: a level multiplied by the
+published StatCan income gives back the APCIQ median price.)*
+
+**From 2021 Q4 to 2023 Q4 the median ratio FELL 4.4 % while the share within
+reach lost 26.7 points.** A reader watching only the ratio would conclude
+housing had become slightly more affordable. The median couple cushion went from
+lost **78 % of its margin** in eight quarters. The shortfall passes through
+`income_required_lower_bound`, which depends on the qualifying rate, the
+amortisation, the down-payment bracket and the insurance premium. It sees the
+2.34 points. The ratio structurally cannot.
+
+Two lesser reasons, both real: the ratio is a **hyperbola in income**, so it
+compresses differences wherever income is high, while the shortfall is
+**linear** — every dollar counts the same, which is the household reality. And
+the shortfall **carries its own threshold in its sign**, where the ratio
+threshold is not even constant: it moves by about a fifth across the archive,
+and the rate is what moves it.
+
+**⚠️ WHAT THE CHANGE COSTS, AND IT MUST BE WRITTEN.** The ratio is a derived
+figure built on two observations, comparable across cities and decades. The
+shortfall is **a quantified assumption**: a rate, a 25-year amortisation, the
+minimum down payment, a 39 % GDS. And `income_required_lower_bound` is a
+FLOOR — no property tax, no heating, no condo fees. **The map is therefore both
+more telling and more optimistic than reality.** Section 41.2 of the brief, in
+one visual.
+
+#### The palette, and why it has six colours and three states
+
+Designed against `scripts/validate_palette.js`, not by eye. **Diverging at
+zero**, blue = surplus, red = shortfall, bounds fixed at −60 000 $ / +150 000 $
+— clipping 1.31 % low and 3.05 % high over 103 854 rows, the same order as the
+2.09 % accepted on 2026-08-30.
+
+| State | Colour |
+|---|---|
+| within reach, from the threshold outwards | `#3987e5` → `#1c5cab` → `#0d366b` |
+| out of reach, from the threshold outwards | `#e85f57` → `#c0392b` → `#6b0f0e` |
+| out of the current selection | `#EDEDED` |
+| no published price **or** no 2020 income | `#9E9E9E` |
+| shared between two sectors | `#6B3FA0` |
+| never | `#FF00FF` |
+
+**No white at the centre, and that was measured.** A light grey midpoint sits at
+**ΔE 4.1** from the beige that used to mean "no census income" —
+indistinguishable even with full colour vision, where the floor is 15. So the
+ramp breaks straight from blue to red at the threshold. It reads better anyway:
+crossing the affordability threshold is an event, not a shade, and a hue break
+is easier to see on shapes as small as a tract than a pass through white.
+
+**⚠️ Both arms start at the same luminance — 0.49 and 0.48 — and the first
+version did not.** It ran blue from `#9ec5f4` (luminance 0.73, very pale) while
+red started at `#e34948` (0.41, saturated): at equal distance from the
+threshold, red shouted and blue whispered. A tract clearing narrowly was nearly
+invisible while one missing just as narrowly was vivid. **The map read
+as "all red", and rightly** — the palette was exaggerating one side.
+
+**⚠️ THE TWO SOURCE ABSENCES ARE NOW ONE GREY, reversing 2026-08-30.** Four hues
+were tried for "no 2020 income" and every one collided: the original beige
+against the pale grey of "out of selection" (ΔE **3.0**), a darker beige against
+the mid grey (7.2), brown or olive against the red arm under protanopia
+(3.8–5.0), a very dark grey against the dark blue (10.3). **A divergent ramp
+with two arms, plus a selection state, consumes the space a one-armed sequential
+ramp left free.** The earlier decision was right for the map it was made for.
+
+What replaces the lost distinction: `Verdict` names it in the tooltip, and
+`Map coverage note` prints **both counts** under the map. The information moved;
+it was not dropped. That sentence in the note is load-bearing.
+
+#### The cross-check the ratio never allowed
+
+**The share of blue shapes must equal the KPI card above the map.**
+
+```
+Share of tracts affordable  =  78.1 %          (condo · couple · 2026 Q2)
+blue shapes                 =  401 / 513  =  78.2 %
+```
+
+Colour and KPI now answer the *same* question, so they must agree, and a
+disagreement is visible without opening a measure. Verified in the marts:
+`meets_income_requirement_indexed` and `income_shortfall_indexed < 0` disagree on
+**0 of 103 854 rows** — one threshold, one definition.
+
+It also replaces the missing legend: a reader does not need to know what a shade
+is worth to read *blue = within reach*, and the KPI above gives the exact
+proportion.
+
+⚠️ **If `Income shortfall (mean)` were left on the un-indexed column, 222 of 513
+shapes would change side** on condo · couple · 2026 Q2, and the median tract
+would flip sign — from a surplus to a shortfall. The cross-check catches that too.
+
+#### Acceptance cases for the shortfall map
+
+| View | What must appear |
+|---|---|
+| condo · couple · 2026 Q2 | ~**401 blue** of 513 shaded; the KPI above reads 78.1 % |
+| plex · couple · 2026 Q2 | **3 blue only**, of 317 shaded |
+| **plex · one person** | **no blue at all**, every quarter — 0.0 % within reach |
+| a sector selected | every unselected tract `#EDEDED`, never violet, never mid grey |
+
+The plex · one person case is the acceptance case, as the 216 grey shapes were
+for the old map: an entirely red map is the **message** — a single person buying
+a plex reaches no tract of the island — not a scale fault. Check that the reds
+still vary inside it; if they are uniformly dark, the 150 000 $ ceiling is too
+low.
 
 #### The figures the map has to reproduce
 
@@ -1730,6 +1927,99 @@ shape per tract; the KPI row counts rows. The two differ by exactly the shared
 tract, and stating the shape count under the map is what stops the two numbers
 from being read as a contradiction.
 
+#### 2026-09-02 — the three measures the page was missing
+
+**⚠️ THE CORRECTION THAT MATTERS MOST ON THIS PAGE, AND IT WAS ALMOST PUT ON
+SCREEN.** Reading the one-person figures, the natural sentence is *"fewer than 1 % of
+Montrealers without capital can buy"*. That is not what the measure says, and
+the difference is not pedantry.
+
+`Share of tracts affordable` counts **census tracts, not households**. A tract
+is within reach when **its median household** clears the bar for **the median
+property of its sector** — two medians, never a population. So in a tract that
+is out of reach, up to half the households sit above the median and some of them
+can buy; in a tract within reach, about half sit below and cannot.
+
+**The model cannot answer "what share of Montrealers can buy."** It would need
+the full income distribution per tract, and table 98100058 publishes medians
+only. Section 41.1 forbids filling that gap.
+
+The exact sentence, and it loses none of its force:
+
+> On condominiums, in 2026 Q2, **in 99.2 % of the island's census tracts a
+> single person earning the median income of their own neighbourhood cannot buy
+> the median condominium of their sector** — with the minimum down payment and
+> no other capital.
+
+That version is checkable and can go in a public README. `Method note` below
+carries the same caveat permanently on screen.
+
+```dax
+Method note =
+VAR Amort = SELECTEDVALUE ( fact_affordability[amortization_years] )
+VAR Rate  = SELECTEDVALUE ( fact_affordability[qualifying_rate_percent] )
+RETURN
+    "Income: 2020 census median, restated to this quarter by the Montréal CPI. "
+        & "Buyer: the legal minimum down payment and not a dollar more — no other capital. "
+        & "Mortgage: " & FORMAT ( Amort, "0" ) & "-year insured"
+        & IF ( NOT ISBLANK ( Rate ), " at " & FORMAT ( Rate, "0.00" ) & " % qualifying" )
+        & ", mortgage payment only at 39 % GDS — no property tax, heating or condo fees. "
+        & "A tract is within reach when its MEDIAN household clears that bar: "
+        & "this counts tracts, not households."
+```
+
+**Every assumption in that sentence was read back from the marts, not written
+from memory** — `down_payment_scenario = minimum_down_payment`,
+`rate_basis = contracted_high_ratio_5y_fixed`,
+`income_required_basis = mortgage_payment_only_at_gds_39`,
+`amortization_years = 25`,
+`price_basis = apciq_sector_price_applied_to_tract`. The amortisation and the
+rate are read live so the card cannot drift from the model.
+
+Requested as "the axioms of the page, stated outright". The request named
+three; the measure states five, because the price basis and the GDS floor weigh
+as much as the down payment rule.
+
+```dax
+Affordability change since peak (points) =
+VAR Quarters  = CALCULATETABLE ( VALUES ( 'date'[quarter_label] ), ALL ( 'date' ) )
+VAR Peak      = MAXX ( Quarters, CALCULATE ( [Share of tracts affordable] ) )
+VAR Displayed = [Share of tracts affordable]
+RETURN
+    IF (
+        NOT ISBLANK ( Displayed ) && NOT ISBLANK ( Peak ),
+        ( Displayed - Peak ) * 100
+    )
+```
+
+Format `+0.0" pts";-0.0" pts";"at the peak"`. **The peak is searched, not
+assumed**: it differs by type and profile.
+
+⚠️ **`Current` is a reserved word in DAX** — the first version used it as a
+variable name and the expression was rejected. Renamed `Displayed`. Same class
+as `trailing` in PostgreSQL, found in J3.5.
+
+⚠️ The two `ISBLANK` guards: without them an unindexed quarter yields
+`BLANK − 92.5 = −92.5 pts`, a collapse invented out of nothing. Eighth
+appearance of the mechanism.
+
+```dax
+Peak quarter =
+VAR Quarters = CALCULATETABLE ( VALUES ( 'date'[quarter_label] ), ALL ( 'date' ) )
+VAR Scored   = ADDCOLUMNS ( Quarters, "@share", CALCULATE ( [Share of tracts affordable] ) )
+VAR Best     = MAXX ( Scored, [@share] )
+RETURN
+    "peak: " & CONCATENATEX ( FILTER ( Scored, [@share] = Best ), 'date'[quarter_label], ", " )
+```
+
+Without it, "−14.4 pts" does not say since when. The `@` in the added column
+name stops the parser looking for a measure called `Share`.
+
+**Expected on condo · couple:** peak **2019 Q2 at 92.5 %**, trough 2023 Q4 at
+**−36.2 pts**, 2026 Q2 at **−14.4 pts**. On condo · one person the story is not
+the slope but the level.
+
+
 ### D. Rates — on `fact_interest_rate` and `interest_rate_series`
 
 ```dax
@@ -2468,14 +2758,42 @@ the project has already rejected.
 and this file did not say by what gesture.** Asked on 2026-08-31 while building;
 the answer has two layers.
 
-**Layer one, free and always on: the tooltip and the column.** Put
-`Share of tracts affordable (2020 dollars)` in the line chart's **Tooltips**
-well, and as a column in the table beside the theoretical share. The reader
-hovers a quarter and reads both. No object is added to the page and no control
-can be mis-set.
+> ⚠️ **REVISED 2026-09-02.** Two decisions below were changed
+> after the page was built. They are corrected in place, with the reasoning,
+> rather than left to be applied and undone.
 
-**And name the gap, rather than leaving it to be subtracted mentally** — the
-gap *is* the finding of the session:
+**Layer one, free and always on: a second plane, not a tooltip.** The original
+text put `Share of tracts affordable (2020 dollars)` in the line chart's
+**Tooltips** well only. **Superseded**: it sits on the line chart as a second
+series, **thin dotted grey, no markers, no data labels**, while the theoretical
+share is solid, accented and labelled.
+
+**The asymmetry is what justifies it, and it is not a matter of taste.** The
+two figures do not bound an interval. 35.0 % divides a 2026 price by a 2020
+dollar — two units of account, so it estimates six years of inflation as much
+as it estimates affordability. 78.1 % is a named assumption whose direction is
+known: it supposes household income tracked the CPI exactly, i.e. that real
+income held. The CIS control measured in J4.2¾ says it fell slightly — RMR 462,
+82 100 $ in 2020 against 81 100 $ in 2024, constant 2024 dollars — so the CPI
+restatement runs a little rich. **The truth is a point or two below 78.1 %, not
+halfway to 35.0 %.** Two series of equal visual weight would assert an
+equivalence that does not hold; a second plane states the reference without
+disputing the reading.
+
+On the **sector bar** the same pair gets the opposite treatment: `(2020
+dollars)` goes to **Tooltips**, with `Tracts evaluated`. Two clustered series
+over eighteen sectors is thirty-six columns, and the ranking — the only thing
+that chart has to say — disappears under the pattern. On the line the axis is
+time and the gap *is* the trajectory; twenty-nine dotted points cost nothing.
+
+**~~And name the gap~~ — `Vintage effect (points)` was NOT built.** Decided on
+2026-09-02: with both series on the chart the gap is already
+visible, and a fourth KPI card for a difference the eye reads is noise.
+
+**The reservation, so this is a decision and not an oversight:** the gap is now
+nowhere readable as a figure. It is **43.1 points on 2026 Q2** — the result of
+J4.2¾ — and a chart shows it without naming it. Recovering it costs one measure
+and one tooltip field, no object on the page. The measure, if it is ever wanted:
 
 ```dax
 Vintage effect (points) =
@@ -2488,36 +2806,46 @@ RETURN
     )
 ```
 
-Affordability group, percentage with one decimal. **+43.1 points on 2026 Q2** —
-the share of the displayed collapse that was not the market. **−0.7 point on
-2019 Q2**, negative because the index deflates towards the past, which is the
-control showing it does not always point one way.
+Affordability group. ⚠️ **Number, not percentage, and that correction stands
+even though the measure was dropped**: `+43.1 %` printed beside a card reading
+`78.1 %` reads as a 43 % relative rise. It is a gap between two shares, so it is
+points — hence the `* 100` and a custom format of `+0.0" pts";-0.0" pts"`.
+
+**+43.1 points on 2026 Q2** — the share of the displayed collapse that was not
+the market. **−0.7 point on 2019 Q2**, negative because the index deflates
+towards the past, which is the control showing it does not always point one
+way.
 
 ⚠️ **The two `ISBLANK` are not padding.** Without them an unindexed quarter
 yields `BLANK − 35.0 = −35.0`, a gap invented out of nothing. Sixth appearance
 of the same mechanism.
 
-**Layer two, deferred on 2026-08-31: two focus views driven by bookmarks.**
-Requested, and postponed because the page design is not final. Recorded
-so it is not redesigned from scratch:
+**Layer two — two focus views driven by bookmarks. ABANDONED 2026-09-02.**
 
-- Bookmarks are **better than a toggle slicer here**, and for a reason worth
-  keeping: a bookmark does not touch DAX, so there is no implicit default to
-  get wrong. The blank-versus-zero trap does not exist in this route.
-- ⚠️ **Uncheck *Data* on both bookmarks.** Captured by default, it would freeze
-  the property-type, quarter and place slicers, so switching view would silently
-  restore whatever was selected the day the bookmark was made.
-- ⚠️ **A bookmark cannot change what a measure knows.** `Income basis note`
-  reads `income_index_basis` and will keep saying *theoretical* in the vintage
-  view. Anything that *names* the view must therefore exist twice, superimposed,
-  one visible per bookmark: the line chart, the share card, the assumption card
-  and the visual title.
-- **What must NOT be duplicated**: the table keeps both columns and
-  `Vintage effect (points)` in either view — it is the one place the gap reads
-  without switching.
-- Two buttons with a differentiated **Selected** state, so the active view is
-  visible. **Save the file on the `Theoretical` view**: a `.pbix` reopens on the
-  state it was saved in, and the decision made theoretical the default.
+Specified on 2026-08-31, deferred the same day, and dropped before
+being built. **The reason is analytical, not a matter of effort, and it is the
+better argument:**
+
+> A focus view would have legitimised the grey line as a COMPETING READING. It
+> is not one. 35.0 % divides a 2026 price by a 2020 dollar — two units of
+> account — so its collapse measures six years of inflation as much as it
+> measures affordability. Analysing that vintage across time does not mean
+> anything, and the collapse of the grey line is precisely what shows it.
+
+In permanent second plane the grey line does the one job it can do: it shows
+where the figure came from and why it had to be restated. Given a view of its
+own, it would have claimed to answer the same question as the blue line.
+
+**What this decision retires**: the two bookmarks, the two buttons, the
+duplicated line chart, share card and view label — and with them the two traps
+recorded on 2026-08-31 (unchecking *Data*, and objects that name a view having
+to exist twice). None of it is needed.
+
+**What survives from that specification, and is worth keeping in mind if a
+toggle is ever proposed again:** a bookmark does not touch DAX, so it carries no
+implicit default to get wrong — unlike a `SELECTEDVALUE ( …, "theoretical" )`
+slicer, whose default fires both when nothing is selected and when everything
+is. If a switch ever becomes necessary, bookmarks remain the right mechanism.
 
 ## 8.7 Acceptance, and it is checkable
 

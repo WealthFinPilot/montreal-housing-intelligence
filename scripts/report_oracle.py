@@ -516,6 +516,60 @@ def main() -> int:
 
         table(
             cur,
+            "PAGE 2 -- The shortfall map, and the cross-check it makes possible",
+            "Added 2026-09-02, when the map stopped colouring the price-to-income\n"
+            "ratio and started colouring the shortfall in dollars, diverging at\n"
+            "zero.\n"
+            "\n"
+            "THE POINT OF THIS BLOCK: the share of BLUE shapes must equal the\n"
+            "Share of tracts affordable card sitting above the map. Colour and\n"
+            "KPI now answer the same question, so a disagreement is visible\n"
+            "without opening a measure -- which the ratio never allowed.\n"
+            "\n"
+            "plex / one_person is the acceptance case: no blue shape at all. An\n"
+            "entirely red map is the message, not a scale fault.\n"
+            "\n"
+            "COUNT ROWS HERE, NOT TRACTS. A shape is a tract, but the shared\n"
+            "tract 4620511.02 is drawn once and carries two rows; it is painted\n"
+            "violet by its own branch, so it is neither blue nor red.",
+            """
+            select property_type_code || ' / ' || household_profile_code   as view,
+                   count(*) filter (where income_shortfall_indexed < 0)    as blue,
+                   count(*) filter (where income_shortfall_indexed >= 0)   as red,
+                   count(*)                                                as shaded,
+                   round(100.0 * count(*) filter (where income_shortfall_indexed < 0)
+                         / nullif(count(*), 0), 1)                         as blue_pct
+            from marts.fact_affordability
+            where edition_year = 2026 and edition_quarter = 2
+              and income_shortfall_indexed is not null
+            group by 1
+            order by blue_pct desc
+            """,
+        )
+
+        table(
+            cur,
+            "PAGE 2 -- One threshold, two measures: they must never disagree",
+            "The map colours on the SIGN of income_shortfall_indexed; the KPI\n"
+            "counts meets_income_requirement_indexed. Two readings of one\n"
+            "threshold is exactly what diverged on 44 of 87 slices on page 3 on\n"
+            "2026-08-30, so this checks they are the same statement.\n"
+            "\n"
+            "disagreements must be 0. Anything else means the mart carries two\n"
+            "definitions and the map contradicts the card above it.",
+            """
+            select count(*) filter (
+                       where meets_income_requirement_indexed
+                             <> (income_shortfall_indexed < 0)) as disagreements,
+                   count(*)                                     as rows_compared
+            from marts.fact_affordability
+            where meets_income_requirement_indexed is not null
+              and income_shortfall_indexed is not null
+            """,
+        )
+
+        table(
+            cur,
             "PLACE SLICER -- what each place actually puts on screen",
             "Added in J4.2-3/4 step 2. Choosing a place selects its APCIQ\n"
             "sector(s), and a sector usually holds more than one place. Only 8\n"

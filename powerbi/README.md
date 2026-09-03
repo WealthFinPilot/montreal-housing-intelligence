@@ -143,6 +143,18 @@ not a total to be recomputed, and hiding it would mean losing the only figure
 APCIQ prints for the whole market. Section 6 says how the measures keep it from
 being added to its own parts.
 
+⚠️ **`Census_Tract` carries `admin_place_name` since 2026-09-02** — the borough
+or linked city a reader would call the tract's neighbourhood. It is NULL on
+every `Sector` row, which is correct: a sector already is a place, and the
+column is there for the 541 tracts whose own name (`CT 0250.00`) means nothing
+to a reader.
+
+**Do not replace it with a measure.** It is a column of the table the page 2
+map groups by, so it sits in the shape's own row context and needs no
+relationship to propagate. The measure it replaced read `Sector[name]` through
+`fact_affordability` and printed the same borough on all 541 shapes — a
+many-to-one relationship does not carry a filter back up, and nothing failed.
+
 ### Two columns to remove in Power Query
 
 **`geometry`** — a PostGIS type. Power BI cannot read it as geography, and 541

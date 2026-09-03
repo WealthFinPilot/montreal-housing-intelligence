@@ -39,6 +39,11 @@ because no published source says which borough a tract is in. Ville de Montréal
 therefore holds 485 tracts directly, which looks coarse and is honest. Reaching
 the borough — and the APCIQ sector — is section 7.
 
+Since 2026-09-02 the census tract rows also carry **`admin_place_name`**, the
+borough or linked city a reader would call the tract's neighbourhood. It is
+NULL on every other level, where the row already is a place. It names a tract;
+it never groups a figure — section 7.4.
+
 `area_km2` carries `area_basis` beside it, because the families do not mean the
 same thing by "area": administrative boundaries run out into the water (the
 island measures 619 km²), tract polygons stop at the shore (499 km²). Both are
@@ -513,6 +518,66 @@ Income is 2020. APCIQ prices run to 2026 Q2. This bridge makes them *joinable*;
 it does not make them contemporaneous. **A 2026 price-to-income ratio is a
 displayed assumption, not an observation**, and `census_year` exists downstream
 so that no model can forget it.
+
+---
+
+## 7.4 Naming a tract after a place people know
+
+**Added 2026-09-02.** The page 2 map draws 541 census tracts, and `CT 0250.00`
+names nothing a reader recognises. Its tooltip therefore had to say where the
+tract is — and the APCIQ sector could not: sector 9 is called *Centre* and
+holds Westmount, sector 1 gathers seven municipalities.
+
+**No existing bridge could answer, and the reason is the direction.** Composing
+`bridge_census_tract_apciq_sector` with `bridge_apciq_sector_geography` runs
+tract → sector → places and returns **every** place of that sector, up to seven
+names for one tract. The missing direction was tract → place, and it was in no
+table. `marts.bridge_census_tract_admin_place` is that direction: 541 rows, one
+per tract.
+
+### The rule, and why it is a third one rather than a reuse
+
+A tract is named after the entity where the **majority of its residents** live.
+The project now carries three majority-shaped rules, and they are deliberately
+not interchangeable because they answer different questions:
+
+| Rule | Where | Question |
+|---|---|---|
+| population weights | `bridge_census_tract_apciq_sector` | an income describes people, so a shared tract sends its income to both sectors in proportion |
+| `is_drawn_in_this_sector` | same table, section 5 | a polygon cannot be painted twice |
+| naming majority | `bridge_census_tract_admin_place` | a tooltip has room for one name |
+
+**Measured cost: 476 residents, 0.0237 % of the island, on 2 tracts of 541** —
+and they are the same two tracts the drawing rule isolated on 2026-08-31
+(`4620511.02`, the one genuinely shared tract, and `4620421.05`, whose second
+entity holds nobody). Three independent rules landing on the same two lines is
+the strongest evidence available that there is only one real ambiguity here.
+
+`population_named_elsewhere` and `name_is_a_majority_call` carry the cost as
+columns, so anyone comparing this name with a map can find the difference —
+the same device as `assignment_method` for the CDN/NDG substitution.
+
+### An independent confirmation, free
+
+485 tracts fall in a borough and 56 in a linked city. That is **exactly** the
+split the published `csd_uid` of the Geographic Attribute File gives (2466023
+against the other fifteen subdivisions), reached here by point-in-polygon
+instead of by a code. Two methods, one partition.
+
+### ⚠️ What this column must never be used for
+
+It **names** a tract. It never **groups** a figure. APCIQ publishes at the
+sector, and 26 of the 34 places cover a territory larger than themselves
+(section 4). Grouping a median price by `admin_place_name` would repeat a
+sector total once per place and present it as that place's own.
+
+### The placement itself now lives in one model
+
+`int_geography__dissemination_area_place` holds the point-in-polygon that puts
+each of the 3 228 dissemination areas in one of the 34 entities, with the one
+declared misplacement corrected. It was lifted **verbatim** out of
+`bridge_census_tract_apciq_sector` when the second reader appeared: two copies
+of the same join would agree today and drift the day one of them is corrected.
 
 ---
 

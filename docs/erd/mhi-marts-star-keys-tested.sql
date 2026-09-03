@@ -120,6 +120,19 @@ CREATE TABLE fact_affordability (
     PRIMARY KEY (affordability_key)
 );
 
+CREATE TABLE bridge_census_tract_admin_place (
+    census_tract_geography_key TEXT NOT NULL,
+    ct_uid                     TEXT NOT NULL,
+    admin_geography_key        TEXT NOT NULL,
+    admin_name                 TEXT NOT NULL,
+    admin_geography_type       TEXT NOT NULL,
+    population_named_elsewhere NUMERIC NOT NULL,
+    places_touched             BIGINT NOT NULL,
+    name_is_a_majority_call    BOOLEAN NOT NULL,
+    assignment_basis           TEXT NOT NULL,
+    PRIMARY KEY (ct_uid)
+);
+
 CREATE TABLE dim_interest_rate_series (
     series_id        TEXT NOT NULL,
     sort_order       INTEGER NOT NULL,
@@ -140,6 +153,20 @@ CREATE TABLE fact_interest_rate (
     PRIMARY KEY (interest_rate_key)
 );
 
+CREATE TABLE map_place (
+    place_key                  TEXT NOT NULL,
+    admin_geography_key        TEXT NOT NULL,
+    place_code                 TEXT NOT NULL,
+    place_name                 TEXT NOT NULL,
+    place_type                 TEXT NOT NULL,
+    apciq_geography_key        TEXT NOT NULL,
+    is_cut_from_a_larger_place BOOLEAN NOT NULL,
+    boundary_is_assumed        BOOLEAN NOT NULL,
+    area_basis                 TEXT NOT NULL,
+    PRIMARY KEY (place_key),
+    UNIQUE (place_code)
+);
+
 -- Referential integrity, recovered from the dbt relationships tests.
 
 ALTER TABLE dim_geography ADD CONSTRAINT tested_geography_nests_in_its_parent FOREIGN KEY (parent_geography_key) REFERENCES dim_geography(geography_key);
@@ -147,6 +174,8 @@ ALTER TABLE bridge_apciq_sector_geography ADD CONSTRAINT tested_bridge_names_an_
 ALTER TABLE bridge_apciq_sector_geography ADD CONSTRAINT tested_bridge_names_an_admin_entity FOREIGN KEY (admin_geography_key) REFERENCES dim_geography(geography_key);
 ALTER TABLE bridge_census_tract_apciq_sector ADD CONSTRAINT tested_bridge_names_a_census_tract FOREIGN KEY (census_tract_geography_key) REFERENCES dim_geography(geography_key);
 ALTER TABLE bridge_census_tract_apciq_sector ADD CONSTRAINT tested_tract_sits_in_an_apciq_sector FOREIGN KEY (apciq_geography_key) REFERENCES dim_geography(geography_key);
+ALTER TABLE bridge_census_tract_admin_place ADD CONSTRAINT tested_bridge_census_tract_admin_place__census_tract_geography_key FOREIGN KEY (census_tract_geography_key) REFERENCES dim_geography(geography_key);
+ALTER TABLE bridge_census_tract_admin_place ADD CONSTRAINT tested_bridge_census_tract_admin_place__admin_geography_key FOREIGN KEY (admin_geography_key) REFERENCES dim_geography(geography_key);
 ALTER TABLE fact_market ADD CONSTRAINT tested_market_is_dated_by_quarter FOREIGN KEY (quarter_start_date) REFERENCES dim_date(date_key);
 ALTER TABLE fact_market ADD CONSTRAINT tested_market_is_measured_in_a_sector FOREIGN KEY (geography_key) REFERENCES dim_geography(geography_key);
 ALTER TABLE fact_market ADD CONSTRAINT tested_market_is_split_by_property_type FOREIGN KEY (property_type_code) REFERENCES dim_property_type(property_type_code);
@@ -159,3 +188,5 @@ ALTER TABLE fact_affordability ADD CONSTRAINT tested_affordability_is_split_by_h
 ALTER TABLE fact_affordability ADD CONSTRAINT tested_affordability_is_measured_in_a_tract FOREIGN KEY (census_tract_geography_key) REFERENCES dim_geography(geography_key);
 ALTER TABLE fact_interest_rate ADD CONSTRAINT tested_fact_interest_rate__series_id FOREIGN KEY (series_id) REFERENCES dim_interest_rate_series(series_id);
 ALTER TABLE fact_interest_rate ADD CONSTRAINT tested_fact_interest_rate__observation_date FOREIGN KEY (observation_date) REFERENCES dim_date(date_key);
+ALTER TABLE map_place ADD CONSTRAINT tested_map_place__admin_geography_key FOREIGN KEY (admin_geography_key) REFERENCES dim_geography(geography_key);
+ALTER TABLE map_place ADD CONSTRAINT tested_map_place__apciq_geography_key FOREIGN KEY (apciq_geography_key) REFERENCES dim_geography(geography_key);

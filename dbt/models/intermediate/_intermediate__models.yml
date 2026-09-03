@@ -66,3 +66,48 @@ models:
           Quarter mean CPI divided by the mean CPI of the twelve months of
           2020. NULL when the quarter is incomplete -- deliberately, and
           never 1.0.
+
+  - name: int_geography__dissemination_area_place
+    description: >
+      One row per dissemination area: which of the 34 administrative entities
+      of the island it sits in, after the one declared misplacement is
+      corrected.
+
+      Lifted verbatim out of bridge_census_tract_apciq_sector on 2026-09-02,
+      when a second reader appeared. bridge_census_tract_admin_place needs the
+      same placement to name a tract's borough or linked city, and two
+      point-in-polygon joins answering the same question would agree today and
+      drift the day one of them is corrected.
+
+      It places an AREA. It decides nothing about a tract sitting in two
+      entities: the two consumers need different rules -- population weights
+      for the sector bridge, a single majority name for the place bridge --
+      and each states its own.
+    columns:
+      - name: da_uid
+        description: Dissemination area identifier. One row each, 3 228 of them.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: ct_uid
+        description: The census tract the area belongs to, published by StatCan.
+        data_tests:
+          - not_null
+
+      - name: codemamh
+        description: >
+          The administrative entity the area's representative point falls in --
+          a five-digit MAMH code for a linked city, REMxx for a borough. Both
+          nomenclatures live in this one column because the source publishes
+          them that way.
+        data_tests:
+          - not_null
+
+      - name: point_was_corrected
+        description: >
+          True on the areas a declaration moved off the side their point landed
+          on. One area carries it, with the measurement that proves it in
+          statcan_misplaced_representative_point.
+        data_tests:
+          - not_null

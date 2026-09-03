@@ -1,0 +1,542 @@
+ct_uid,admin_name,admin_geography_type,places_touched,name_is_a_majority_call,population_in_place,tract_population,population_named_elsewhere,assignment_basis
+4620001.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,2684,2684,0,population
+4620002.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,3780,3780,0,population
+4620003.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,6600,6600,0,population
+4620004.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,3355,3355,0,population
+4620005.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,3175,3175,0,population
+4620006.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,4611,4611,0,population
+4620007.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,5655,5655,0,population
+4620008.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,3104,3104,0,population
+4620009.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,3554,3554,0,population
+4620010.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,1494,1494,0,population
+4620011.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,6439,6439,0,population
+4620012.01,Mercier-Hochelaga-Maisonneuve,borough,1,False,2547,2547,0,population
+4620012.02,Mercier-Hochelaga-Maisonneuve,borough,1,False,4163,4163,0,population
+4620013.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,5694,5694,0,population
+4620014.02,Mercier-Hochelaga-Maisonneuve,borough,1,False,0,0,0,dissemination_area_count
+4620014.03,Mercier-Hochelaga-Maisonneuve,borough,1,False,3363,3363,0,population
+4620014.04,Mercier-Hochelaga-Maisonneuve,borough,1,False,4187,4187,0,population
+4620015.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,4089,4089,0,population
+4620016.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,2470,2470,0,population
+4620017.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,2131,2131,0,population
+4620018.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,2013,2013,0,population
+4620019.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,2398,2398,0,population
+4620021.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,3028,3028,0,population
+4620022.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,1527,1527,0,population
+4620023.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,1238,1238,0,population
+4620024.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,2544,2544,0,population
+4620025.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,3018,3018,0,population
+4620026.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,2519,2519,0,population
+4620027.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,1629,1629,0,population
+4620028.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,2058,2058,0,population
+4620029.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,4027,4027,0,population
+4620030.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,3506,3506,0,population
+4620031.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,2803,2803,0,population
+4620032.00,Ville-Marie,borough,1,False,1497,1497,0,population
+4620033.00,Ville-Marie,borough,1,False,1752,1752,0,population
+4620034.00,Ville-Marie,borough,1,False,2825,2825,0,population
+4620035.00,Ville-Marie,borough,1,False,2015,2015,0,population
+4620036.00,Ville-Marie,borough,1,False,2103,2103,0,population
+4620037.00,Ville-Marie,borough,1,False,3452,3452,0,population
+4620038.00,Ville-Marie,borough,1,False,1976,1976,0,population
+4620039.00,Ville-Marie,borough,1,False,2142,2142,0,population
+4620040.00,Ville-Marie,borough,1,False,0,0,0,dissemination_area_count
+4620041.00,Ville-Marie,borough,1,False,1814,1814,0,population
+4620042.00,Ville-Marie,borough,1,False,1145,1145,0,population
+4620043.00,Ville-Marie,borough,1,False,1385,1385,0,population
+4620044.00,Ville-Marie,borough,1,False,2164,2164,0,population
+4620045.00,Ville-Marie,borough,1,False,1493,1493,0,population
+4620046.00,Ville-Marie,borough,1,False,2143,2143,0,population
+4620047.00,Ville-Marie,borough,1,False,728,728,0,population
+4620048.00,Ville-Marie,borough,1,False,2302,2302,0,population
+4620049.00,Ville-Marie,borough,1,False,1399,1399,0,population
+4620050.00,Ville-Marie,borough,1,False,1364,1364,0,population
+4620051.00,Ville-Marie,borough,1,False,1907,1907,0,population
+4620052.00,Ville-Marie,borough,1,False,2208,2208,0,population
+4620053.00,Ville-Marie,borough,1,False,1385,1385,0,population
+4620054.00,Ville-Marie,borough,1,False,1444,1444,0,population
+4620055.01,Ville-Marie,borough,1,False,5726,5726,0,population
+4620055.02,Ville-Marie,borough,1,False,559,559,0,population
+4620056.00,Ville-Marie,borough,1,False,1963,1963,0,population
+4620057.00,Ville-Marie,borough,1,False,1963,1963,0,population
+4620058.00,Ville-Marie,borough,1,False,1251,1251,0,population
+4620059.00,Ville-Marie,borough,1,False,1428,1428,0,population
+4620060.00,Ville-Marie,borough,1,False,1082,1082,0,population
+4620061.00,Ville-Marie,borough,1,False,1325,1325,0,population
+4620062.00,Ville-Marie,borough,1,False,4679,4679,0,population
+4620063.00,Ville-Marie,borough,1,False,5477,5477,0,population
+4620064.00,Ville-Marie,borough,1,False,1949,1949,0,population
+4620065.01,Ville-Marie,borough,1,False,6388,6388,0,population
+4620065.02,Ville-Marie,borough,1,False,3629,3629,0,population
+4620066.01,Ville-Marie,borough,1,False,3684,3684,0,population
+4620066.02,Ville-Marie,borough,1,False,3178,3178,0,population
+4620067.00,Le Sud-Ouest,borough,1,False,1839,1839,0,population
+4620068.00,Le Sud-Ouest,borough,1,False,1901,1901,0,population
+4620069.01,Ville-Marie,borough,1,False,4563,4563,0,population
+4620069.02,Le Sud-Ouest,borough,1,False,4206,4206,0,population
+4620070.01,Ville-Marie,borough,1,False,3767,3767,0,population
+4620070.02,Le Sud-Ouest,borough,1,False,5908,5908,0,population
+4620071.00,Le Sud-Ouest,borough,1,False,0,0,0,dissemination_area_count
+4620072.00,Le Sud-Ouest,borough,1,False,3634,3634,0,population
+4620073.00,Le Sud-Ouest,borough,1,False,1936,1936,0,population
+4620074.00,Le Sud-Ouest,borough,1,False,3631,3631,0,population
+4620075.00,Le Sud-Ouest,borough,1,False,2675,2675,0,population
+4620076.00,Le Sud-Ouest,borough,1,False,3305,3305,0,population
+4620077.00,Le Sud-Ouest,borough,1,False,4025,4025,0,population
+4620078.00,Le Sud-Ouest,borough,1,False,3955,3955,0,population
+4620079.00,Le Sud-Ouest,borough,1,False,4579,4579,0,population
+4620080.00,Le Sud-Ouest,borough,1,False,782,782,0,population
+4620081.00,Le Sud-Ouest,borough,1,False,3553,3553,0,population
+4620082.00,Le Sud-Ouest,borough,1,False,2186,2186,0,population
+4620083.00,Le Sud-Ouest,borough,1,False,3406,3406,0,population
+4620084.00,Le Sud-Ouest,borough,1,False,2793,2793,0,population
+4620085.00,Le Sud-Ouest,borough,1,False,747,747,0,population
+4620086.00,Le Sud-Ouest,borough,1,False,3934,3934,0,population
+4620087.00,Le Sud-Ouest,borough,1,False,3221,3221,0,population
+4620088.00,Le Sud-Ouest,borough,1,False,3585,3585,0,population
+4620089.00,Le Sud-Ouest,borough,1,False,4916,4916,0,population
+4620090.00,Le Sud-Ouest,borough,1,False,4589,4589,0,population
+4620091.00,Le Sud-Ouest,borough,1,False,0,0,0,dissemination_area_count
+4620092.00,Le Sud-Ouest,borough,1,False,5984,5984,0,population
+4620093.00,Le Sud-Ouest,borough,1,False,3253,3253,0,population
+4620094.01,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,6306,6306,0,population
+4620094.02,Le Sud-Ouest,borough,1,False,10,10,0,population
+4620095.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,2147,2147,0,population
+4620096.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,2370,2370,0,population
+4620097.01,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,6174,6174,0,population
+4620097.02,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,4133,4133,0,population
+4620098.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,5466,5466,0,population
+4620099.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,5742,5742,0,population
+4620100.01,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,4147,4147,0,population
+4620100.02,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,3442,3442,0,population
+4620101.01,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,4082,4082,0,population
+4620101.02,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,3728,3728,0,population
+4620102.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,4254,4254,0,population
+4620103.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,2325,2325,0,population
+4620104.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,2818,2818,0,population
+4620105.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,3425,3425,0,population
+4620106.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,2107,2107,0,population
+4620107.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,1539,1539,0,population
+4620108.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,3947,3947,0,population
+4620109.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,1907,1907,0,population
+4620110.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,4212,4212,0,population
+4620111.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,7142,7142,0,population
+4620112.01,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,5718,5718,0,population
+4620112.02,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,4192,4192,0,population
+4620113.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,4987,4987,0,population
+4620114.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,2183,2183,0,population
+4620115.01,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,2080,2080,0,population
+4620115.02,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,5957,5957,0,population
+4620116.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,6765,6765,0,population
+4620117.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,4243,4243,0,population
+4620118.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,4396,4396,0,population
+4620119.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,6142,6142,0,population
+4620120.01,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,7337,7337,0,population
+4620120.02,Côte-Saint-Luc,linked_city,1,False,1114,1114,0,population
+4620121.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,2078,2078,0,population
+4620122.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,6517,6517,0,population
+4620123.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,6480,6480,0,population
+4620124.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,5872,5872,0,population
+4620125.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,6344,6344,0,population
+4620126.00,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,2280,2280,0,population
+4620127.01,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,5578,5578,0,population
+4620127.02,Côte-des-Neiges-Notre-Dame-de-Grâce,borough,1,False,21,21,0,population
+4620128.00,Ville-Marie,borough,1,False,3839,3839,0,population
+4620129.01,Ville-Marie,borough,1,False,4249,4249,0,population
+4620129.02,Ville-Marie,borough,1,False,3602,3602,0,population
+4620130.00,Le Plateau-Mont-Royal,borough,1,False,3017,3017,0,population
+4620131.00,Le Plateau-Mont-Royal,borough,1,False,3201,3201,0,population
+4620132.00,Le Plateau-Mont-Royal,borough,1,False,5151,5151,0,population
+4620133.00,Le Plateau-Mont-Royal,borough,1,False,2645,2645,0,population
+4620134.00,Le Plateau-Mont-Royal,borough,1,False,1136,1136,0,population
+4620135.00,Le Plateau-Mont-Royal,borough,1,False,1717,1717,0,population
+4620136.00,Le Plateau-Mont-Royal,borough,1,False,2861,2861,0,population
+4620137.00,Le Plateau-Mont-Royal,borough,1,False,1165,1165,0,population
+4620138.00,Le Plateau-Mont-Royal,borough,1,False,2077,2077,0,population
+4620139.00,Le Plateau-Mont-Royal,borough,1,False,3223,3223,0,population
+4620140.00,Le Plateau-Mont-Royal,borough,1,False,1388,1388,0,population
+4620141.00,Le Plateau-Mont-Royal,borough,1,False,1722,1722,0,population
+4620142.00,Le Plateau-Mont-Royal,borough,1,False,1683,1683,0,population
+4620143.00,Le Plateau-Mont-Royal,borough,1,False,2691,2691,0,population
+4620144.00,Le Plateau-Mont-Royal,borough,1,False,3542,3542,0,population
+4620145.00,Le Plateau-Mont-Royal,borough,1,False,0,0,0,dissemination_area_count
+4620146.00,Le Plateau-Mont-Royal,borough,1,False,2455,2455,0,population
+4620147.00,Le Plateau-Mont-Royal,borough,1,False,2905,2905,0,population
+4620148.00,Le Plateau-Mont-Royal,borough,1,False,1223,1223,0,population
+4620149.00,Le Plateau-Mont-Royal,borough,1,False,3238,3238,0,population
+4620150.00,Le Plateau-Mont-Royal,borough,1,False,2412,2412,0,population
+4620151.00,Le Plateau-Mont-Royal,borough,1,False,2124,2124,0,population
+4620152.00,Le Plateau-Mont-Royal,borough,1,False,1650,1650,0,population
+4620153.00,Le Plateau-Mont-Royal,borough,1,False,812,812,0,population
+4620154.00,Le Plateau-Mont-Royal,borough,1,False,1104,1104,0,population
+4620155.00,Le Plateau-Mont-Royal,borough,1,False,1813,1813,0,population
+4620156.00,Le Plateau-Mont-Royal,borough,1,False,1955,1955,0,population
+4620157.00,Le Plateau-Mont-Royal,borough,1,False,2152,2152,0,population
+4620158.00,Le Plateau-Mont-Royal,borough,1,False,2094,2094,0,population
+4620159.00,Le Plateau-Mont-Royal,borough,1,False,1886,1886,0,population
+4620160.00,Le Plateau-Mont-Royal,borough,1,False,1738,1738,0,population
+4620161.00,Le Plateau-Mont-Royal,borough,1,False,1980,1980,0,population
+4620162.00,Le Plateau-Mont-Royal,borough,1,False,1755,1755,0,population
+4620163.00,Le Plateau-Mont-Royal,borough,1,False,3090,3090,0,population
+4620164.00,Le Plateau-Mont-Royal,borough,1,False,1586,1586,0,population
+4620165.00,Le Plateau-Mont-Royal,borough,1,False,2322,2322,0,population
+4620166.00,Rosemont-La Petite-Patrie,borough,1,False,574,574,0,population
+4620167.00,Le Plateau-Mont-Royal,borough,1,False,2453,2453,0,population
+4620168.00,Le Plateau-Mont-Royal,borough,1,False,2826,2826,0,population
+4620169.00,Le Plateau-Mont-Royal,borough,1,False,2099,2099,0,population
+4620170.00,Le Plateau-Mont-Royal,borough,1,False,2098,2098,0,population
+4620171.00,Le Plateau-Mont-Royal,borough,1,False,4778,4778,0,population
+4620172.00,Le Plateau-Mont-Royal,borough,1,False,2656,2656,0,population
+4620173.00,Le Plateau-Mont-Royal,borough,1,False,2041,2041,0,population
+4620174.00,Le Plateau-Mont-Royal,borough,1,False,2110,2110,0,population
+4620175.00,Le Plateau-Mont-Royal,borough,1,False,1992,1992,0,population
+4620176.00,Le Plateau-Mont-Royal,borough,1,False,1643,1643,0,population
+4620177.00,Le Plateau-Mont-Royal,borough,1,False,1342,1342,0,population
+4620178.00,Le Plateau-Mont-Royal,borough,1,False,2262,2262,0,population
+4620179.00,Rosemont-La Petite-Patrie,borough,1,False,3783,3783,0,population
+4620180.00,Rosemont-La Petite-Patrie,borough,1,False,3322,3322,0,population
+4620181.00,Rosemont-La Petite-Patrie,borough,1,False,5881,5881,0,population
+4620182.00,Rosemont-La Petite-Patrie,borough,1,False,2099,2099,0,population
+4620183.00,Rosemont-La Petite-Patrie,borough,1,False,2152,2152,0,population
+4620184.00,Rosemont-La Petite-Patrie,borough,1,False,2965,2965,0,population
+4620185.00,Rosemont-La Petite-Patrie,borough,1,False,5192,5192,0,population
+4620186.00,Rosemont-La Petite-Patrie,borough,1,False,4606,4606,0,population
+4620187.01,Rosemont-La Petite-Patrie,borough,1,False,3339,3339,0,population
+4620187.03,Rosemont-La Petite-Patrie,borough,1,False,4751,4751,0,population
+4620187.04,Rosemont-La Petite-Patrie,borough,1,False,6501,6501,0,population
+4620188.01,Rosemont-La Petite-Patrie,borough,1,False,2136,2136,0,population
+4620188.02,Rosemont-La Petite-Patrie,borough,1,False,2605,2605,0,population
+4620189.00,Rosemont-La Petite-Patrie,borough,1,False,0,0,0,dissemination_area_count
+4620190.01,Mercier-Hochelaga-Maisonneuve,borough,1,False,3688,3688,0,population
+4620190.02,Rosemont-La Petite-Patrie,borough,1,False,4164,4164,0,population
+4620191.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,6160,6160,0,population
+4620192.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,3229,3229,0,population
+4620193.00,Mercier-Hochelaga-Maisonneuve,borough,1,False,2197,2197,0,population
+4620194.01,Mercier-Hochelaga-Maisonneuve,borough,1,False,5132,5132,0,population
+4620194.02,Mercier-Hochelaga-Maisonneuve,borough,1,False,4478,4478,0,population
+4620195.01,Rosemont-La Petite-Patrie,borough,1,False,3537,3537,0,population
+4620195.02,Mercier-Hochelaga-Maisonneuve,borough,1,False,5384,5384,0,population
+4620195.03,Mercier-Hochelaga-Maisonneuve,borough,1,False,4956,4956,0,population
+4620196.00,Rosemont-La Petite-Patrie,borough,1,False,4065,4065,0,population
+4620197.00,Rosemont-La Petite-Patrie,borough,1,False,4915,4915,0,population
+4620198.00,Rosemont-La Petite-Patrie,borough,1,False,5025,5025,0,population
+4620199.00,Rosemont-La Petite-Patrie,borough,1,False,2619,2619,0,population
+4620200.00,Rosemont-La Petite-Patrie,borough,1,False,4579,4579,0,population
+4620201.00,Rosemont-La Petite-Patrie,borough,1,False,6953,6953,0,population
+4620202.00,Rosemont-La Petite-Patrie,borough,1,False,4186,4186,0,population
+4620203.00,Rosemont-La Petite-Patrie,borough,1,False,2797,2797,0,population
+4620204.00,Rosemont-La Petite-Patrie,borough,1,False,2667,2667,0,population
+4620205.00,Rosemont-La Petite-Patrie,borough,1,False,2095,2095,0,population
+4620206.00,Rosemont-La Petite-Patrie,borough,1,False,2530,2530,0,population
+4620207.00,Rosemont-La Petite-Patrie,borough,1,False,3379,3379,0,population
+4620208.00,Rosemont-La Petite-Patrie,borough,1,False,2497,2497,0,population
+4620209.00,Rosemont-La Petite-Patrie,borough,1,False,6031,6031,0,population
+4620210.00,Rosemont-La Petite-Patrie,borough,1,False,4165,4165,0,population
+4620211.00,Rosemont-La Petite-Patrie,borough,1,False,2249,2249,0,population
+4620212.00,Rosemont-La Petite-Patrie,borough,1,False,2523,2523,0,population
+4620213.00,Rosemont-La Petite-Patrie,borough,1,False,2586,2586,0,population
+4620214.00,Rosemont-La Petite-Patrie,borough,1,False,2765,2765,0,population
+4620215.00,Rosemont-La Petite-Patrie,borough,1,False,3010,3010,0,population
+4620216.00,Rosemont-La Petite-Patrie,borough,1,False,2200,2200,0,population
+4620217.00,Rosemont-La Petite-Patrie,borough,1,False,2518,2518,0,population
+4620218.00,Rosemont-La Petite-Patrie,borough,1,False,2877,2877,0,population
+4620219.00,Rosemont-La Petite-Patrie,borough,1,False,2827,2827,0,population
+4620220.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,5683,5683,0,population
+4620221.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,6147,6147,0,population
+4620222.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,3777,3777,0,population
+4620223.01,Villeray-Saint-Michel-Parc-Extension,borough,1,False,4052,4052,0,population
+4620223.02,Villeray-Saint-Michel-Parc-Extension,borough,1,False,3353,3353,0,population
+4620224.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,6054,6054,0,population
+4620225.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,1414,1414,0,population
+4620226.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,2952,2952,0,population
+4620227.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,1561,1561,0,population
+4620228.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,1628,1628,0,population
+4620229.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,0,0,0,dissemination_area_count
+4620230.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,1858,1858,0,population
+4620231.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,1612,1612,0,population
+4620232.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,4674,4674,0,population
+4620233.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,2011,2011,0,population
+4620234.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,2144,2144,0,population
+4620235.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,1872,1872,0,population
+4620236.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,1776,1776,0,population
+4620237.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,3418,3418,0,population
+4620238.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,2338,2338,0,population
+4620239.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,4606,4606,0,population
+4620240.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,3118,3118,0,population
+4620241.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,2791,2791,0,population
+4620242.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,6077,6077,0,population
+4620243.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,3677,3677,0,population
+4620244.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,2064,2064,0,population
+4620245.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,2883,2883,0,population
+4620247.00,Rosemont-La Petite-Patrie,borough,1,False,2148,2148,0,population
+4620249.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,4188,4188,0,population
+4620250.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,3994,3994,0,population
+4620251.01,Villeray-Saint-Michel-Parc-Extension,borough,1,False,3669,3669,0,population
+4620251.02,Villeray-Saint-Michel-Parc-Extension,borough,1,False,2649,2649,0,population
+4620252.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,5186,5186,0,population
+4620253.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,3598,3598,0,population
+4620254.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,4029,4029,0,population
+4620256.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,3877,3877,0,population
+4620257.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,4500,4500,0,population
+4620258.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,5314,5314,0,population
+4620259.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,6349,6349,0,population
+4620260.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,2338,2338,0,population
+4620261.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,2858,2858,0,population
+4620262.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,4866,4866,0,population
+4620263.00,Villeray-Saint-Michel-Parc-Extension,borough,1,False,4135,4135,0,population
+4620264.01,Ahuntsic-Cartierville,borough,1,False,5369,5369,0,population
+4620264.02,Ahuntsic-Cartierville,borough,1,False,5432,5432,0,population
+4620265.00,Ahuntsic-Cartierville,borough,1,False,4561,4561,0,population
+4620266.00,Ahuntsic-Cartierville,borough,1,False,3195,3195,0,population
+4620267.00,Ahuntsic-Cartierville,borough,1,False,6463,6463,0,population
+4620268.01,Ahuntsic-Cartierville,borough,1,False,6525,6525,0,population
+4620268.02,Ahuntsic-Cartierville,borough,1,False,6170,6170,0,population
+4620268.03,Ahuntsic-Cartierville,borough,1,False,489,489,0,population
+4620269.00,Ahuntsic-Cartierville,borough,1,False,4521,4521,0,population
+4620270.00,Ahuntsic-Cartierville,borough,1,False,4739,4739,0,population
+4620271.00,Ahuntsic-Cartierville,borough,1,False,3477,3477,0,population
+4620272.00,Ahuntsic-Cartierville,borough,1,False,3715,3715,0,population
+4620273.00,Ahuntsic-Cartierville,borough,1,False,4752,4752,0,population
+4620274.00,Ahuntsic-Cartierville,borough,1,False,3133,3133,0,population
+4620275.00,Ahuntsic-Cartierville,borough,1,False,4158,4158,0,population
+4620276.00,Ahuntsic-Cartierville,borough,1,False,5123,5123,0,population
+4620277.00,Ahuntsic-Cartierville,borough,1,False,4350,4350,0,population
+4620278.00,Ahuntsic-Cartierville,borough,1,False,4229,4229,0,population
+4620279.00,Ahuntsic-Cartierville,borough,1,False,4954,4954,0,population
+4620280.00,Ahuntsic-Cartierville,borough,1,False,4621,4621,0,population
+4620281.00,Ahuntsic-Cartierville,borough,1,False,3756,3756,0,population
+4620282.00,Ahuntsic-Cartierville,borough,1,False,6549,6549,0,population
+4620283.01,Ahuntsic-Cartierville,borough,1,False,4058,4058,0,population
+4620283.02,Ahuntsic-Cartierville,borough,1,False,2891,2891,0,population
+4620284.00,Ahuntsic-Cartierville,borough,1,False,3489,3489,0,population
+4620285.00,Ahuntsic-Cartierville,borough,1,False,6335,6335,0,population
+4620286.00,Ahuntsic-Cartierville,borough,1,False,5433,5433,0,population
+4620287.01,Ahuntsic-Cartierville,borough,1,False,6636,6636,0,population
+4620287.02,Ahuntsic-Cartierville,borough,1,False,4740,4740,0,population
+4620288.00,Ahuntsic-Cartierville,borough,1,False,1473,1473,0,population
+4620290.01,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,2713,2713,0,population
+4620290.02,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,5711,5711,0,population
+4620290.03,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,4263,4263,0,population
+4620290.04,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,6876,6876,0,population
+4620290.05,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,5156,5156,0,population
+4620290.06,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,5326,5326,0,population
+4620290.07,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,4010,4010,0,population
+4620290.08,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,4111,4111,0,population
+4620290.09,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,4930,4930,0,population
+4620291.01,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,3900,3900,0,population
+4620291.03,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,5854,5854,0,population
+4620291.04,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,5222,5222,0,population
+4620300.00,Verdun,borough,1,False,2797,2797,0,population
+4620301.00,Verdun,borough,1,False,5191,5191,0,population
+4620302.00,Verdun,borough,1,False,2923,2923,0,population
+4620303.00,Verdun,borough,1,False,2376,2376,0,population
+4620304.00,Verdun,borough,1,False,3191,3191,0,population
+4620305.00,Verdun,borough,1,False,3973,3973,0,population
+4620306.00,Verdun,borough,1,False,2781,2781,0,population
+4620307.00,Verdun,borough,1,False,3032,3032,0,population
+4620308.00,Verdun,borough,1,False,2688,2688,0,population
+4620309.00,Verdun,borough,1,False,1352,1352,0,population
+4620310.00,Verdun,borough,1,False,3393,3393,0,population
+4620311.00,Verdun,borough,1,False,4092,4092,0,population
+4620312.00,Verdun,borough,1,False,3162,3162,0,population
+4620313.00,Verdun,borough,1,False,3221,3221,0,population
+4620314.00,Verdun,borough,1,False,2448,2448,0,population
+4620315.00,Verdun,borough,1,False,15,15,0,population
+4620316.00,Verdun,borough,1,False,2174,2174,0,population
+4620317.03,Verdun,borough,1,False,4450,4450,0,population
+4620317.05,Verdun,borough,1,False,3545,3545,0,population
+4620317.06,Verdun,borough,1,False,4943,4943,0,population
+4620317.07,Verdun,borough,1,False,5410,5410,0,population
+4620317.08,Verdun,borough,1,False,3220,3220,0,population
+4620320.00,LaSalle,borough,1,False,4814,4814,0,population
+4620321.00,LaSalle,borough,1,False,2918,2918,0,population
+4620322.02,LaSalle,borough,1,False,3840,3840,0,population
+4620322.03,LaSalle,borough,1,False,4936,4936,0,population
+4620322.04,LaSalle,borough,1,False,3357,3357,0,population
+4620323.00,LaSalle,borough,1,False,3118,3118,0,population
+4620324.01,LaSalle,borough,1,False,4734,4734,0,population
+4620324.02,LaSalle,borough,1,False,2894,2894,0,population
+4620325.01,LaSalle,borough,1,False,3818,3818,0,population
+4620325.02,LaSalle,borough,1,False,6728,6728,0,population
+4620325.03,LaSalle,borough,1,False,3758,3758,0,population
+4620325.05,LaSalle,borough,1,False,9824,9824,0,population
+4620325.06,LaSalle,borough,1,False,4838,4838,0,population
+4620326.01,LaSalle,borough,1,False,2894,2894,0,population
+4620326.02,LaSalle,borough,1,False,3778,3778,0,population
+4620326.03,LaSalle,borough,1,False,5000,5000,0,population
+4620327.00,LaSalle,borough,1,False,4891,4891,0,population
+4620328.00,LaSalle,borough,1,False,1874,1874,0,population
+4620329.00,LaSalle,borough,1,False,4221,4221,0,population
+4620330.00,Lachine,borough,1,False,5484,5484,0,population
+4620340.00,Montréal-Ouest,linked_city,1,False,5115,5115,0,population
+4620350.00,Westmount,linked_city,1,False,2594,2594,0,population
+4620351.00,Westmount,linked_city,1,False,5004,5004,0,population
+4620352.00,Westmount,linked_city,1,False,2747,2747,0,population
+4620353.00,Westmount,linked_city,1,False,2873,2873,0,population
+4620354.00,Westmount,linked_city,1,False,3038,3038,0,population
+4620355.00,Westmount,linked_city,1,False,1423,1423,0,population
+4620356.00,Westmount,linked_city,1,False,1979,1979,0,population
+4620360.00,Outremont,borough,1,False,1947,1947,0,population
+4620361.00,Outremont,borough,1,False,1720,1720,0,population
+4620362.00,Outremont,borough,1,False,2308,2308,0,population
+4620363.00,Outremont,borough,1,False,4617,4617,0,population
+4620364.00,Outremont,borough,1,False,3321,3321,0,population
+4620365.00,Outremont,borough,1,False,3263,3263,0,population
+4620366.00,Outremont,borough,1,False,2505,2505,0,population
+4620367.00,Outremont,borough,1,False,4948,4948,0,population
+4620370.00,Hampstead,linked_city,1,False,7037,7037,0,population
+4620380.00,Côte-Saint-Luc,linked_city,1,False,4247,4247,0,population
+4620381.00,Côte-Saint-Luc,linked_city,1,False,6248,6248,0,population
+4620382.01,Côte-Saint-Luc,linked_city,1,False,4130,4130,0,population
+4620382.02,Côte-Saint-Luc,linked_city,1,False,4663,4663,0,population
+4620383.01,Côte-Saint-Luc,linked_city,1,False,3887,3887,0,population
+4620383.02,Côte-Saint-Luc,linked_city,1,False,8641,8641,0,population
+4620385.00,Côte-Saint-Luc,linked_city,1,False,1574,1574,0,population
+4620390.00,Lachine,borough,1,False,1603,1603,0,population
+4620391.00,Lachine,borough,1,False,1739,1739,0,population
+4620392.00,Lachine,borough,1,False,1587,1587,0,population
+4620393.00,Lachine,borough,1,False,6929,6929,0,population
+4620394.00,Lachine,borough,1,False,4156,4156,0,population
+4620395.01,Lachine,borough,1,False,2754,2754,0,population
+4620395.02,Lachine,borough,1,False,6861,6861,0,population
+4620395.03,Lachine,borough,1,False,4782,4782,0,population
+4620396.00,Lachine,borough,1,False,6553,6553,0,population
+4620397.00,Lachine,borough,1,False,3980,3980,0,population
+4620400.00,Mont-Royal,linked_city,1,False,5412,5412,0,population
+4620401.00,Mont-Royal,linked_city,1,False,3019,3019,0,population
+4620402.00,Mont-Royal,linked_city,1,False,1989,1989,0,population
+4620403.00,Mont-Royal,linked_city,1,False,5474,5474,0,population
+4620404.00,Mont-Royal,linked_city,1,False,5059,5059,0,population
+4620410.01,Saint-Laurent,borough,1,False,5529,5529,0,population
+4620410.02,Saint-Laurent,borough,1,False,6013,6013,0,population
+4620410.03,Saint-Laurent,borough,1,False,1756,1756,0,population
+4620412.00,Saint-Laurent,borough,1,False,7061,7061,0,population
+4620413.01,Saint-Laurent,borough,1,False,3760,3760,0,population
+4620413.02,Saint-Laurent,borough,1,False,4048,4048,0,population
+4620415.03,Saint-Laurent,borough,1,False,4011,4011,0,population
+4620415.04,Saint-Laurent,borough,1,False,5458,5458,0,population
+4620415.07,Saint-Laurent,borough,1,False,7568,7568,0,population
+4620415.08,Saint-Laurent,borough,1,False,2686,2686,0,population
+4620415.09,Saint-Laurent,borough,1,False,3033,3033,0,population
+4620415.10,Saint-Laurent,borough,1,False,5297,5297,0,population
+4620416.01,Saint-Laurent,borough,1,False,4000,4000,0,population
+4620416.02,Saint-Laurent,borough,1,False,3329,3329,0,population
+4620417.01,Saint-Laurent,borough,1,False,5046,5046,0,population
+4620417.02,Saint-Laurent,borough,1,False,2748,2748,0,population
+4620418.00,Saint-Laurent,borough,1,False,5704,5704,0,population
+4620419.00,Saint-Laurent,borough,1,False,4786,4786,0,population
+4620420.00,Saint-Laurent,borough,1,False,5114,5114,0,population
+4620421.03,Saint-Laurent,borough,1,False,2948,2948,0,population
+4620421.04,Saint-Laurent,borough,1,False,4407,4407,0,population
+4620421.05,Saint-Laurent,borough,2,True,2339,2339,0,population
+4620421.06,Saint-Laurent,borough,1,False,5463,5463,0,population
+4620430.00,Dorval,linked_city,1,False,7238,7238,0,population
+4620431.00,Dorval,linked_city,1,False,5443,5443,0,population
+4620432.00,Dorval,linked_city,1,False,3134,3134,0,population
+4620433.00,Dorval,linked_city,1,False,3487,3487,0,population
+4620440.00,L'Île-Dorval,linked_city,1,False,30,30,0,population
+4620450.00,Pointe-Claire,linked_city,1,False,7140,7140,0,population
+4620451.00,Pointe-Claire,linked_city,1,False,6986,6986,0,population
+4620452.00,Pointe-Claire,linked_city,1,False,8886,8886,0,population
+4620453.01,Pointe-Claire,linked_city,1,False,5543,5543,0,population
+4620453.02,Pointe-Claire,linked_city,1,False,4933,4933,0,population
+4620460.00,Beaconsfield,linked_city,1,False,5367,5367,0,population
+4620461.00,Beaconsfield,linked_city,1,False,2926,2926,0,population
+4620462.01,Beaconsfield,linked_city,1,False,5148,5148,0,population
+4620462.02,Beaconsfield,linked_city,1,False,5836,5836,0,population
+4620470.01,Kirkland,linked_city,1,False,7022,7022,0,population
+4620470.03,Kirkland,linked_city,1,False,4907,4907,0,population
+4620470.04,Kirkland,linked_city,1,False,3487,3487,0,population
+4620470.05,Kirkland,linked_city,1,False,3997,3997,0,population
+4620480.00,Baie-D'Urfé,linked_city,1,False,3764,3764,0,population
+4620490.00,Sainte-Anne-de-Bellevue,linked_city,1,False,2532,2532,0,population
+4620491.00,Sainte-Anne-de-Bellevue,linked_city,1,False,2495,2495,0,population
+4620500.00,Senneville,linked_city,1,False,951,951,0,population
+4620511.01,Pierrefonds-Roxboro,borough,1,False,3325,3325,0,population
+4620511.02,Pierrefonds-Roxboro,borough,2,True,6191,6667,476,population
+4620512.02,Pierrefonds-Roxboro,borough,1,False,4568,4568,0,population
+4620512.03,Pierrefonds-Roxboro,borough,1,False,2552,2552,0,population
+4620512.04,Pierrefonds-Roxboro,borough,1,False,6579,6579,0,population
+4620513.01,Pierrefonds-Roxboro,borough,1,False,5002,5002,0,population
+4620513.02,Pierrefonds-Roxboro,borough,1,False,4581,4581,0,population
+4620514.01,Pierrefonds-Roxboro,borough,1,False,6896,6896,0,population
+4620514.02,Pierrefonds-Roxboro,borough,1,False,6132,6132,0,population
+4620515.01,Pierrefonds-Roxboro,borough,1,False,6413,6413,0,population
+4620515.02,Pierrefonds-Roxboro,borough,1,False,4376,4376,0,population
+4620515.03,Pierrefonds-Roxboro,borough,1,False,3453,3453,0,population
+4620515.04,Pierrefonds-Roxboro,borough,1,False,3708,3708,0,population
+4620520.02,Dollard-des-Ormeaux,linked_city,1,False,7112,7112,0,population
+4620520.03,Dollard-des-Ormeaux,linked_city,1,False,3764,3764,0,population
+4620520.04,Dollard-des-Ormeaux,linked_city,1,False,4638,4638,0,population
+4620521.01,Dollard-des-Ormeaux,linked_city,1,False,4857,4857,0,population
+4620521.04,Dollard-des-Ormeaux,linked_city,1,False,4768,4768,0,population
+4620521.05,Dollard-des-Ormeaux,linked_city,1,False,4587,4587,0,population
+4620521.06,Dollard-des-Ormeaux,linked_city,1,False,5147,5147,0,population
+4620521.07,Dollard-des-Ormeaux,linked_city,1,False,4070,4070,0,population
+4620522.01,Dollard-des-Ormeaux,linked_city,1,False,3464,3464,0,population
+4620522.02,Dollard-des-Ormeaux,linked_city,1,False,3506,3506,0,population
+4620523.00,Dollard-des-Ormeaux,linked_city,1,False,2490,2490,0,population
+4620530.00,Pierrefonds-Roxboro,borough,1,False,6130,6130,0,population
+4620540.00,L'Île-Bizard-Sainte-Geneviève,borough,1,False,3969,3969,0,population
+4620550.02,L'Île-Bizard-Sainte-Geneviève,borough,1,False,3327,3327,0,population
+4620550.03,L'Île-Bizard-Sainte-Geneviève,borough,1,False,6780,6780,0,population
+4620550.04,L'Île-Bizard-Sainte-Geneviève,borough,1,False,4809,4809,0,population
+4620570.00,Montréal-Est,linked_city,1,False,4394,4394,0,population
+4620580.01,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,4853,4853,0,population
+4620580.02,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,3235,3235,0,population
+4620580.03,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,3829,3829,0,population
+4620581.01,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,5825,5825,0,population
+4620581.02,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,3490,3490,0,population
+4620582.01,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,6340,6340,0,population
+4620582.02,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,5918,5918,0,population
+4620583.00,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,3208,3208,0,population
+4620584.00,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,7066,7066,0,population
+4620585.01,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,2281,2281,0,population
+4620585.02,Rivière-des-Prairies-Pointe-aux-Trembles,borough,1,False,3824,3824,0,population
+4620590.01,Anjou,borough,1,False,5526,5526,0,population
+4620590.02,Anjou,borough,1,False,3452,3452,0,population
+4620591.01,Anjou,borough,1,False,2704,2704,0,population
+4620591.02,Anjou,borough,1,False,4117,4117,0,population
+4620592.00,Anjou,borough,1,False,7570,7570,0,population
+4620593.01,Anjou,borough,1,False,4862,4862,0,population
+4620593.02,Anjou,borough,1,False,4575,4575,0,population
+4620594.01,Anjou,borough,1,False,2848,2848,0,population
+4620594.02,Anjou,borough,1,False,7589,7589,0,population
+4620600.01,Saint-Léonard,borough,1,False,4022,4022,0,population
+4620600.02,Saint-Léonard,borough,1,False,4118,4118,0,population
+4620600.03,Saint-Léonard,borough,1,False,7091,7091,0,population
+4620601.01,Saint-Léonard,borough,1,False,3373,3373,0,population
+4620601.02,Saint-Léonard,borough,1,False,4827,4827,0,population
+4620602.01,Saint-Léonard,borough,1,False,3780,3780,0,population
+4620602.02,Saint-Léonard,borough,1,False,2794,2794,0,population
+4620603.01,Saint-Léonard,borough,1,False,3598,3598,0,population
+4620603.02,Saint-Léonard,borough,1,False,4252,4252,0,population
+4620603.03,Saint-Léonard,borough,1,False,3281,3281,0,population
+4620604.01,Saint-Léonard,borough,1,False,3550,3550,0,population
+4620604.02,Saint-Léonard,borough,1,False,4517,4517,0,population
+4620604.03,Saint-Léonard,borough,1,False,3012,3012,0,population
+4620604.04,Saint-Léonard,borough,1,False,3457,3457,0,population
+4620604.05,Saint-Léonard,borough,1,False,5279,5279,0,population
+4620605.01,Saint-Léonard,borough,1,False,3525,3525,0,population
+4620605.02,Saint-Léonard,borough,1,False,1997,1997,0,population
+4620605.03,Saint-Léonard,borough,1,False,5854,5854,0,population
+4620605.04,Saint-Léonard,borough,1,False,4898,4898,0,population
+4620605.05,Saint-Léonard,borough,1,False,2270,2270,0,population
+4620610.01,Montréal-Nord,borough,1,False,4777,4777,0,population
+4620610.02,Montréal-Nord,borough,1,False,4612,4612,0,population
+4620610.03,Montréal-Nord,borough,1,False,5684,5684,0,population
+4620610.04,Montréal-Nord,borough,1,False,3973,3973,0,population
+4620610.05,Montréal-Nord,borough,1,False,4856,4856,0,population
+4620610.06,Montréal-Nord,borough,1,False,2822,2822,0,population
+4620610.07,Montréal-Nord,borough,1,False,4659,4659,0,population
+4620611.01,Montréal-Nord,borough,1,False,3036,3036,0,population
+4620611.02,Montréal-Nord,borough,1,False,5839,5839,0,population
+4620612.00,Montréal-Nord,borough,1,False,4813,4813,0,population
+4620613.00,Montréal-Nord,borough,1,False,7813,7813,0,population
+4620614.00,Montréal-Nord,borough,1,False,3827,3827,0,population
+4620615.00,Montréal-Nord,borough,1,False,5848,5848,0,population
+4620616.00,Montréal-Nord,borough,1,False,6896,6896,0,population
+4620617.01,Montréal-Nord,borough,1,False,5616,5616,0,population
+4620617.02,Montréal-Nord,borough,1,False,3904,3904,0,population
+4620618.00,Montréal-Nord,borough,1,False,3611,3611,0,population
+4620619.00,Montréal-Nord,borough,1,False,5885,5885,0,population

@@ -77,7 +77,8 @@ island as (
         'Île de Montréal (agglomeration)'         as name,
         cast(null as text)                        as parent_geography_key,
         st_union(geometry)                        as geometry,
-        round(sum(area_km2), 3)                   as area_km2
+        round(sum(area_km2), 3)                   as area_km2,
+        cast(null as text)                        as admin_place_name
     from boundaries
 
 ),
@@ -93,7 +94,8 @@ municipalities as (
         name,
         'island:mtl'                              as parent_geography_key,
         geometry,
-        area_km2
+        area_km2,
+        cast(null as text)                        as admin_place_name
     from boundaries
     where geography_type = 'linked_city'
 
@@ -109,7 +111,8 @@ municipalities as (
         'Montréal'                                as name,
         'island:mtl'                              as parent_geography_key,
         st_union(geometry)                        as geometry,
-        round(sum(area_km2), 3)                   as area_km2
+        round(sum(area_km2), 3)                   as area_km2,
+        cast(null as text)                        as admin_place_name
     from boundaries
     where geography_type = 'borough'
 
@@ -124,7 +127,8 @@ boroughs as (
         name,
         'municipality:66023'                      as parent_geography_key,
         geometry,
-        area_km2
+        area_km2,
+        cast(null as text)                        as admin_place_name
     from boundaries
     where geography_type = 'borough'
 
@@ -179,7 +183,8 @@ apciq_sectors as (
         'island:mtl'                                      as parent_geography_key,
 
         sector_geometry.geometry,
-        sector_geometry.area_km2
+        sector_geometry.area_km2,
+        cast(null as text)                        as admin_place_name
     from sectors
     /*
         An inner join would hide a sector that lost its tracts by removing
@@ -211,14 +216,40 @@ census_tracts as (
     */
 
     select
-        'census_tract:' || ct_uid                 as geography_key,
+        'census_tract:' || tracts.ct_uid          as geography_key,
         'census_tract'                            as geography_type,
-        ct_uid                                    as geography_code,
-        'CT ' || ct_name                          as name,
-        'municipality:' || municipality_code      as parent_geography_key,
-        geometry,
-        area_km2
-    from {{ ref('stg_statcan__census_tracts') }}
+        tracts.ct_uid                             as geography_code,
+        'CT ' || tracts.ct_name                   as name,
+        'municipality:' || tracts.municipality_code
+                                                  as parent_geography_key,
+        tracts.geometry,
+        tracts.area_km2,
+
+        /*
+            THE ONLY LEVEL THAT CARRIES THIS COLUMN, AND WHY IT IS HERE RATHER
+            THAN LEFT TO A MEASURE
+
+            'CT 0250.00' names nothing a reader recognises, so the page 2 map
+            has to say where a tract is. The APCIQ sector cannot: sector 9 is
+            called "Centre" and holds Westmount, and sector 1 gathers seven
+            municipalities.
+
+            Attached to the dimension rather than read through a measure
+            because the map groups by this very table: the column then sits in
+            the same row context as the shape and needs no relationship to
+            propagate. Reading it from the fact table instead is what produced
+            a tooltip naming the same borough on all 541 shapes -- a
+            many-to-one relationship does not carry a filter back up.
+
+            A LEFT join: an inner one would drop a tract that lost its
+            placement and turn 541 rows into 540 without a word. The singular
+            test assert_every_tract_is_named_by_one_place fails on a NULL
+            instead.
+        */
+        places.admin_name                         as admin_place_name
+    from {{ ref('stg_statcan__census_tracts') }} as tracts
+    left join {{ ref('bridge_census_tract_admin_place') }} as places
+           on places.ct_uid = tracts.ct_uid
 
 ),
 

@@ -202,6 +202,35 @@ models:
           Read it with area_basis: the administrative rows include the water
           they extend over, the tract and sector rows stop at the shoreline.
 
+      - name: admin_place_name
+        description: >
+          The borough or linked city a reader would call this tract's
+          neighbourhood. Populated at the census_tract level ONLY; NULL on
+          every other level, where the row already is a place.
+
+          It exists because 'CT 0250.00' names nothing a reader recognises and
+          an APCIQ sector is not a place people know -- sector 9 is called
+          "Centre" and holds Westmount. Carried on the dimension rather than
+          computed by a measure because the page 2 map groups by this table:
+          the column then sits in the same row context as the shape and needs
+          no relationship to propagate.
+
+          ⚠️ It NAMES a tract. It never groups a figure: APCIQ publishes at
+          the sector, and 26 of the 34 places cover a territory larger than
+          themselves (docs/geography.md section 4).
+
+          ⚠️ NO relationships TEST HERE, AND THAT IS DELIBERATE. One was
+          written on 2026-09-02 pointing at bridge_census_tract_admin_place.
+          admin_name, and replaying the generated DDL on the real server
+          rejected it: a foreign key needs a UNIQUE target, and that column
+          holds 34 names across 541 rows. dbt would have accepted it, the ERD
+          would have drawn a key that does not exist, and the check would only
+          have proved the name belongs to a set.
+
+          assert_every_tract_is_named_by_one_place does better: it compares
+          this column with the bridge TRACT BY TRACT, so a join that returned
+          plausible names for the wrong shapes fails.
+
   - name: bridge_apciq_sector_geography
     description: >
       The many-to-many relationship between APCIQ sectors and administrative
@@ -374,6 +403,117 @@ models:
           counted and tested.
         data_tests:
           - not_null
+
+  - name: bridge_census_tract_admin_place
+    description: >
+      One row per census tract, 541 of them: the administrative entity --
+      borough or linked city -- a reader would call its neighbourhood.
+
+      WHY IT EXISTS
+
+      Asked on 2026-09-02 while building the page 2 map, whose tooltip named an
+      APCIQ sector. An APCIQ sector is not a place people know: sector 9 is
+      called "Centre" and holds Hampstead, Mont-Royal, Outremont and Westmount.
+
+      No existing bridge could answer. Composing tract → sector → places
+      returns EVERY place of that sector, up to seven names for one tract. The
+      missing direction is tract → place, and it was in no table.
+
+      THE RULE, AND ITS COST
+
+      A tract is named after the entity where the majority of its residents
+      live. This is the third majority-style rule in the project and they are
+      deliberately not interchangeable: population weights share an income,
+      is_drawn_in_this_sector paints a polygon once, and this one fills a
+      tooltip that has room for one name.
+
+      Measured at build: 2 tracts of 541 needed a majority, and 476 residents
+      are named after a neighbouring entity -- 0.0237 % of the island. They are
+      the same two tracts the drawing rule isolated on 2026-08-31, which is
+      three independent rules landing on the same two lines.
+
+      ⚠️ NOT A GEOGRAPHY TO AGGREGATE BY. It names a tract; it never groups a
+      price.
+    columns:
+      - name: ct_uid
+        description: One row per tract. 541, no more and no fewer.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: census_tract_geography_key
+        description: Joins to dim_geography.geography_key at census_tract level.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: admin_geography_key
+        description: >
+          The borough or linked city, as a key of dim_geography. Taken from
+          bridge_apciq_sector_geography rather than re-derived here, so
+          'REM' || no_arr is written once in the project.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+
+      - name: admin_name
+        data_tests:
+          - not_null
+
+      - name: admin_geography_type
+        description: >
+          The source's own vocabulary, passed through unchanged:
+          'borough' for the 19 boroughs of Ville de Montréal, 'linked_city' for
+          the 15 municipalities that have none. 485 tracts fall in a borough and
+          56 in a linked city -- the same 485 / 56 split the published csd_uid
+          gives, reached by a different route.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['borough', 'linked_city']
+
+      - name: places_touched
+        description: >
+          How many administrative entities the tract's dissemination areas fall
+          in. 1 on 539 tracts; 2 on the two the majority rule had to decide.
+        data_tests:
+          - not_null
+
+      - name: name_is_a_majority_call
+        description: >
+          True where more than one entity was in play, so the name is a
+          decision rather than a reading. A reader comparing this name with a
+          map has to be able to find these rows, which is why it is a column
+          and not a rule applied in silence.
+        data_tests:
+          - not_null
+
+      - name: population_named_elsewhere
+        description: >
+          Residents of the tract who live in an entity other than the one
+          naming it. Zero on 539 tracts. What the rule costs, stated rather
+          than described.
+        data_tests:
+          - not_null
+
+      - name: assignment_basis
+        description: >
+          Which rule ranked the entities. The seven tracts with no residents
+          at all have no population to rank and fall back to counting
+          dissemination areas -- each holds exactly one, so each has a single
+          candidate anyway. Same device as weight_basis next door.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['population', 'dissemination_area_count']
 
   - name: dim_property_type
     description: >
