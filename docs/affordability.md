@@ -133,8 +133,18 @@ with their own sources.
 **Amortization** (CMHC, verbatim): « The maximum amortization period is 25
 years; or 30 years if the LTV is greater than 80 % and the borrower is either:
 (i) a first-time homebuyer or (ii) purchasing a newly built home. » The tables
-compute the **25-year** scenario; the 30-year bands are seeded so a Power BI
-what-if can reach them without reopening the research.
+compute the **25-year** scenario.
+
+⚠️ **The four 30-year bands are seeded and nothing exercises them** — not the
+marts, and not the down-payment what-if added on 2026-09-09, which reads the
+25-year bands only. That was checked rather than assumed: every one of the
+1 653 rows carries `amortization_years = 25`, and the single premium rate the
+table has ever used is the 4.00 % band. A note written on 2026-08-31 said the
+20 % threshold also puts a 30-year amortization out of reach; **it does not,
+because 30 years was never within reach here in the first place.** Keeping the
+down payment as the only moving variable is what makes the slider readable: two
+variables moving together would let a reader attribute a change to the wrong
+one.
 
 ### Two things in the seeds that are not published requirements
 
@@ -155,6 +165,46 @@ The seed reproduces both worked examples the Agency publishes, to the dollar:
 400 000 $ → 20 000 $, and 600 000 $ → 35 000 $.
 
 ---
+
+
+### One scenario in the mart, several on the page
+
+`fact_mortgage_scenario` holds exactly one: the **legal minimum** down payment.
+The column `down_payment_scenario` says so on every row, and that is why it
+exists.
+
+Since 2026-09-09 page 3 of the report lets the reader type a different amount
+and recomputes the chain in DAX. **No grid of scenarios was pre-computed, and
+the reason is not the row count.** A grid can only carry a *ratio* or a
+*discrete amount*: the same 50 000 $ is a different percentage on each of the
+751 distinct prices in the table, so a grid either answers a question nobody
+asked — "what if I put down 10 %" — or discretises what a formula computes
+exactly. The row count settles it either way: a six-step ratio grid would take
+`fact_affordability` from 141 462 rows to **848 772**.
+
+**What the DAX duplicates is the band-selection logic, not one published
+value.** The two seeds are imported into the model and read with filters; no
+rate, no threshold and no ratio is retyped. The control is
+`scripts/report_oracle.py`, which computes the same chain in SQL — and, on every
+run, feeds that chain the legal minimum and checks it reproduces this mart on
+all 1 223 priced rows, to the cent. It did on 2026-09-09: zero differences on
+the loan, the premium, the payment and the required income.
+
+⚠️ **One published value *is* retyped, and it is named rather than hidden.**
+The 80 % loan-to-value threshold above which insurance is compulsory appears
+twice in `fact_mortgage_scenario.sql` and once more in the DAX. Decided on
+2026-09-09: accepted, documented, and checked by the oracle rather than
+promoted to a seed row. It is the one place this project's rule — no regulatory
+constant in code — is knowingly bent.
+
+**A typed down payment can be illegal, and the model refuses instead of
+computing.** Below the legal minimum the loan-to-value passes 95 %, where **no
+premium band exists**; a lookup that returns nothing reads as a premium of zero
+and produces a loan larger than any lender would write. Measured on
+2026-08-31, a naive probe did exactly that and produced a loan **1.23 times**
+the legal one. The order of the tests is therefore part of the specification:
+legality first, band second. With that order, "no band found" occurs **zero
+times** across the whole table at every slider position from 0 to 300 000 $.
 
 ## 4. The rate is the contracted one
 

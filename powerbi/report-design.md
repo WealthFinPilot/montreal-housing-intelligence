@@ -1337,12 +1337,16 @@ step with it.
 | Guards | `Grain warning` | `_Measures` | filter state of `Census_Tract` | Text | 2, 3 |
 | Guards | `Income vintage warning` | `_Measures` | `fact_affordability` | Text | 2 |
 | Guards | `Income basis note` | `_Measures` | `fact_affordability` | Text | 2 |
-| Guards | `Selected area disclosure` | `_Measures` | `Place` | Text | 1, 2, 3 |
+| Guards | `Area is narrowed` | `_Measures` | `Sector` | Whole number (0/1) | 1, 3 |
 | Guards | `Slice warning` | `_Measures` | `property_type`, `fact_affordability` | Text | 2, 3 |
 | Market | `Sales (island, as published)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1 |
-| Market | `Sales (selected area)` | `_Measures` | `fact_market`, `Place` | Whole number, thousands sep. | 1 |
-| Market | `Active listings (selected area)` | `_Measures` | `fact_market`, `Place` | Whole number, thousands sep. | 1 |
-| Market | `Area title` | `_Measures` | `Place` | Text | 1 |
+| Market | `Sales (selected area)` | `_Measures` | `fact_market`, `Area is narrowed` | Whole number, thousands sep. | 1 |
+| Market | `Active listings (selected area)` | `_Measures` | `fact_market`, `Area is narrowed` | Whole number, thousands sep. | 1 |
+| Market | `Median price (selected area)` | `_Measures` | `Median price`, `Area is narrowed` | Currency, 0 dec. | 1 |
+| Market | `Days on market (selected area)` | `_Measures` | `Days on market`, `Area is narrowed` | Whole number | 1 |
+| Market | `Price status (selected area)` | `_Measures` | `Price status`, `Area is narrowed` | Text | 1 |
+| Market | `Price context (selected area)` | `_Measures` | `Price context`, `Area is narrowed` | Text | 1 |
+| Market | `Area title` | `_Measures` | `Sector`, `Area is narrowed` | Text | 1 |
 | Market | `Sales (sectors)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1, 4 |
 | Market | `Sectors minus island (sales)` | `_Measures` | the two `Sales` measures | Whole number | 1 |
 | Market | `Median price` | `_Measures` | `fact_market` | Currency, 0 dec., thousands sep. | 1 |
@@ -1378,14 +1382,23 @@ step with it.
 | Rates | `Rate grain warning` | `_Measures` | `fact_interest_rate`, `interest_rate_series` | Text | 4 |
 | Rates | `Rate freshness warning` | `_Measures` | `fact_interest_rate`, `interest_rate_series` | Text | 4 |
 | First-time buyer | `Sectors priced` | `_Measures` | `fact_affordability` | Whole number | 3 |
-| First-time buyer | `Sectors within reach of this income` | `_Measures` | `fact_affordability`, `Income input` | Whole number | 3 |
-| First-time buyer | `Sectors borderline` | `_Measures` | `fact_affordability`, `Income input` | Whole number | 3 |
 | First-time buyer | `Tracts priced` | `_Measures` | `fact_affordability` | Whole number | 3 |
-| First-time buyer | `Verdict for this income` | `_Measures` | `fact_affordability`, `Income input` | Text | 3 |
-| First-time buyer | `Sector bar colour` | `_Measures` | `Verdict for this income` | Text | 3 |
-| First-time buyer | `Down payment assumption` | `_Measures` | nothing — a constant string | Text | 3 |
-| First-time buyer | `Verdict for the selected place` | `_Measures` | `Verdict for this income`, `Place` | Text | 3 |
+| First-time buyer | `Down payment regime code` | `_Measures` | `fact_mortgage_scenario`, `Down payment input` | Whole number | 3 |
+| First-time buyer | `Income required at this down payment` | `_Measures` | `fact_mortgage_scenario`, the two seed tables, `Down payment input` | Currency, 0 dec., thousands sep. | 3 |
+| First-time buyer | `Verdict at this down payment` | `_Measures` | `Down payment regime code`, `Income required at this down payment`, `Income input` | Text | 3 |
+| First-time buyer | `Sectors within reach of this income` | `_Measures` | `Verdict at this down payment` | Whole number | 3 |
+| First-time buyer | `Sectors borderline` | `_Measures` | `Verdict at this down payment` | Whole number | 3 |
+| First-time buyer | `Sectors below the legal minimum` | `_Measures` | `Verdict at this down payment` | Whole number | 3 |
+| First-time buyer | `Sector bar colour` | `_Measures` | `Verdict at this down payment` | Text | 3 |
+| First-time buyer | `Down payment assumption` | `_Measures` | `fact_mortgage_scenario`, `Down payment regime code`, `Down payment input` | Text | 3 |
+| First-time buyer | `Verdict for the selected sector` | `_Measures` | `Verdict at this down payment`, `Area is narrowed` | Text | 3 |
 | — | `Income input Value` | `Income input` | the slicer selection | Currency, 0 dec. | 3 |
+| — | `Down payment input Value` | `Down payment input` | the slicer selection | Currency, 0 dec. | 3 |
+
+⚠️ **`Verdict for this income` is absent from this table because section 13.10
+deletes it**, once everything that reads it has been rebranched onto
+`Verdict at this down payment`. `Income required, lower bound (mean)` stays —
+it is page 2's, listed under Affordability, and the two must never share a page.
 
 ### 3.3 Build order
 
@@ -1408,7 +1421,8 @@ explanation, so build in this order:
 | 7b | `Rate observations`, `First rate observation`, `Last rate observation`, `Rate grain warning`, `Rate freshness warning` | independent |
 | 7c | `Sales (island, 12 months)`, `Trailing window` | Market group, but built with page 4 — nothing before it needed the trailing table |
 | 8 | **the `Income input` parameter (section 5)** | three First-time buyer measures read `'Income input'[Income input Value]` |
-| 9 | the First-time buyer group, `Verdict for this income` before `Sector bar colour` | the colour measure reads the verdict rather than repeating its comparison |
+| 8b | **the `Down payment input` parameter (section 13.4)**, and the import of the two seed tables (13.3) | the whole First-time buyer chain refuses to resolve without them |
+| 9 | the First-time buyer group, in the order of section 13: `Down payment regime code` → `Income required at this down payment` → `Verdict at this down payment` → the three counts and `Sector bar colour` | each reads the one before it. The colour and the counts read the verdict rather than repeating its comparison, which is what keeps the 10 % band in a single measure |
 | 10 | the three Grain guards | independent; they only need `fact_affordability`, `property_type` and the `Census_Tract` table |
 
 **Build a group, then build its page, then check the number.** Each group has a
@@ -1425,7 +1439,8 @@ or something is wrong upstream of the visual:
 | Rates | `Posted minus contract (points)`, on the quarter table's 2026 Q2 row | 1.84 points — and 1.93 with the year slicer on 2026, 2.11 with nothing selected. All three are the same measure; see page 4 |
 | Rates | `Rate freshness warning`, no slicer | names the contracted series, last 2026-06-02, against observations held to 2026-08-26 |
 | Rates | `Rate grain warning`, `calendar_year` = 2026 | three series named, the contracted one at 22 observations against 34 posted and 168 policy — measured 2026-08-30 |
-| First-time buyer | page 3 at 95 000 $, condominium, couple, 2026 Q2 | 6 within reach, 1 borderline, 10 out of reach, 1 with no published price — and `Sectors priced` reads 17 |
+| First-time buyer | page 3 at 95 000 $, condominium, 2026 Q2, down payment **50 000 $** | 7 within reach, 2 borderline, 7 out of reach, 1 below the legal minimum, 1 with no published price — six classes, **totalling 18** — and `Sectors priced` reads 17 |
+| First-time buyer | the same slice with the down payment slider at **0 $** | every priced sector below the legal minimum, no bars, and the KPI cards on a firm zero rather than blank |
 
 These are the same figures section 1 and section 2 of this file quote. A visual
 that disagrees with them is not a new finding — it is a filter in the wrong
@@ -3607,3 +3622,600 @@ filters `Sector`, and `Place_map` hangs off `Sector` by a bidirectional
 relationship — so the filter propagates back and the map would draw one shape.
 Set **Format > Edit interactions > None** between the slicer and the map, or
 the page loses the context that makes a selection readable.
+
+
+# 13. J4.2¾ · 3 — The typed down payment
+
+**2026-09-09.** Page 3 assumed the legal *minimum* down payment, because that
+is the only scenario `fact_mortgage_scenario` carries. A reader with savings
+was not modelled, and `Down payment assumption` existed to say so. This section
+replaces that card with a control.
+
+The whole of it lives in DAX. **No dbt model moves**, and the two figures that
+prove the model is untouched are the ones to check first: `dbt build` stays at
+PASS=353 and the pytest suite at 140.
+
+## 13.1 What changes, and what deliberately does not
+
+| | |
+|---|---|
+| **Page 3** | gains a `Down payment input` slider; every figure on the page becomes a figure *at that down payment* |
+| **Page 2** | **unchanged**. Its map still colours the shortfall computed in SQL at the legal minimum |
+| **Pages 1 and 4** | unchanged; neither carries a mortgage figure |
+| `marts.fact_mortgage_scenario` | unchanged. It remains the legal-minimum scenario, and it remains what the oracle checks against |
+| `income_required_lower_bound` | **keeps its name.** A bigger down payment moves the floor up towards the true figure; it does not reach it. The GDS ratio still charges property tax, heating and half of any condo fees, and this project still holds none of the three |
+
+**Page 2 is left out on purpose, and the reason is a measurement rather than a
+scope decision.** On 2026-08-31 the indexed verdict and the indexed ratio were
+computed in SQL rather than left to DAX, because two definitions of one
+threshold had been found cohabiting on page 3 and disagreeing on **44 of 87
+slices**. Re-deriving `income_shortfall_indexed` in DAX for 541 census tracts
+would recreate exactly that: one figure with a SQL definition and a DAX
+definition, differing wherever a guard was written in one and forgotten in the
+other. Decided on 2026-09-09.
+
+## 13.2 The probe that licenses every formula below
+
+Before a measure was written, the entire mortgage chain was re-implemented in
+SQL **with the down payment as a free parameter**, and then fed the legal
+minimum — the one input for which the answer is already known, because
+`fact_mortgage_scenario` holds it.
+
+| Compared on the 1 223 rows that carry a price | Rows differing by more than one cent |
+|---|---|
+| loan amount | **0** |
+| insurance premium | **0** |
+| monthly payment at the qualifying rate | **0** |
+| income required | **0** |
+
+So the DAX below is not a re-reading of `fact_mortgage_scenario.sql` — it is a
+transcription of a chain that was checked against the table it has to agree
+with. ⚠️ **That is also why every formula here mirrors the SQL line for line,
+including the parts that look clumsy.** The `- 0.0001` on the band lookup and
+the rounding of the payment *before* it is divided by the GDS ratio are not
+style; changing either makes the page disagree with the oracle by a few dollars
+per sector, which is exactly the size of error nobody notices.
+
+## 13.3 Two seed tables to import, and one deliberately not
+
+Both **disconnected** — no relationship to anything. They are parameter
+lookups, read with explicit filters, never sliced by the page.
+
+| Import | Rows | What it carries |
+|---|---|---|
+| `marts.mortgage_insurance_premium_band` | 11 | the CMHC premium rate by amortization × LTV band × down-payment kind |
+| `marts.mortgage_underwriting_parameter` | 12 | GDS, the qualifying rate buffer and floor, the amortization, the compounding convention |
+
+⚠️ **`mortgage_down_payment_bracket` is NOT imported, and importing it would be
+a mistake.** The mart already publishes `minimum_down_payment` on every row,
+computed from that seed in SQL. Importing the bracket to re-derive the same
+figure in DAX would put a second definition of the legal minimum in the model —
+the one thing this section is organised to avoid. The measure reads the column.
+
+**Both tables keep their database names**, unlike the dimensions. The `dim_`
+convention does not apply: these are neither dimensions nor facts, and a name
+that matches the seed is what lets a reader find where the number came from.
+
+## 13.4 The what-if parameter
+
+**Modeling > New parameter > Numeric range.**
+
+| Field | Value |
+|---|---|
+| Name | `Down payment input` |
+| Data type | Whole number |
+| Minimum | 0 |
+| Maximum | 300000 |
+| Increment | 5000 |
+| Default | **50000** |
+
+**The name clears two collisions, and the reasoning is the one that named
+`Income input`.** `fact_mortgage_scenario[minimum_down_payment]` is a figure
+*derived from a published rule*; `Down payment input` is a number the reader
+types. And the measure `Down payment assumption` keeps its name because it
+still does what it says — it states the assumption, which is now the typed
+figure rather than the legal minimum.
+
+⚠️ **0 is a real input and must not be overloaded to mean "use the legal
+minimum".** A reader with nothing saved is the reader this project was built
+for, and the honest answer at 0 $ is *below the minimum down payment* on every
+sector. Making 0 mean something else would take the page's most common starting
+question and answer a different one.
+
+⚠️ **There is no "follow the mart" toggle either**, and the reason is on the
+record. Such a switch would rest on `SELECTEDVALUE ( …, <default> )`, whose
+default fires both when **nothing** is selected and when **several** things
+are — the DAX form of the blank-as-zero mechanism, written down on 2026-08-31
+when a vintage toggle was rejected for the same reason.
+
+**Why the default is 50 000 $, and what it moves.** Measured on 2026-09-09
+across the 54 sector × property-type slices of the most recent quarter, at the
+95 000 $ income the page opens on:
+
+| Legal minimum → 50 000 $ | Slices |
+|---|---|
+| `Out of reach` → **`Below the legal minimum`** | **19** |
+| `Out of reach` → `Borderline` | 2 |
+| `Borderline` → `Within reach` | 1 |
+| unchanged | 32 |
+
+**Nineteen of the twenty-two are not verdicts flipping, they are verdicts
+ceasing to exist** — the scenario becomes one the law does not allow, and the
+page stops answering rather than answering wrongly. Nothing here is an
+approximation: at 50 000 $ the chain computes exactly, against each sector's own
+published price.
+
+⚠️ **At 50 000 $ the plex carries no verdict at all** — nine sectors below the
+legal minimum, nine with no published price. That is true, and it is
+recognisable at a glance: nobody expects to buy a plex with 50 000 $ down. It
+is left as it falls, on the same grounds the page already shows nine plex
+sectors *Out of reach* today.
+
+## 13.5 The measures read `fact_mortgage_scenario`, not `fact_affordability`
+
+**This is the J4.1 split line, used for the purpose it was drawn for.** A down
+payment is a property of the purchase, not of the household: it belongs on the
+1 653-row table keyed to quarter × area × property type, not on the 141 462-row
+table that repeats each purchase once per household profile. Reading the
+household table for a household-independent quantity would work — and would
+re-create the confusion two tables were built to prevent.
+
+It carries every input the chain needs, on one row: `median_price`,
+`minimum_down_payment`, `contract_rate_percent`.
+
+**Nothing has to be created in the model.** `Sector`, `'date'` and
+`property_type` already reach `fact_mortgage_scenario` — three of the thirteen
+relationships listed in `powerbi/README.md` section 5.
+
+**`Sectors priced` and `Tracts priced` stay on `fact_affordability`**, and that
+is a deliberate exception. `Tracts priced` counts census tracts, which the
+scenario table does not carry. `Sectors priced` stays beside it so the KPI row's
+denominator comes from one table. The two tables could in principle disagree
+about which sector has a price — and the check that they do not is **already in
+the oracle**, written on 2026-08-30 for a different reason: across all 141 462
+rows there is no row where a median price is present and a required income is
+missing, nor the reverse.
+
+## 13.6 The regime, decided in exactly one place
+
+```dax
+Down payment regime code =
+VAR Price   = CALCULATE ( AVERAGE ( fact_mortgage_scenario[median_price] ) )
+VAR MinDown = CALCULATE ( AVERAGE ( fact_mortgage_scenario[minimum_down_payment] ) )
+VAR Down    = 'Down payment input'[Down payment input Value]
+VAR Ltv     = DIVIDE ( Price - Down, Price )
+RETURN
+    SWITCH (
+        TRUE (),
+        ISBLANK ( Price ), 0,   -- no published price
+        Down >= Price,     1,   -- cash purchase, no mortgage
+        Down < MinDown,    2,   -- below the legal minimum
+        Ltv <= 0.80,       3,   -- uninsured
+        4                       -- insured
+    )
+```
+
+**⚠️ THE ORDER OF THESE FIVE TESTS IS THE WHOLE MEASURE.** Written the other way
+round — band first, legality afterwards — a down payment below the legal minimum
+pushes the LTV above 95 %, where **no band exists in the seed**, the lookup
+returns blank, and a `coalesce` reads that blank as a premium of *zero*. The
+naive probe of 2026-08-31 did exactly that and produced a loan **1.23 times
+larger than the legal one**, with no premium. Fifth appearance of the
+blank-as-zero mechanism in this project.
+
+**With the guard first, the two dangerous branches stop existing rather than
+being caught.** Measured on 2026-09-09 over the whole table at seven slider
+positions from 0 to 300 000 $:
+
+- **`no band` occurs 0 times**, at every position. Once the down payment is at
+  or above the legal minimum, the LTV cannot exceed 95 %: that *is* what the
+  minimum is.
+- **`not insurable` becomes unreachable.** Above 1.5 M$ the legal minimum is
+  20 %, so an LTV above 80 % there already means *below the minimum*. The mart
+  carries the status for its own scenario; the slider chain never needs it.
+
+⚠️ **`0.80` is a constant in this formula, and it is the third place it lives**
+— `fact_mortgage_scenario.sql` writes it twice. Decided on
+2026-09-09: **accepted and documented**, rather than promoted to a seed row.
+What it costs is stated plainly here so nobody has to rediscover it: the
+threshold above which mortgage insurance is compulsory is a published rule, and
+none of the three places it appears says where it comes from. The control is
+`scripts/report_oracle.py`, which computes the same regimes in SQL — a page that
+disagrees with it has one of the three copies wrong.
+
+⚠️ **The regime is a *code*, not a label, and the chain reads the code.** A
+chain that re-derived the regime from its own arithmetic could refuse where the
+regime said *insured*, or compute where it said *below the minimum*. One
+decision, read twice.
+
+## 13.7 The chain
+
+```dax
+Income required at this down payment =
+VAR Regime = [Down payment regime code]
+VAR Price  = CALCULATE ( AVERAGE ( fact_mortgage_scenario[median_price] ) )
+VAR Rate   = CALCULATE ( AVERAGE ( fact_mortgage_scenario[contract_rate_percent] ) )
+VAR Down   = 'Down payment input'[Down payment input Value]
+VAR Loan0  = Price - Down
+VAR Ltv    = DIVIDE ( Loan0, Price )
+
+VAR Years =
+    CALCULATE (
+        MAX ( mortgage_underwriting_parameter[parameter_value] ),
+        mortgage_underwriting_parameter[parameter_name] = "max_amortization_years_standard"
+    )
+VAR Compounding =
+    CALCULATE (
+        MAX ( mortgage_underwriting_parameter[parameter_value] ),
+        mortgage_underwriting_parameter[parameter_name] = "interest_compounding_periods_per_year"
+    )
+VAR Gds =
+    CALCULATE (
+        MAX ( mortgage_underwriting_parameter[parameter_value] ),
+        mortgage_underwriting_parameter[parameter_name] = "gds_max_ratio"
+    ) / 100
+VAR BufferInsured =
+    CALCULATE (
+        MAX ( mortgage_underwriting_parameter[parameter_value] ),
+        mortgage_underwriting_parameter[parameter_name] = "qualifying_rate_buffer"
+    )
+VAR BufferUninsured =
+    CALCULATE (
+        MAX ( mortgage_underwriting_parameter[parameter_value] ),
+        mortgage_underwriting_parameter[parameter_name] = "qualifying_rate_buffer_uninsured"
+    )
+VAR FloorInsured =
+    CALCULATE (
+        MAX ( mortgage_underwriting_parameter[parameter_value] ),
+        mortgage_underwriting_parameter[parameter_name] = "qualifying_rate_floor"
+    )
+VAR FloorUninsured =
+    CALCULATE (
+        MAX ( mortgage_underwriting_parameter[parameter_value] ),
+        mortgage_underwriting_parameter[parameter_name] = "qualifying_rate_floor_uninsured"
+    )
+
+VAR Band =
+    MAXX (
+        FILTER (
+            ALL ( mortgage_insurance_premium_band ),
+            mortgage_insurance_premium_band[amortization_years] = Years
+                && mortgage_insurance_premium_band[down_payment_kind] = "traditional"
+                && Ltv > mortgage_insurance_premium_band[ltv_from] - 0.0001
+                && Ltv <= mortgage_insurance_premium_band[ltv_to]
+        ),
+        mortgage_insurance_premium_band[premium_rate]
+    )
+
+VAR Premium = IF ( Regime = 4, ROUND ( Loan0 * Band, 2 ), 0 )
+VAR Loan    = Loan0 + Premium
+
+VAR QualifyingRate =
+    MAX (
+        Rate + IF ( Regime = 3, BufferUninsured, BufferInsured ),
+        IF ( Regime = 3, FloorUninsured, FloorInsured )
+    )
+VAR MonthlyRate =
+    POWER ( 1 + QualifyingRate / 100 / Compounding, Compounding / 12 ) - 1
+VAR Payment =
+    ROUND (
+        DIVIDE ( Loan * MonthlyRate, 1 - POWER ( 1 + MonthlyRate, - Years * 12 ) ),
+        2
+    )
+RETURN
+    IF (
+        Regime < 3 || ( Regime = 4 && ISBLANK ( Band ) ),
+        BLANK (),
+        ROUND ( Payment * 12 / Gds, 2 )
+    )
+```
+
+**Read once, in order, this is the same chain the SQL runs.** A price, minus
+what the buyer puts down, is the loan before insurance. Insurance is added to
+the loan when the loan is above 80 % of the price, at the rate the seed
+publishes for that band. The payment is computed not at the rate the buyer
+gets but at the **qualifying** rate the regulator imposes — the contract rate
+plus two points, or 5.25 %, whichever is higher. And the income required is
+that payment, over a year, divided by the 39 % of gross income a lender allows
+to go to housing.
+
+**The five things worth knowing before editing it:**
+
+⚠️ **`POWER ( …, Compounding / 12 )` is not `/ 12`.** Canadian fixed-rate
+mortgages are quoted **half-yearly**, so the monthly rate is
+`(1 + annual/2)^(1/6) − 1`. The simpler form overstates every payment. The seed
+row that carries the convention says in its own text that it is *market
+practice, not law*.
+
+⚠️ **`Payment` is rounded to the cent BEFORE being divided by the GDS ratio.**
+`fact_mortgage_scenario.sql` rounds in exactly that order. Round once at the end
+instead and the page disagrees with the oracle by a few dollars a sector —
+enough to move a verdict that sits on the threshold, not enough for anyone to
+suspect the formula.
+
+⚠️ **The uninsured pair of underwriting parameters is read even though it is
+identical to the insured pair today.** Both stand at a 2-point buffer and a
+5.25 % floor, so the 20 % threshold currently changes the premium and the loan
+but not the qualifying rate. Reading the right pair costs four lines and means
+the model follows if OSFI and CMHC ever diverge — which is the only reason both
+pairs are seeded separately.
+
+⚠️ **`ISBLANK ( Band )` on the insured branch is written and cannot fire
+today.** Section 13.6 measured it: with the legality guard first, the band gap
+above 95 % LTV is unreachable. It is written anyway, and this note is what
+stops a later reader from deleting it as dead code — the same treatment the
+sixth branch of `Verdict` received on 2026-08-31.
+
+⚠️ **`MAX ( a, b )` here is the two-scalar form**, not the column aggregation.
+It is DAX's `greatest()`, and it is what makes the floor a floor.
+
+## 13.8 The verdict now has six classes, and the control changes with it
+
+```dax
+Verdict at this down payment =
+VAR Areas    = COUNTROWS ( VALUES ( fact_mortgage_scenario[area_code] ) )
+VAR Income   = 'Income input'[Income input Value]
+VAR Regime   = [Down payment regime code]
+VAR Required = [Income required at this down payment]
+RETURN
+    SWITCH (
+        TRUE (),
+        Areas > 1,  "Several areas selected",
+        Regime = 0, "No published price",
+        Regime = 1, "Cash purchase",
+        Regime = 2, "Below the legal minimum",
+        ISBLANK ( Required ), "Not evaluated",
+        Income >= Required * 1.10, "Within reach",
+        Income >= Required, "Borderline",
+        "Out of reach"
+    )
+```
+
+⚠️ **`Areas > 1` comes first, and it is the guard section 12.5 asked for on a
+different card.** A median of two medians does not exist: with two sectors
+selected, `AVERAGE ( median_price )` returns a number that belongs to no
+property. The counting measures below are safe from it by construction —
+they evaluate this measure once per sector inside a `FILTER` — but a card
+reading it directly is not.
+
+| Verdict | Colour | What it says |
+|---|---|---|
+| Within reach | `#17527A` | the income clears the required figure by at least 10 % |
+| Cash purchase | `#17527A` | the down payment covers the price; there is no loan, and the income does not matter |
+| Borderline | `#5B9BC4` | the income clears the required figure, but by less than 10 % |
+| Out of reach | `#A6ADB4` | evaluated, and the income does not clear it |
+| Below the legal minimum | `#7A5C4B` | **a refusal, not an absence.** The law does not allow this purchase at this down payment |
+| No published price | `#E8EAEC` | APCIQ printed no median for this slice |
+
+**The 10 % band is still a display convention of this project and still lives in
+one measure only.** The counting measures below read *this* verdict rather than
+repeating the comparison — the `Sector bar colour` principle, applied to the
+KPI row as well. What they duplicate is the *label*, not the threshold, and a
+renamed label fails loudly: the counts stop adding up to eighteen.
+
+### The palette was measured, and the measurement found an inherited fault
+
+`scripts/validate_palette.py` computes CIEDE2000 between every pair, in normal
+vision and through all three dichromacies, and reports the **worst** of the
+four. Its first run, on the four colours the page already had:
+
+> `Out of reach` / `No published price` — **7.0 in deuteranopia**
+
+Two greys separated by lightness alone, accepted by eye on 2026-08-30. Lightness
+is the axis colour blindness leaves intact, which is why it looked safe — and
+also the axis two light greys on a light background have almost none of. **Out
+of reach therefore moves from `#C7CCD1` to `#A6ADB4`** in the same pass that
+adds the fifth class.
+
+| The five, measured | |
+|---|---|
+| pairs tested | **10** |
+| worst pair | **14.8** — Borderline / Out of reach, in protanopia |
+| pairs below the threshold of 10 | **0** |
+
+Negative control run the same day: putting `#C7CCD1` back alongside the new set
+still fails, at 7.0. ⚠️ **`#C7CCD1` remains correct on page 1**, where it is the
+*Blank area* grey of a map with no second grey beside it. This is a page 3
+change, not a project-wide one.
+
+```dax
+Sector bar colour =
+SWITCH (
+    [Verdict at this down payment],
+    "Within reach",            "#17527A",
+    "Cash purchase",           "#17527A",
+    "Borderline",              "#5B9BC4",
+    "Out of reach",            "#A6ADB4",
+    "Below the legal minimum", "#7A5C4B",
+    "#E8EAEC"
+)
+```
+
+### The three counting measures
+
+```dax
+Sectors within reach of this income =
+VAR Reached =
+    COUNTROWS (
+        FILTER (
+            VALUES ( fact_mortgage_scenario[area_code] ),
+            CALCULATE ( [Verdict at this down payment] )
+                IN { "Within reach", "Cash purchase" }
+        )
+    )
+RETURN IF ( ISBLANK ( Reached ), 0, Reached )
+```
+
+```dax
+Sectors borderline =
+VAR Band =
+    COUNTROWS (
+        FILTER (
+            VALUES ( fact_mortgage_scenario[area_code] ),
+            CALCULATE ( [Verdict at this down payment] ) = "Borderline"
+        )
+    )
+RETURN IF ( ISBLANK ( Band ), 0, Band )
+```
+
+```dax
+Sectors below the legal minimum =
+VAR Refused =
+    COUNTROWS (
+        FILTER (
+            VALUES ( fact_mortgage_scenario[area_code] ),
+            CALCULATE ( [Verdict at this down payment] ) = "Below the legal minimum"
+        )
+    )
+RETURN IF ( ISBLANK ( Refused ), 0, Refused )
+```
+
+**A cash purchase counts as within reach, and the tooltip is where the
+difference is read.** It is the extreme case of affordable — no loan at all —
+so counting it anywhere else would put a sector nobody needs an income for into
+a column of sectors that are out of reach. It is unreachable on the most recent
+quarter at every slider position, and reachable on the early quarters of the
+archive: a page checked only on 2026 Q2 has not seen it.
+
+**The `IF ( ISBLANK ( … ), 0, … )` is kept on all three.** `COUNTROWS` over an
+empty table returns `BLANK()`, and a card that goes empty reads as broken where
+a firm `0` reads as an answer. At 0 $ on the slider, two of these three
+measures are legitimately zero on every slice.
+
+⚠️ **The page's arithmetic check changes shape.** It was *four counts totalling
+eighteen*. It is now **six**, and the two new ones are refusals. Measured on
+2026-09-09 at seven slider positions and on all three property types: the six
+classes total 18 in every one of the 21 combinations, with no exception.
+
+## 13.9 `Down payment assumption`, rewritten
+
+```dax
+Down payment assumption =
+VAR Down   = 'Down payment input'[Down payment input Value]
+VAR Areas  = COUNTROWS ( VALUES ( fact_mortgage_scenario[area_code] ) )
+VAR Price  = CALCULATE ( AVERAGE ( fact_mortgage_scenario[median_price] ) )
+VAR Regime = [Down payment regime code]
+VAR Amount = FORMAT ( Down, "#,##0 $" )
+RETURN
+    SWITCH (
+        TRUE (),
+        Areas > 1 || ISBLANK ( Price ),
+            Amount & " down. The share of the price it represents differs by "
+                & "sector — select one to read it.",
+        Regime = 1,
+            Amount & " down covers the whole published median price here: "
+                & "a cash purchase, with no mortgage and no income requirement.",
+        Regime = 2,
+            Amount & " down is "
+                & FORMAT ( DIVIDE ( Down, Price ), "0.0%" )
+                & " of the published median price — below the legal minimum for "
+                & "this price. No figure is shown, because the purchase is not "
+                & "one a lender may make.",
+        Regime = 3,
+            Amount & " down is "
+                & FORMAT ( DIVIDE ( Down, Price ), "0.0%" )
+                & " of the published median price: at or below 80 % "
+                & "loan-to-value, so uninsured and with no CMHC premium.",
+        Amount & " down is "
+            & FORMAT ( DIVIDE ( Down, Price ), "0.0%" )
+            & " of the published median price: above 80 % loan-to-value, so "
+            & "insured, and the CMHC premium is added to the loan."
+    )
+```
+
+**The card was the thing that stopped the page implying it modelled savings.
+Now that the page does model them, the card is what stops it implying the
+figure is complete.** It names the amount, the share of the price, and the
+regime — three things that change together at the 20 % threshold and that a
+reader cannot infer from a bar chart.
+
+⚠️ **It refuses to state a share when more than one sector is in context**, for
+the reason section 13.8 gives: the share would be computed against a mean of
+medians.
+
+⚠️ **No example of its output is reproduced in this file.** The share is a typed
+number divided by an APCIQ median, so printing one here would reproduce the
+median indirectly. Read it on screen.
+
+## 13.10 What changes on page 3
+
+| Element | Before | After |
+|---|---|---|
+| Slicer | `Income input` | `Income input` **and `Down payment input`** |
+| Bar | `Income required, lower bound (mean)` | **`Income required at this down payment`** |
+| Bar colour | `Sector bar colour` | unchanged name, new body, five colours |
+| Map colour | `Sector bar colour` | idem |
+| Map / bar tooltips | `Verdict for this income` | **`Verdict at this down payment`**, plus `Down payment assumption` |
+| Table | `Verdict for this income`, `Income required, lower bound (mean)` | the two measures above |
+| KPI | within reach · borderline · of priced | **plus `Sectors below the legal minimum`** |
+| Card | `Down payment assumption` | rewritten, section 13.9 |
+
+⚠️ **`Income required, lower bound (mean)` is NOT deleted — page 2's KPI row
+reads it.** The two coexist because they answer different scenarios on different
+pages, and the rule that keeps them apart is simple: **they must never appear on
+the same page.** On page 2 the down payment is the legal minimum; on page 3 it is
+whatever the reader typed.
+
+⚠️ **`Verdict for this income` is superseded by `Verdict at this down payment`,
+and `Verdict for the selected place` was already renamed** by section 12.4.
+Delete the old verdict **after** rebranching everything that reads it — the bar,
+the map, the table, the colour measure, and `Verdict for the selected sector`.
+Power BI reports a broken measure where it is *used*, not where it was deleted.
+
+### Section 12.4, still outstanding, belongs in this same session
+
+Applied nowhere as of 2026-09-09. It is page 3, so it is done here:
+
+1. Synchronise the `Sector[name]` slicer of section 12.1 onto page 3 — pages
+   **1 and 3**, never page 4.
+2. Rename `Verdict for the selected place` to **`Verdict for the selected
+   sector`**, and swap its test to `[Area is narrowed] = 1`.
+3. Put `REMOVEFILTERS ( Sector )` on the three island KPI cards. **`Place` is
+   gone, so `Sector` alone is now enough** — and it is the only form that still
+   resolves.
+4. Point `Verdict for the selected sector` at `[Verdict at this down payment]`.
+
+## 13.11 Acceptance
+
+Run the oracle, read the blocks titled **"PAGE 3 — The typed down payment"**.
+
+```bash
+.venv/Scripts/python.exe scripts/report_oracle.py
+.venv/Scripts/python.exe scripts/report_oracle.py --down-payment 100000
+```
+
+**The counts below are counts of sectors, so they are written here.** Every
+dollar figure on this page derives from an APCIQ median and is therefore printed
+by the oracle at run time and nowhere else.
+
+Most recent quarter, income **95 000 $**, the six verdicts read off the table:
+
+| Down payment | Type | Within | Border | Out | Below min | Cash | No price |
+|---|---|---|---|---|---|---|---|
+| **0 $** | condominium | 0 | 0 | 0 | **17** | 0 | 1 |
+| **25 000 $** | condominium | 6 | 1 | 2 | 8 | 0 | 1 |
+| **50 000 $** *(default)* | condominium | **7** | **2** | **7** | **1** | 0 | **1** |
+| 100 000 $ | condominium | 10 | 2 | 5 | 0 | 0 | 1 |
+| 150 000 $ | condominium | 13 | 3 | 1 | 0 | 0 | 1 |
+| 300 000 $ | condominium | 16 | 1 | 0 | 0 | 0 | 1 |
+| **50 000 $** | plex | 0 | 0 | 0 | **9** | 0 | **9** |
+| **50 000 $** | single-family | 0 | 0 | 5 | 9 | 0 | 4 |
+| 300 000 $ | single-family | 4 | 2 | 7 | **1** | 0 | 4 |
+
+**Every row totals 18.** That is the check to run first, and it is the one that
+catches a measure applying its own threshold.
+
+| Case | What must happen |
+|---|---|
+| **Slider at 0 $** | every priced sector reads *Below the legal minimum*; the bar chart is empty of bars and the KPI cards read a firm **0**, never blank |
+| **Slider at 300 000 $, single-family** | **one sector still refuses.** The refusal branch is never empty, not even at the ceiling — those are the sectors whose median is at or above 1.5 M$, where the legal minimum is 20 % |
+| **Slider at 100 000 $, condominium** | both regimes are on screen at once — nine sectors uninsured, eight insured. `Down payment assumption` must change its sentence as the map selection moves between them |
+| **Two sectors selected** | `Verdict at this down payment` reads *Several areas selected*, and `Down payment assumption` refuses to state a share |
+| **An early quarter at 300 000 $** | *Cash purchase* appears, coloured as within reach. It never appears on the most recent quarter at any slider position |
+| **Page 2** | **unchanged at every slider position.** If a page 2 figure moves when the down payment slider moves, a page 3 measure has been dropped into the wrong page |
+
+⚠️ **Dragging the slider is part of the acceptance, not a nicety.** The
+constant line at `Income input Value` and the bars now move on two independent
+axes, and the fault this page is exposed to is a card frozen on one of them
+while the other moves — every figure right, the verdict false. That is the same
+fault the typed constant line was warned about on 2026-08-30.

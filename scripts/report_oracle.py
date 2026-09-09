@@ -61,6 +61,231 @@ def table(cur, title: str, note: str, sql: str, params: tuple = ()) -> None:
         print("  " + " | ".join(str(v).ljust(widths[i]) for i, v in enumerate(row)))
 
 
+
+# ----------------------------------------------------------------------------
+# The mortgage chain, with the down payment as a free parameter.
+#
+# fact_mortgage_scenario holds ONE scenario: the legal minimum down payment.
+# Page 3 lets the reader type another, and computes the rest in DAX. So the
+# oracle has to be able to compute the same thing, at any down payment, or
+# there is nothing to check the page against.
+#
+# This is the chain that was validated on 2026-09-09 by feeding it the legal
+# minimum: it reproduced all four money columns of the mart to the cent on the
+# 1 223 rows that carry a price. _reproduction_sql() below re-runs that check
+# on every invocation, so the two cannot drift apart in silence.
+# ----------------------------------------------------------------------------
+
+_CHAIN = """
+with grid as ({grid}),
+
+parameter as (
+    select
+        max(case when parameter_name = 'gds_max_ratio'
+                 then parameter_value end) / 100.0 as gds_max_ratio,
+        max(case when parameter_name = 'qualifying_rate_buffer'
+                 then parameter_value end)         as buffer_insured,
+        max(case when parameter_name = 'qualifying_rate_floor'
+                 then parameter_value end)         as floor_insured,
+        max(case when parameter_name = 'qualifying_rate_buffer_uninsured'
+                 then parameter_value end)         as buffer_uninsured,
+        max(case when parameter_name = 'qualifying_rate_floor_uninsured'
+                 then parameter_value end)         as floor_uninsured,
+        max(case when parameter_name = 'max_amortization_years_standard'
+                 then parameter_value end)         as amortization_years,
+        max(case when parameter_name = 'interest_compounding_periods_per_year'
+                 then parameter_value end)         as compounding_per_year
+    from marts.mortgage_underwriting_parameter
+),
+
+base as (
+    select s.area_code, s.property_type_code, s.edition_label,
+           s.median_price, s.contract_rate_percent, s.minimum_down_payment,
+           s.loan_amount                     as mart_loan_amount,
+           s.insurance_premium               as mart_premium,
+           s.monthly_payment_qualifying_rate as mart_payment,
+           s.income_required_lower_bound     as mart_income_required
+    from marts.fact_mortgage_scenario s
+    where 1 = 1 {where}
+),
+
+scenario as (
+    select base.*, parameter.*, {down_expr} as down_payment
+    from base cross join parameter cross join grid
+),
+
+with_ltv as (
+    select scenario.*,
+           scenario.median_price - scenario.down_payment as loan_before_premium,
+           (scenario.median_price - scenario.down_payment)
+               / nullif(scenario.median_price, 0)::numeric as loan_to_value
+    from scenario
+),
+
+with_band as (
+    select with_ltv.*, band.premium_rate
+    from with_ltv
+    left join marts.mortgage_insurance_premium_band band
+           on band.amortization_years = with_ltv.amortization_years
+          and band.down_payment_kind  = 'traditional'
+          and with_ltv.loan_to_value  >  band.ltv_from - 0.0001
+          and with_ltv.loan_to_value <= band.ltv_to
+),
+
+regime as (
+    /*
+        THE LEGALITY GUARD COMES FIRST, and the order is the point.
+        Written the other way round, a down payment below the legal minimum
+        pushes the LTV past 95 per cent, where no band exists, and a coalesce
+        reads the missing band as a premium of zero. Section 13.6.
+
+        -1 is "a band was expected and none was found". It must never occur:
+        once the down payment is at or above the legal minimum, the LTV cannot
+        exceed 95 per cent.
+    */
+    select with_band.*,
+        case
+            when median_price is null                 then 0
+            when down_payment >= median_price         then 1
+            when down_payment <  minimum_down_payment then 2
+            when loan_to_value <= 0.80                then 3
+            when premium_rate is not null             then 4
+            else -1
+        end as regime
+    from with_band
+),
+
+money as (
+    select regime.*,
+        case when regime.regime = 4
+             then round(regime.loan_before_premium * regime.premium_rate, 2)
+             when regime.regime = 3 then 0::numeric end as premium,
+        case when regime.regime in (3, 4)
+             then greatest(
+                    regime.contract_rate_percent
+                      + case when regime.regime = 3 then regime.buffer_uninsured
+                             else regime.buffer_insured end,
+                    case when regime.regime = 3 then regime.floor_uninsured
+                         else regime.floor_insured end)
+             end as qualifying_rate_percent
+    from regime
+),
+
+compounded as (
+    select money.*,
+        money.loan_before_premium + coalesce(money.premium, 0) as loan_amount,
+        power(1 + (money.qualifying_rate_percent / 100.0
+                   / money.compounding_per_year)::double precision,
+              (money.compounding_per_year / 12.0)::double precision) - 1 as monthly_rate
+    from money
+),
+
+paid as (
+    select compounded.*,
+        case when regime in (3, 4) then
+            round((loan_amount::double precision * monthly_rate
+                   / (1 - power(1 + monthly_rate,
+                                -(amortization_years * 12)::double precision)))::numeric, 2)
+        end as payment_qualifying
+    from compounded
+),
+
+final as (
+    /*
+        The payment is rounded to the cent BEFORE the division by the GDS
+        ratio, exactly as fact_mortgage_scenario.sql does it. Rounding once at
+        the end instead moves the answer by a few dollars per sector.
+    */
+    select paid.*,
+        case when payment_qualifying is not null
+             then round(payment_qualifying * 12 / gds_max_ratio, 2) end as income_required
+    from paid
+)
+"""
+
+# The six classes of section 13.8, written once. The 10 per cent band is a
+# display convention of this project, and this is the only place the oracle
+# states it.
+_VERDICT = """
+        case
+            when regime = 0 then 'No published price'
+            when regime = 1 then 'Cash purchase'
+            when regime = 2 then 'Below the legal minimum'
+            when income_required is null then 'Not evaluated'
+            when %s >= income_required * 1.10 then 'Within reach'
+            when %s >= income_required then 'Borderline'
+            else 'Out of reach'
+        end
+"""
+
+
+def _down_payment_chain(grid: str, where: str) -> str:
+    """One row per sector, at the down payment `grid` yields."""
+    return _CHAIN.format(grid=grid, where=where, down_expr="grid.down_payment") + f"""
+    select property_type_code,
+           area_code,
+           regime,
+           round(loan_to_value, 4) as ltv,
+           -- Shown only where it is APPLIED. The band lookup succeeds below
+           -- 80 per cent LTV too, and printing that rate beside a premium of
+           -- zero is how the mart's own insurance_premium_rate column misleads
+           -- on its 29 not_insurable rows.
+           case when regime = 4 then premium_rate end as premium_rate,
+           premium,
+           income_required,
+           {_VERDICT} as verdict
+    from final
+    order by property_type_code, income_required nulls last, area_code
+    """
+
+
+def _verdict_grid_sql() -> str:
+    """The six counts, at seven slider positions, for the three property types."""
+    return _CHAIN.format(
+        grid="select * from (values (0), (25000), (50000), (100000), (150000), "
+             "(200000), (300000)) as g(down_payment)",
+        where="and not s.is_island_aggregate "
+              "and s.edition_year = %s and s.edition_quarter = %s",
+        down_expr="grid.down_payment",
+    ) + f"""
+    select down_payment,
+           property_type_code,
+           count(*) filter (where verdict = 'Within reach')            as within_reach,
+           count(*) filter (where verdict = 'Borderline')              as borderline,
+           count(*) filter (where verdict = 'Out of reach')            as out_of_reach,
+           count(*) filter (where verdict = 'Below the legal minimum') as below_minimum,
+           count(*) filter (where verdict = 'Cash purchase')           as cash,
+           count(*) filter (where verdict = 'No published price')      as no_price,
+           count(*) filter (where verdict = 'Not evaluated')           as not_evaluated,
+           count(*)                                                    as total
+    from (select down_payment, property_type_code, {_VERDICT} as verdict from final) v
+    group by 1, 2
+    order by 1, 2
+    """
+
+
+def _reproduction_sql() -> str:
+    """Fed the legal minimum, the chain must land on the mart. Every count 0."""
+    return _CHAIN.format(
+        grid="select 1 as unused",
+        where="",
+        down_expr="base.minimum_down_payment",
+    ) + """
+    select count(*)                                                          as rows_compared,
+           count(*) filter (where abs(loan_amount - mart_loan_amount) > 0.01) as loan_differs,
+           count(*) filter (where abs(coalesce(premium, 0)
+                                      - coalesce(mart_premium, 0)) > 0.01)    as premium_differs,
+           count(*) filter (where abs(payment_qualifying - mart_payment) > 0.01)
+                                                                              as payment_differs,
+           count(*) filter (where abs(income_required - mart_income_required) > 0.01)
+                                                                              as income_differs,
+           count(*) filter (where regime = -1)                                as band_not_found,
+           count(*) filter (where regime = 2)                                 as below_minimum
+    from final
+    where median_price is not null
+    """
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -74,6 +299,13 @@ def main() -> int:
         default=95_000,
         help="household income for page 3, in dollars. Defaults to the figure "
              "used in section 31 of the brief.",
+    )
+    parser.add_argument(
+        "--down-payment",
+        type=int,
+        default=50_000,
+        help="down payment for page 3, in dollars. Defaults to the opening "
+             "position of the Down payment input slider.",
     )
     args = parser.parse_args()
 
@@ -650,6 +882,59 @@ def main() -> int:
             group by 1
             order by 1
             """,
+        )
+
+        # ------------------------------------------------------------------
+        # J4.2 3/4 . 3 -- the typed down payment. Section 13 of report-design.
+        # ------------------------------------------------------------------
+
+        table(
+            cur,
+            f"PAGE 3 -- The typed down payment, at {args.down_payment:,} $",
+            "One row per sector, in the order the bar chart draws them, for all\n"
+            "THREE property types -- the page shows one at a time. The DAX chain\n"
+            "of section 13.7 must reproduce income_required to the cent.\n"
+            "\n"
+            "regime is what Down payment regime code returns:\n"
+            "  0 no published price   1 cash purchase   2 below the legal minimum\n"
+            "  3 uninsured            4 insured",
+            _down_payment_chain(
+                "select %s::numeric as down_payment",
+                "and s.edition_year = %s and s.edition_quarter = %s",
+            ),
+            (args.down_payment, year, quarter, args.income, args.income),
+        )
+
+        table(
+            cur,
+            "PAGE 3 -- The six verdict classes must total 18",
+            "The arithmetic check of the page, at seven slider positions. It was\n"
+            "four counts totalling eighteen before the down payment existed; the\n"
+            "two refusals are new.\n"
+            "\n"
+            "A row that does not total 18 means a measure applied its own\n"
+            "threshold instead of reading [Verdict at this down payment].\n"
+            "\n"
+            "Two cases are worth looking for by name:\n"
+            "  - at 0 $, every priced sector is below the legal minimum\n"
+            "  - at 300 000 $, single-family STILL refuses one sector. Those are\n"
+            "    the medians at or above 1.5 M$, where the minimum is 20 per cent.",
+            _verdict_grid_sql(),
+            (year, quarter, args.income, args.income),
+        )
+
+        table(
+            cur,
+            "PAGE 3 -- The chain fed the legal minimum must reproduce the mart",
+            "The probe that licenses every formula of section 13, re-run here so\n"
+            "it keeps being true. The same chain, given the down payment the mart\n"
+            "assumed, has to land on the mart's own figures.\n"
+            "\n"
+            "Every count below must be 0. A non-zero one means the SQL here and\n"
+            "fact_mortgage_scenario.sql have drifted apart -- and since the DAX\n"
+            "was transcribed from this chain, the report drifted with it.",
+            _reproduction_sql(),
+            (),
         )
 
         print(f"\n{'=' * 78}")
