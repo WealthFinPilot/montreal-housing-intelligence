@@ -524,29 +524,40 @@ def main() -> int:
             "COUNTROWS and DISTINCTCOUNT both return blank over an empty set, and\n"
             "no sector is within reach at the low end of the slicer.\n"
             "\n"
-            "The same four counts are the map's four colour classes, because the map\n"
-            "reads Sector bar colour, which reads Verdict for this income. Counting\n"
-            "shapes of each shade must reproduce this row -- and a shape that failed\n"
-            "to join carries no colour at all, so the four would fall short of 18.",
+            "⚠️ THE MAP NO LONGER COUNTS EIGHTEEN. Since 2026-09-09 page 3 draws\n"
+            "the 36 administrative places, not the 18 sectors, so the shapes\n"
+            "column below is what to count on screen. The KPI cards still count\n"
+            "sectors: 12 blue shapes beside a card reading 6 is correct, and the\n"
+            "text box under the map is what tells the reader not to count shapes.",
             """
             with per_sector as (
-              select a.apciq_sector_number, avg(a.income_required_lower_bound) as required
+              select a.apciq_sector_number,
+                     a.apciq_geography_key,
+                     avg(a.income_required_lower_bound) as required
               from marts.fact_affordability a
               where a.property_type_code = 'condo'
                 and a.household_profile_code = 'couple'
                 and a.edition_year = %s and a.edition_quarter = %s
-              group by a.apciq_sector_number
+              group by 1, 2
+            ),
+            classified as (
+              select per_sector.*,
+                     case when required is null              then 'no published price'
+                          when %s >= required * 1.10         then 'within reach'
+                          when %s >= required                then 'borderline'
+                          else                                    'out of reach'
+                     end as verdict
+              from per_sector
             )
-            select count(*) filter (where required is not null)                        as sectors_priced,
-                   count(*) filter (where required is not null and %s >= required * 1.10) as within_reach,
-                   count(*) filter (where required is not null and %s >= required
-                                      and %s < required * 1.10)                        as borderline,
-                   count(*) filter (where required is not null and %s < required)      as out_of_reach,
-                   count(*) filter (where required is null)                            as no_price,
-                   count(*)                                                            as sectors_total
-            from per_sector
+            select coalesce(c.verdict, 'TOTAL -- must read 18 and 36') as verdict,
+                   count(distinct c.apciq_sector_number)               as sectors,
+                   count(m.place_key)                                  as shapes
+            from classified c
+            join marts.map_place m on m.apciq_geography_key = c.apciq_geography_key
+            group by rollup (c.verdict)
+            order by c.verdict nulls last
             """,
-            (year, quarter, args.income, args.income, args.income, args.income),
+            (year, quarter, args.income, args.income),
         )
 
         table(

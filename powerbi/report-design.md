@@ -847,7 +847,13 @@ own household income was measured too — it reproduces `meets_income_requiremen
 which *is* page 2, and it would take `Income input` out of the loop on the one
 page whose only control is that slider.
 
-So the map here is the **eighteen sectors, coloured by the verdict**: 18 shapes
+⚠️ **SUPERSEDED ON 2026-09-09 — this map now draws the 36 places. See section
+13.12.** What follows is kept because its refusal of a *census tract* map still
+holds. What expired is the second argument: the sector file was free because
+page 1 used it, and page 1 moved to the 36 land-clipped places on 2026-09-01,
+leaving this map alone with an outline nothing else in the report shares.
+
+So the map here was the **eighteen sectors, coloured by the verdict**: 18 shapes
 for 17 values, it moves with the slider, and it reuses the shape file of page 1
 at no extra cost. Two of the report's maps sharing one outline is not a
 weakness — the reader learns the island once and then compares a price to a
@@ -2206,10 +2212,26 @@ Sectors priced =
 VAR Priced =
     CALCULATE (
         DISTINCTCOUNT ( fact_affordability[apciq_sector_number] ),
-        NOT ISBLANK ( fact_affordability[median_price] )
+        NOT ISBLANK ( fact_affordability[median_price] ),
+        REMOVEFILTERS ( Sector )
     )
 RETURN IF ( ISBLANK ( Priced ), 0, Priced )
 ```
+
+⚠️ **`REMOVEFILTERS ( Sector )` was added on 2026-09-09, with the sector slicer,
+and it is what keeps this card a denominator.** Section 12.4. Without it,
+selecting one sector turns "6 of 17" into "0 of 1", which a reader takes as a
+statement about the island. Section 9.6 asked for `REMOVEFILTERS ( Place )`
+alongside it; `Place` is deleted, so `Sector` alone is now both sufficient and
+the only form that resolves.
+
+⚠️ **It also removes the page filter `Sector[geography_type] is apciq_sector`,
+and that is safe here for a measured reason.** `fact_affordability` holds
+**18 sector keys and zero island rows** — verified 2026-09-09, 141 462 rows,
+none of them keyed to anything but an APCIQ sector. The same gesture on
+`fact_mortgage_scenario` would not be safe: it carries **19** area codes and
+87 island rows, which is why the three counting measures of section 13.8 state
+the exclusion themselves instead of relying on a page filter.
 
 ```dax
 Tracts priced =
@@ -2238,12 +2260,15 @@ in the denominator and not in the numerator, and the oracle is what will say so.
 Sectors within reach of this income =
 VAR Income = 'Income input'[Income input Value]
 VAR Reached =
-    COUNTROWS (
-        FILTER (
-            VALUES ( fact_affordability[apciq_sector_number] ),
-            VAR Required = CALCULATE ( AVERAGE ( fact_affordability[income_required_lower_bound] ) )
-            RETURN NOT ISBLANK ( Required ) && Required * 1.10 <= Income
-        )
+    CALCULATE (
+        COUNTROWS (
+            FILTER (
+                VALUES ( fact_affordability[apciq_sector_number] ),
+                VAR Required = CALCULATE ( AVERAGE ( fact_affordability[income_required_lower_bound] ) )
+                RETURN NOT ISBLANK ( Required ) && Required * 1.10 <= Income
+            )
+        ),
+        REMOVEFILTERS ( Sector )
     )
 RETURN IF ( ISBLANK ( Reached ), 0, Reached )
 ```
@@ -2252,15 +2277,25 @@ RETURN IF ( ISBLANK ( Reached ), 0, Reached )
 Sectors borderline =
 VAR Income = 'Income input'[Income input Value]
 VAR Band =
-    COUNTROWS (
-        FILTER (
-            VALUES ( fact_affordability[apciq_sector_number] ),
-            VAR Required = CALCULATE ( AVERAGE ( fact_affordability[income_required_lower_bound] ) )
-            RETURN NOT ISBLANK ( Required ) && Required <= Income && Required * 1.10 > Income
-        )
+    CALCULATE (
+        COUNTROWS (
+            FILTER (
+                VALUES ( fact_affordability[apciq_sector_number] ),
+                VAR Required = CALCULATE ( AVERAGE ( fact_affordability[income_required_lower_bound] ) )
+                RETURN NOT ISBLANK ( Required ) && Required <= Income && Required * 1.10 > Income
+            )
+        ),
+        REMOVEFILTERS ( Sector )
     )
 RETURN IF ( ISBLANK ( Band ), 0, Band )
 ```
+
+⚠️ **These two bodies are transitional.** The down-payment block of section 13
+replaces both — they move onto `fact_mortgage_scenario` and read
+`[Verdict at this down payment]` instead of repeating the comparison. Section
+13.8 holds their final form, and it carries the island exclusion inside the
+measure rather than leaning on the page filter. `Sectors priced` above is not
+transitional: it stays on `fact_affordability`, and its body is final.
 
 **The `NOT ISBLANK` is not defensive padding — without it the measure is
 wrong.** A sector APCIQ did not price has no required income, so `AVERAGE`
@@ -4033,12 +4068,46 @@ SWITCH (
 
 ### The three counting measures
 
+All three count over the same universe, and **they define it themselves rather
+than inheriting it**:
+
+```dax
+The eighteen sectors, whatever the page is filtered on
+=  CALCULATETABLE (
+       VALUES ( fact_mortgage_scenario[area_code] ),
+       REMOVEFILTERS ( Sector ),
+       fact_mortgage_scenario[is_island_aggregate] = FALSE
+   )
+```
+
+⚠️ **`REMOVEFILTERS ( Sector )` and the island exclusion are one gesture, and
+splitting them is the fault.** These three cards must keep the island
+denominator when a sector is selected — that is what section 12.4 asks for, and
+"6 of 17" turning into "0 of 1" is why. But `REMOVEFILTERS ( Sector )` also
+removes the **page filter** `Sector[geography_type] is apciq_sector`, and
+`fact_mortgage_scenario` carries **19 area codes, one of them `island`**. Remove
+the one filter without stating the other and every count silently gains the
+island row: eighteen becomes nineteen, the arithmetic check stops adding up, and
+nothing raises an error.
+
+**This is the `RANKX` fault of 2026-08-31 in another costume.** There, ranking
+over `ALLSELECTED ( Sector[name] )` let the island row slip in at rank 9 and
+pushed every sector below it down a place, while the first rank stayed correct
+and nothing looked broken. A measure whose correctness depends on a filter
+somebody else has to remember to leave in place is not a measure, it is a trap.
+
 ```dax
 Sectors within reach of this income =
+VAR Sectors =
+    CALCULATETABLE (
+        VALUES ( fact_mortgage_scenario[area_code] ),
+        REMOVEFILTERS ( Sector ),
+        fact_mortgage_scenario[is_island_aggregate] = FALSE
+    )
 VAR Reached =
     COUNTROWS (
         FILTER (
-            VALUES ( fact_mortgage_scenario[area_code] ),
+            Sectors,
             CALCULATE ( [Verdict at this down payment] )
                 IN { "Within reach", "Cash purchase" }
         )
@@ -4048,10 +4117,16 @@ RETURN IF ( ISBLANK ( Reached ), 0, Reached )
 
 ```dax
 Sectors borderline =
+VAR Sectors =
+    CALCULATETABLE (
+        VALUES ( fact_mortgage_scenario[area_code] ),
+        REMOVEFILTERS ( Sector ),
+        fact_mortgage_scenario[is_island_aggregate] = FALSE
+    )
 VAR Band =
     COUNTROWS (
         FILTER (
-            VALUES ( fact_mortgage_scenario[area_code] ),
+            Sectors,
             CALCULATE ( [Verdict at this down payment] ) = "Borderline"
         )
     )
@@ -4060,15 +4135,28 @@ RETURN IF ( ISBLANK ( Band ), 0, Band )
 
 ```dax
 Sectors below the legal minimum =
+VAR Sectors =
+    CALCULATETABLE (
+        VALUES ( fact_mortgage_scenario[area_code] ),
+        REMOVEFILTERS ( Sector ),
+        fact_mortgage_scenario[is_island_aggregate] = FALSE
+    )
 VAR Refused =
     COUNTROWS (
         FILTER (
-            VALUES ( fact_mortgage_scenario[area_code] ),
+            Sectors,
             CALCULATE ( [Verdict at this down payment] ) = "Below the legal minimum"
         )
     )
 RETURN IF ( ISBLANK ( Refused ), 0, Refused )
 ```
+
+⚠️ **`CALCULATE` around `[Verdict at this down payment]` inside the `FILTER` is
+what makes it evaluate per sector.** Without it the measure would be computed
+once, in the filter context of the whole card, where `Areas > 1` fires and the
+verdict reads *Several areas selected* — so every count would come back zero,
+on every slice, at every slider position. A firm and uniform zero is exactly
+the kind of wrong answer that looks like a market rather than like a bug.
 
 **A cash purchase counts as within reach, and the tooltip is where the
 difference is read.** It is the extreme case of affordable — no loan at all —
@@ -4219,3 +4307,162 @@ constant line at `Income input Value` and the bars now move on two independent
 axes, and the fault this page is exposed to is a card frozen on one of them
 while the other moves — every figure right, the verdict false. That is the same
 fault the typed constant line was warned about on 2026-08-30.
+
+## 13.12 The page-3 map moves onto the 36 places
+
+**2026-09-09, proposed while block C was being applied.** The map
+now draws the same 36 administrative places as page 1, coloured by the verdict
+of the APCIQ sector each one belongs to.
+
+**It repairs a justification that had quietly expired.** The page-3 map section
+above argues for eighteen sectors partly because the map *"reuses the shape file
+of page 1 at no extra cost"*. That stopped being true on **2026-09-01**, when
+page 1 moved to the 36 land-clipped places. From then until now the report drew
+the island twice, with two different outlines, and the sentence that justified
+the choice no longer described anything.
+
+**Measured before the change, on the marts:**
+
+| | |
+|---|---|
+| shapes in `marts.map_place` | **36** |
+| APCIQ sectors they reach | **18** — all of them |
+| shapes carrying no sector | **0** |
+| sectors drawn by 1 shape · 2 · 4 · 7 | 9 · 6 · 2 · 1 |
+
+That last row is the whole cost of the change, and it has to be stated rather
+than discovered: **one sector can be seven shapes.** Sector 1 gathers seven
+municipalities, so a single verdict paints seven polygons.
+
+### The one real risk, and what answers it
+
+On the acceptance slice — most recent quarter, condominium, 95 000 $, at the
+legal minimum — **6 sectors within reach are painted as 12 shapes**, while the
+KPI card beside the map reads **6**. Both are right, and a reader who counts
+blue patches finds a third number.
+
+**Page 1 did not carry this risk and page 3 does**, which is why it needs an
+answer here: page 1's map paints a **price**, so nothing invites counting. Page
+3 paints a **verdict**, and the KPI row counts verdicts a few centimetres away.
+
+The answer is the pattern page 1 already established on 2026-09-01: **a static
+text box under the map, carrying no figure at all.**
+
+```text
+Each shape is a borough or a linked city, coloured by the verdict of its APCIQ
+sector — so neighbouring shapes share one published figure, and the number of
+shapes is not the number of sectors. The line dividing Côte-des-Neiges from
+Notre-Dame-de-Grâce is not published by APCIQ: the city's 2014 sociological
+boundary stands in for it.
+```
+
+⚠️ **No figure, no count, no quarter in that box, ever.** A text box is filtered
+by nothing and refreshes never. The middle clause is the one that defuses the
+12-against-6: it tells the reader not to count patches. The last clause carries
+the only assumed line on the map, exactly as page 1's box does.
+
+⚠️ **A measure was proposed for that box and was wrong.** The argument for it —
+"a frozen line would still say 36 the day the model holds 37" — only bites if
+the line carries counts. It carries none, which is what makes a text box safe
+here. Page 1 settled this on 2026-09-01 and the same ruling applies.
+
+### The build
+
+| Well | Field |
+|---|---|
+| Location | **`Place_map[place_code]`** |
+| Format visual > Map settings > Add map | `powerbi/shapes/admin_place_island.geojson` |
+| Colors > Location > `fx` > Format style | **Field value**, on `Sector bar colour` — unchanged measure |
+| Tooltips | `Place_map[place_name]`, `Place_map[apciq_sector_name]`, the verdict, the required income |
+
+⚠️ **Load the shape file into this visual even though page 1 already has it.**
+A `shapeMap` carries **one** `map.geoJson` binding, read in the `.pbix`
+definition on 2026-08-31. The two visuals hold their own copies.
+
+⚠️ **Changing the Location field resets the `fx` colour binding.** Re-apply it
+*after*, never before — done the other way round the map comes out in a single
+colour and nothing says why.
+
+⚠️ **`Tracts priced` leaves the tooltip.** At place grain it would print the
+**sector's** tract count on a **place's** shape, and a reader takes it for that
+place's. Same fault as `Min(Sector[name])` on the page-2 map, and harder to
+catch because the number is plausible.
+
+**The tooltip is two columns and no measure**, following page 1: the place name
+and its sector answer *where does this figure come from* better than a sentence
+does, and a tooltip past one line is not read at all. The columns resolve
+because they belong to `Place_map` itself — no propagation involved, which is
+the lesson page 2 paid for on 2026-09-02.
+
+### Acceptance
+
+Most recent quarter, 95 000 $, at the legal minimum — the state block C leaves:
+
+| Condominium | Sectors | Shapes |
+|---|---|---|
+| Within reach | 6 | **12** |
+| Borderline | 1 | 1 |
+| Out of reach | 10 | 22 |
+| No published price | 1 | 1 |
+| **Total** | **18** | **36** |
+
+Then switch to **plex: 24 shapes of 36 are grey** — the grey-dominant case, the
+only one that shows whether an absence reads as an absence. `scripts/report_oracle.py`
+prints both columns in its *KPI row AND map colours* block.
+
+⚠️ **A map that comes out entirely grey is a join failure, not a colour
+failure.** `place_code` must be **Text** in the model: the shape file's key is a
+string, and a code typed as a number loads without error and matches nothing.
+Same trap as `4620001.00` becoming `4620001` on the tract map.
+
+## 13.13 `Verdict for the selected sector`
+
+**It did not exist.** Section 12.4 says to *rename* `Verdict for the selected
+place` — but that measure was step **B7** of block B, which stopped at B5 on
+2026-09-01 and was then abandoned. Found on 2026-09-09, while applying
+block C: without this card the sector slicer drives **nothing** on page 3 once
+the interactions of C4 are set, and the block cannot be accepted.
+
+```dax
+Verdict for the selected sector =
+VAR Chosen = COUNTROWS ( VALUES ( fact_affordability[apciq_sector_number] ) )
+VAR SectorName = SELECTEDVALUE ( Sector[name] )
+RETURN
+    SWITCH (
+        TRUE (),
+        [Area is narrowed] = 0,
+            "Select a sector to see whether it is within reach",
+        Chosen > 1,
+            Chosen & " sectors selected — a median of medians does not exist",
+        SectorName & " — " & [Verdict for this income]
+    )
+```
+
+⚠️ **`NAME` is a reserved word in DAX.** The variable was first written `Name`
+and the expression was rejected. Third collision of this kind in the project,
+after `Current` in DAX on 2026-09-02 and `trailing` in PostgreSQL in J3.5. The
+**column** `Sector[name]` stays valid — inside brackets the parser is not
+looking for a keyword.
+
+**The three branches, in this order:**
+
+⚠️ **`[Area is narrowed] = 0` first**, and it reads that measure rather than
+`ISFILTERED` for the reason section 11.2 gives: `ISFILTERED` only sees a filter
+placed *directly* on the column it names, so a **click on a bar** — which
+reaches `Sector` by propagation — would leave it FALSE and the card would go on
+inviting the reader to choose a sector that is visibly chosen. That click is the
+acceptance case that proves it.
+
+⚠️ **`Chosen > 1` second.** The slicer allows multiple selection, and with two
+sectors `[Verdict for this income]` averages two required incomes into a figure
+belonging to no property. The card refuses, exactly as `Median price` refuses on
+page 1 — and section 12.5 asked for that refusal on this page.
+
+**The name is printed with the verdict.** On a page where the slicer, a bar and
+a map can each have designated something, a verdict without its subject reads as
+a verdict about the island.
+
+⚠️ **It does not carry the rank yet.** The rank asked for — *"14th of
+17 by required income"* — is computed on the required income **at the typed down
+payment**, which does not exist until block D. It is added in D11, when the card
+is repointed at `[Verdict at this down payment]`.
