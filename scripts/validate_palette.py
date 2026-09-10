@@ -62,6 +62,28 @@ PALETTES: dict[str, list[tuple[str, str]]] = {
         ("#7A5C4B", "Below the legal minimum"),
         ("#E8EAEC", "No published price"),
     ],
+    # The quarter-over-quarter badges of pages 1 and 2, added 2026-09-10.
+    #
+    # ⚠️ THIS PALETTE IS FOR THE DARK THEME AND FAILS ON A LIGHT ONE. The
+    # report runs "Montreal Immobilier - Executive PropTech Dark", canvas
+    # #0E1A25, visual background #192A3A. #B8E0C5 on white is 1.45:1.
+    #
+    # Red and green collapse onto one axis in protanopia and deuteranopia, so
+    # the only separator left is lightness -- and on a dark background every
+    # usable colour is already light, which spends most of that range before
+    # the palette starts. Four obvious candidates were measured and all four
+    # failed: the theme's own good/bad/neutral at 2.2 (tritanopia), Fluent
+    # green/red at 4.2 (deuteranopia), Okabe-Ito teal/vermilion at 6.6, and the
+    # theme's good/bad with a grey neutral at 8.5. A search over the passing
+    # combinations returned this triple as the least drifted from a canonical
+    # green (hue 140) and red (hue 4). Worst pair 24.0.
+    #
+    # The colour is never the only carrier: every badge starts with an arrow.
+    "page1-badge": [
+        ("#B8E0C5", "Favourable to a first-time buyer"),
+        ("#FA584C", "Unfavourable"),
+        ("#8FA3B5", "Flat, and the denominator badge"),
+    ],
     # Page 2, the states that sit OFF the diverging ramp, against the two ends
     # of the ramp itself. The ramp's own interior steps are deliberately absent.
     "page2-off-ramp": [

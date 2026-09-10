@@ -391,6 +391,7 @@ per visual — the slicer carries a visual filter
 | Card | `Income vintage warning` |
 | Card | `Grain warning` |
 | Card | `Map coverage note` |
+| Card | `Down payment note` |
 
 `Grain warning` prints only when a census tract is filtering, which is exactly
 when a market measure on the same page would be repeating a sector total once
@@ -1377,6 +1378,7 @@ step with it.
 | Affordability | `Price to income (median)` | `_Measures` | `fact_affordability` | Custom `0.0"×"` — **never a currency** | 2 |
 | Affordability | `Verdict` | `_Measures` | `fact_affordability` | Text | 2 |
 | Affordability | `Tract map colour` | `_Measures` | `Verdict`, `Price to income (median)` | Text — a `#RRGGBB` string, **never formatted** | 2 |
+| Affordability | `Down payment note` | `_Measures` | nothing — a constant string | Text | 2 |
 | Affordability | `Map coverage note` | `_Measures` | `fact_affordability` | Text | 2 |
 | Rates | `Rate (mean of period)` | `_Measures` | `fact_interest_rate` | Decimal, 2 dec. | 4 |
 | Rates | `Contract rate (mean)` | `_Measures` | `Rate (mean of period)`, `interest_rate_series` | Decimal, 2 dec. | 4 |
@@ -1398,8 +1400,38 @@ step with it.
 | First-time buyer | `Sector bar colour` | `_Measures` | `Verdict at this down payment` | Text | 3 |
 | First-time buyer | `Down payment assumption` | `_Measures` | `fact_mortgage_scenario`, `Down payment regime code`, `Down payment input` | Text | 3 |
 | First-time buyer | `Verdict for the selected sector` | `_Measures` | `Verdict at this down payment`, `Area is narrowed` | Text | 3 |
+| Change | `Sales change` | `_Measures` | `Sales (selected area)`, `QuarterBadge` | Text | 1 |
+| Change | `Sales change colour` | `_Measures` | `Sales (selected area)`, `QuarterBadgeColour` | Text | 1 |
+| Change | `Price change` | `_Measures` | `Median price (selected area)`, `QuarterBadge` | Text | 1 |
+| Change | `Price change colour` | `_Measures` | `Median price (selected area)`, `QuarterBadgeColour` | Text | 1 |
+| Change | `Time on market change` | `_Measures` | `Days on market (selected area)`, `QuarterBadge` | Text | 1 |
+| Change | `Time on market colour` | `_Measures` | `Days on market (selected area)`, `QuarterBadgeColour` | Text | 1 |
+| Change | `Listings change` | `_Measures` | `Active listings (selected area)`, `fact_market[active_listings_corroboration]` | Text | 1 |
+| Change | `Listings change colour` | `_Measures` | same, plus `QuarterBadgeColour` | Text | 1 |
+| Change | `Share change` | `_Measures` | `Share of tracts affordable`, `QuarterBadge` | Text | 2 |
+| Change | `Share change colour` | `_Measures` | `Share of tracts affordable`, `QuarterBadgeColour` | Text | 2 |
+| Change | `Tracts evaluated change` | `_Measures` | `Tracts evaluated`, `QuarterBadge` | Text | 2 |
+| Change | `Tracts evaluated colour` | `_Measures` | **nothing — a constant** | Text | 2 |
+| Change | `Required income change` | `_Measures` | `Income required, lower bound (mean)`, `QuarterBadge` | Text | 2 |
+| Change | `Required income change colour` | `_Measures` | same, plus `QuarterBadgeColour` | Text | 2 |
+| Change | `Quarter comparison note` | `_Measures` | **nothing — a constant** | Text | 1, 2 |
+| Change | `Colour convention note` | `_Measures` | **nothing — a constant** | Text | 1 |
+| Icons | `Sales icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 1 |
+| Icons | `Median price icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 1 |
+| Icons | `Days on market icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 1 |
+| Icons | `Active listings icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 1 |
+| Icons | `Share affordable icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
+| Icons | `Tracts evaluated icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
+| Icons | `Income required icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
 | — | `Income input Value` | `Income input` | the slicer selection | Currency, 0 dec. | 3 |
 | — | `Down payment input Value` | `Down payment input` | the slicer selection | Currency, 0 dec. | 3 |
+
+⚠️ **Three DAX user-defined functions are NOT in this table, because they are
+not measures.** `ValueOneQuarterEarlier`, `QuarterBadge` and
+`QuarterBadgeColour` live under *Functions* in Model explorer, not under
+`_Measures`, and section 14.2 is where they are written. They are what makes
+every Change row above a one-liner — except `Listings change`, which carries the
+corroboration refusal of 14.7 and is written out in full there.
 
 ⚠️ **`Verdict for this income` is absent from this table because section 13.10
 deletes it**, once everything that reads it has been rebranched onto
@@ -4108,7 +4140,7 @@ VAR Reached =
     COUNTROWS (
         FILTER (
             Sectors,
-            CALCULATE ( [Verdict at this down payment] )
+            CALCULATE ( [Verdict at this down payment], REMOVEFILTERS ( Sector ) )
                 IN { "Within reach", "Cash purchase" }
         )
     )
@@ -4127,7 +4159,7 @@ VAR Band =
     COUNTROWS (
         FILTER (
             Sectors,
-            CALCULATE ( [Verdict at this down payment] ) = "Borderline"
+            CALCULATE ( [Verdict at this down payment], REMOVEFILTERS ( Sector ) ) = "Borderline"
         )
     )
 RETURN IF ( ISBLANK ( Band ), 0, Band )
@@ -4145,7 +4177,7 @@ VAR Refused =
     COUNTROWS (
         FILTER (
             Sectors,
-            CALCULATE ( [Verdict at this down payment] ) = "Below the legal minimum"
+            CALCULATE ( [Verdict at this down payment], REMOVEFILTERS ( Sector ) ) = "Below the legal minimum"
         )
     )
 RETURN IF ( ISBLANK ( Refused ), 0, Refused )
@@ -4157,6 +4189,22 @@ once, in the filter context of the whole card, where `Areas > 1` fires and the
 verdict reads *Several areas selected* — so every count would come back zero,
 on every slice, at every slider position. A firm and uniform zero is exactly
 the kind of wrong answer that looks like a market rather than like a bug.
+
+⚠️ **`REMOVEFILTERS ( Sector )` has to be repeated inside that `CALCULATE`,
+and the first version of this section omitted it.** Found in Desktop on
+2026-09-09, applying D7: with the slicer on one sector, the three cards moved
+instead of holding. The `REMOVEFILTERS` in the `CALCULATETABLE` above protects
+only the **construction of the universe** — the list of eighteen `area_code`
+stays eighteen. The verdict inside the `FILTER` is then evaluated in the
+**outer** filter context, where the slicer has left `Sector[name]` set: for the
+seventeen other area codes the intersection *this area code* ∩ *that sector* is
+empty, `Price` comes back blank, the regime reads 0 and the row is counted as
+*No published price*. Eighteen rows are walked and seventeen are evaluated
+against nothing. **Nothing raises an error, and the smaller figure is exactly
+what a reader expects to see after narrowing a page** — which is why only the
+acceptance gesture *select a sector and check the cards do NOT move* catches
+it. The trimester and property-type filters are deliberately left in place;
+only `Sector` is removed, in both spots.
 
 **A cash purchase counts as within reach, and the tooltip is where the
 difference is read.** It is the extreme case of affordable — no loan at all —
@@ -4224,6 +4272,38 @@ medians.
 ⚠️ **No example of its output is reproduced in this file.** The share is a typed
 number divided by an APCIQ median, so printing one here would reproduce the
 median indirectly. Read it on screen.
+
+### ⚠️ This card is ALSO on page 2, and rewriting it broke that page
+
+Found on 2026-09-09, reading `Report/Layout` after D8 was applied: page 2
+carries a full-width `cardVisual` bound to `Down payment assumption` — a card
+the page-2 element list above never mentioned. Once the measure became
+dynamic, that card started announcing the typed down payment on a page whose
+every figure is computed **in SQL at the legal minimum**. `Down payment input`
+is not synchronised to page 2, so `SELECTEDVALUE` fell back to its default of
+50 000 $ and the card stated it as fact.
+
+⚠️ **The acceptance case *page 2 unchanged at every slider position* would not
+have caught it.** No page-2 *figure* moves. A sentence did. A check that reads
+only numbers walks straight past it.
+
+**Page 2 gets its own measure**, carrying the exact text `Down payment
+assumption` held before D8:
+
+```dax
+Down payment note =
+"Assumes the legal minimum down payment for this price, insured. "
+    & "A larger down payment is not modelled."
+```
+
+It reads neither `Down payment input` nor `fact_mortgage_scenario`, so page 2
+is insensitive to the slider **by construction** rather than by care.
+
+⚠️ **Reservation, written rather than forgotten**: that text says *insured*,
+which is untrue of the scenarios at or above 1.5 M$, where the legal minimum of
+20 % leaves the loan uninsured. The flaw predates this session and correcting it
+would change what page 2 claims — out of scope for block D, to be picked up with
+`limitations.md` in J4.4.
 
 ## 13.10 What changes on page 3
 
@@ -4434,9 +4514,70 @@ RETURN
             "Select a sector to see whether it is within reach",
         Chosen > 1,
             Chosen & " sectors selected — a median of medians does not exist",
-        SectorName & " — " & [Verdict for this income]
+        SectorName & " — " & [Verdict at this down payment] & Sentence
     )
 ```
+
+**Written in full, as applied on 2026-09-09 (block D11):**
+
+```dax
+Verdict for the selected sector =
+VAR Chosen = COUNTROWS ( VALUES ( fact_affordability[apciq_sector_number] ) )
+VAR SectorName = SELECTEDVALUE ( Sector[name] )
+VAR Sectors =
+    CALCULATETABLE (
+        VALUES ( fact_mortgage_scenario[area_code] ),
+        REMOVEFILTERS ( Sector ),
+        fact_mortgage_scenario[is_island_aggregate] = FALSE
+    )
+VAR Scored =
+    FILTER (
+        ADDCOLUMNS (
+            Sectors,
+            "@required",
+                CALCULATE ( [Income required at this down payment], REMOVEFILTERS ( Sector ) )
+        ),
+        NOT ISBLANK ( [@required] )
+    )
+VAR Evaluated = COUNTROWS ( Scored )
+VAR Mine = [Income required at this down payment]
+VAR Position = RANKX ( Scored, [@required], Mine, ASC, DENSE )
+VAR Sentence =
+    IF (
+        NOT ISBLANK ( Mine ) && Evaluated > 0,
+        " — " & Position & " of " & Evaluated & " by required income",
+        ""
+    )
+RETURN
+    SWITCH (
+        TRUE (),
+        [Area is narrowed] = 0,
+            "Select a sector to see whether it is within reach",
+        Chosen > 1,
+            Chosen & " sectors selected — a median of medians does not exist",
+        SectorName & " — " & [Verdict at this down payment] & Sentence
+    )
+```
+
+**The rank ascends: rank 1 is the lowest required income**, so the most
+reachable sector. **The denominator is computed, never written down.** "of 17"
+was the count at the legal minimum; at 50 000 $ on condominium only **16**
+sectors carry a calculable required income — the other two are a refusal and an
+absent price. A hard-coded denominator would be wrong at every other slider
+position.
+
+⚠️ **`REMOVEFILTERS ( Sector )` appears twice here too**, for the reason 13.8
+gives. Without it in the inner `CALCULATE`, the ranking universe collapses to
+the selected sector and the rank reads 1 whatever is chosen.
+
+⚠️ **The variable is `Position`, not `Rank`.** `RANK` is a DAX function and a
+variable of that name has the expression rejected — the **fourth** collision of
+this kind in the project, after `Name` in this very measure, `Current` in DAX on
+2026-09-02 and `trailing` in PostgreSQL in J3.5.
+
+**When the chosen sector is not evaluable** — below the legal minimum, or with
+no published price — `Mine` is blank and the rank sentence disappears on its
+own. No rank is invented for a sector that carries no figure.
 
 ⚠️ **`NAME` is a reserved word in DAX.** The variable was first written `Name`
 and the expression was rejected. Third collision of this kind in the project,
@@ -4462,7 +4603,537 @@ page 1 — and section 12.5 asked for that refusal on this page.
 a map can each have designated something, a verdict without its subject reads as
 a verdict about the island.
 
-⚠️ **It does not carry the rank yet.** The rank asked for — *"14th of
-17 by required income"* — is computed on the required income **at the typed down
-payment**, which does not exist until block D. It is added in D11, when the card
-is repointed at `[Verdict at this down payment]`.
+**The rank was added in D11, on 2026-09-09**, once `[Verdict at this down
+payment]` existed to be ranked on. ⚠️ **No DAX for it had been written** — this
+section announced it and stopped. Written above, in full.
+
+---
+
+# 14. J4.2¾ · 4 — The quarter-over-quarter badges
+
+> **Specified 2026-09-10. Nothing in dbt moves** — every figure below already
+> exists in `fact_market` and `fact_affordability`. This section is DAX,
+> formatting, and one page of refusals. The build stays at PASS=353 and 140
+> pytest, and `git status` on `dbt/` is how that claim is checked.
+
+Seven KPI cards gain a small line under the figure: how the same measure stood
+**one calendar quarter earlier**, as a signed percentage (or in points, where a
+percentage would be wrong), coloured, with an arrow, and **naming the quarter it
+compares to**.
+
+## 14.1 What was asked, what was measured, and what was decided anyway
+
+The request was a variation against the previous quarter. **The measurement
+argued against it and the choice was confirmed**, so that is what this section
+builds. The argument is written down here rather than discarded, because it
+decides two things that follow: what the badge is allowed to claim, and what has
+to sit on screen beside it.
+
+**Three of the four page-1 metrics are seasonal, and the fourth is not.**
+Measured on the island row, twenty-one transitions of each kind (seven years ×
+three property types):
+
+| Metric | Q1 → Q2 | Q2 → Q3 | Reads as |
+|---|---|---|---|
+| Sales | **18 rises of 21** | **18 falls of 21** | the calendar |
+| Active listings | **19 rises of 21** | 6 rises of 21 | the calendar |
+| Days on market | **2 rises of 21** | 16 rises of 21 | the calendar |
+| **Median price** | 19 of 21 | 13 of 21 | a trend, not a season |
+
+A badge on sales will be green every spring and red every summer whatever the
+market does. That is not a defect to be fixed in DAX — it is what a sequential
+comparison of a seasonal series *is*. The answer is not to hide it but to
+**name it on screen**, which 14.9 does, and to **name the quarter in the badge
+itself** so the reader is never told merely "up" but always "up on 2026 Q1".
+
+**⚠️ There is a year-over-year figure sitting unused in the mart, and it is a
+published one.** `fact_market` has carried five `*_change_pct_yoy` columns since
+J3.5 — the percentages APCIQ prints, « par rapport au même trimestre de l'année
+précédente », never recomputed. Coverage is **87 of 87 on the island row** for
+all four page-1 metrics, and 1 211 to 1 418 of 1 566 on the sectors. It is an
+observation; what this section builds is a derivation. Two measurements say why
+they are not interchangeable, and both are worth keeping:
+
+- **Recomputing the year-over-year change from our own levels does not
+  reproduce the published one.** Island sales: **31 exact agreements of 75**
+  after rounding to the integer APCIQ prints, mean **signed** gap **+0.68
+  point** — the published figure systematically the larger. That is the J3.5
+  vintage finding seen from the other end: APCIQ divides by a year-ago figure it
+  has since revised downward, and we hold the first publication. On median price
+  the same test gives 834 of 992 and a signed gap of ≈ 0, so it is the
+  **counts** that drift, not the medians.
+- **The published figure covers more, including a quarter no arithmetic can
+  reach**: 1 211 published price changes against 1 110 computable
+  quarter-over-quarter, and it exists on **2019 Q2**, where there is no 2019 Q1
+  in the model to subtract.
+
+**⚠️ The published columns are integers.** The staging model casts
+`change_percent_text` with `::int` after stripping everything but digits and a
+minus sign. Swept over the whole raw table, **no cell carries a decimal mark** —
+every shape is `NN%`, `-N%`, `NNN%` and their spaced variants. So the cast is
+safe, and any future comparison against them must round before it compares. A
+test written to 0.15 point will fail on arithmetic that is perfectly correct.
+
+**None of that is thrown away.** The reference label of the new card visual has
+a second level, `Detail`. If the year-over-year figure is ever wanted, it goes
+there, reading `median_price_change_pct_yoy` directly, and no measure below
+changes.
+
+## 14.2 The previous quarter is decided in exactly one place
+
+Seven badges, seven colours, and three notes would otherwise hold seven copies
+of one rule. **DAX user-defined functions are generally available since June
+2026** and this model runs on Desktop **2026.08**, so the rule is a function.
+
+⚠️ **The function is NOT called `PreviousQuarter`.** `PREVIOUSQUARTER` is a DAX
+function, and a user-defined name that collides with a built-in one is rejected.
+This is the **fifth** collision of its kind on this project after `trailing` in
+PostgreSQL, `Current`, `Name` and `RANK` — the habit is now to check the name
+before typing the body.
+
+Create these in **TMDL view** (*Apply*) or **DAX query view** (*Update model*).
+They land under *Functions* in Model explorer.
+
+```tmdl
+createOrReplace
+	/// The same measure, re-evaluated on the calendar quarter before the one in
+	/// filter context. BLANK when the context does not hold exactly one quarter.
+	/// @param {AnyRef} m - the measure to re-evaluate
+	/// @returns its value one quarter earlier, or BLANK
+	function ValueOneQuarterEarlier = (m : ANYREF EXPR) =>
+		VAR ThisQuarterStart = SELECTEDVALUE ( 'date'[quarter_start_date] )
+		VAR EarlierQuarterStart = EDATE ( ThisQuarterStart, -3 )
+		RETURN
+			IF (
+				NOT ISBLANK ( ThisQuarterStart ),
+				CALCULATE (
+					m,
+					REMOVEFILTERS ( 'date' ),
+					'date'[date_key] = EarlierQuarterStart
+				)
+			)
+```
+
+**Four things in eleven lines, each of which would otherwise be a separate
+guard.**
+
+- **`SELECTEDVALUE ( 'date'[quarter_start_date] )` buys the multi-quarter guard
+  for nothing.** Every one of the ninety-odd rows of `'date'` inside one
+  selected quarter carries the *same* `quarter_start_date`, so `SELECTEDVALUE`
+  returns it. Select two quarters and it returns BLANK, the badge vanishes, and
+  no card ever compares a two-quarter aggregate to a one-quarter figure. The
+  quarter slicers are `strictSingleSelect` on pages 1, 2 and 3 — read out of
+  `Report/Layout` — so this should never fire. It is written because a slicer
+  setting is one click from being changed and a wrong badge would not look
+  wrong.
+- **`REMOVEFILTERS ( 'date' )` before re-filtering, and it is not optional.**
+  The slicer filters `'date'[quarter_label]`, a *text* column. Leaving it in
+  place and adding a date filter intersects "2026 Q2" with the days of 2026 Q1
+  and returns the empty set — the badge would be blank on every card, always,
+  with nothing to diagnose.
+- **The re-filter is on `date_key`, not on `quarter_start_date`.** All five
+  relationships run from `'date'[date_key]` to a fact column that holds the
+  quarter's first day (`powerbi/README.md` §5). Filtering `date_key` to that one
+  day leaves exactly one row of `'date'` standing and reaches exactly one fact
+  row per geography. Filtering `quarter_start_date` would work too, by leaving
+  ninety rows of which one matches — the same answer through a mechanism nobody
+  should have to reason about twice.
+- **`EDATE ( .., -3 )` handles the year boundary and cannot land on a short
+  month**, because a quarter always starts on the first.
+
+Two more functions compose what the reader sees, so each of the fourteen
+measures below is a single line.
+
+```tmdl
+createOrReplace
+	/// The badge text for a measure: arrow, size of the change, and the quarter
+	/// it is measured against. BLANK whenever the comparison cannot be made.
+	/// @param {AnyRef} m - the measure to compare
+	/// @param {String} mode - "percent", "points" or "count"
+	/// @returns e.g. "▲ 4.2 % vs 2026 Q1", or BLANK
+	function QuarterBadge = (m : ANYREF EXPR, mode : STRING) =>
+		VAR Now = m
+		VAR Before = ValueOneQuarterEarlier ( m )
+		VAR EarlierLabel =
+			CALCULATE (
+				SELECTEDVALUE ( 'date'[quarter_label] ),
+				REMOVEFILTERS ( 'date' ),
+				'date'[date_key] = EDATE ( SELECTEDVALUE ( 'date'[quarter_start_date] ), -3 )
+			)
+		VAR Movement =
+			SWITCH (
+				mode,
+				"percent", DIVIDE ( Now - Before, Before ),
+				Now - Before
+			)
+		VAR Arrow = SWITCH ( TRUE (), Movement > 0, "▲ ", Movement < 0, "▼ ", "— " )
+		VAR Size =
+			SWITCH (
+				mode,
+				"percent", FORMAT ( ABS ( Movement ), "0.0" ) & " %",
+				"points",  FORMAT ( ABS ( Movement ), "0.0" ) & " pts",
+				FORMAT ( ABS ( Movement ), "#,0" )
+			)
+		RETURN
+			IF (
+				NOT ISBLANK ( Now ) && NOT ISBLANK ( Before )
+					&& NOT ( mode = "percent" && Before = 0 ),
+				Arrow & Size & " vs " & EarlierLabel
+			)
+
+	/// The badge colour. higherIsBetter says which direction is good FOR A
+	/// FIRST-TIME BUYER, which is not the same as "up".
+	/// @param {AnyRef} m - the measure the badge is about
+	/// @param {Boolean} higherIsBetter - TRUE when a rise favours the buyer
+	/// @returns a #RRGGBB string, or BLANK when there is no badge to colour
+	function QuarterBadgeColour = (m : ANYREF EXPR, higherIsBetter : BOOLEAN) =>
+		VAR Now = m
+		VAR Before = ValueOneQuarterEarlier ( m )
+		VAR Movement = Now - Before
+		VAR Favourable = IF ( higherIsBetter, Movement > 0, Movement < 0 )
+		RETURN
+			IF (
+				NOT ISBLANK ( Now ) && NOT ISBLANK ( Before ),
+				SWITCH (
+					TRUE (),
+					Movement = 0,  "#8FA3B5",
+					Favourable,    "#B8E0C5",
+					"#FA584C"
+				)
+			)
+```
+
+⚠️ **`ABS` in the text and the sign in the arrow, deliberately.** A badge
+reading `▼ -4.2 %` says the same thing twice and reads as a double negative. The
+arrow carries the direction; the number carries the size.
+
+⚠️ **The two functions re-evaluate `Before` independently.** That is one extra
+evaluation per card, on a model of 1 653 rows, and it buys something worth more:
+neither function can be used without the other agreeing on when a badge exists.
+Passing the value between them would mean a third measure per card.
+
+## 14.3 The fourteen measures
+
+Each is one line. Nothing but the measure reference and two flags changes, and
+that is the point — **the rule they share is above, not repeated here.**
+
+**Page 1 — Market.** The measure inside the badge is the `(selected area)`
+wrapper, not the bare measure, so the badge follows the sector slicer exactly as
+the card above it does. Reading the bare measure would produce a badge about the
+island under a figure about one sector.
+
+```dax
+Sales change            = QuarterBadge ( [Sales (selected area)], "percent" )
+Sales change colour     = QuarterBadgeColour ( [Sales (selected area)], FALSE )
+
+Price change            = QuarterBadge ( [Median price (selected area)], "percent" )
+Price change colour     = QuarterBadgeColour ( [Median price (selected area)], FALSE )
+
+Time on market change   = QuarterBadge ( [Days on market (selected area)], "percent" )
+Time on market colour   = QuarterBadgeColour ( [Days on market (selected area)], TRUE )
+
+Listings change         = QuarterBadge ( [Active listings (selected area)], "percent" )
+Listings change colour  = QuarterBadgeColour ( [Active listings (selected area)], TRUE )
+```
+
+**Page 2 — Affordability.**
+
+```dax
+Share change            = QuarterBadge ( [Share of tracts affordable], "points" )
+Share change colour     = QuarterBadgeColour ( [Share of tracts affordable], TRUE )
+
+Tracts evaluated change = QuarterBadge ( [Tracts evaluated], "count" )
+Tracts evaluated colour = "#8FA3B5"
+
+Required income change        = QuarterBadge ( [Income required, lower bound (mean)], "percent" )
+Required income change colour = QuarterBadgeColour ( [Income required, lower bound (mean)], FALSE )
+```
+
+⚠️ **`Share of tracts affordable` is in POINTS, never in percent.** A share that
+goes from 40 % to 44 % has risen four points and ten percent, and the two
+sentences are both true and describe different things. Section 41.2 of the brief
+is about exactly this kind of quiet ambiguity.
+
+⚠️ **`Tracts evaluated colour` is a constant grey, and it is the most important
+line in this block.** That card is the **denominator**, not a result: more
+tracts evaluated is neither good nor bad news, it means the base of comparison
+moved. Colouring it would say the model got better or worse when only APCIQ's
+coverage changed. It carries a badge — with an arrow and a count — because the
+reader needs to see the base move; it never carries a verdict.
+
+**The denominator does move, and far more than one would guess.** Across 28
+transitions on the couple profile:
+
+| Type | Quarters where the denominator held | Mean absolute move | Worst |
+|---|---|---|---|
+| Condominium | 16 of 28 | 8.4 tracts | — |
+| Plex | **2 of 28** | 40.6 tracts | — |
+| Single-family | **3 of 28** | 85.0 tracts | **−258** |
+
+On single-family, a share that moves ten points can be entirely the arrival or
+departure of 258 tracts from the calculation. Without the grey badge beside it,
+nothing on the page would say so.
+
+## 14.4 Green means favourable to a first-time buyer
+
+**Decided on 2026-09-10, against the convention the project's own mock-ups
+use.** On the fourth mock-up, `Days on Market 54 ▼ −18 %` is red. On a tool
+built to answer *where can a first-time buyer still buy*, a market that sells
+faster is worse news, not better: less time to decide, more competition. And
+"green = up" would paint a rising median price green on a page about
+affordability.
+
+| Card | A rise means | Flag |
+|---|---|---|
+| Sales | more competition for the same stock | `FALSE` |
+| Median price | it costs more | `FALSE` |
+| Days on market | **more time to decide** | `TRUE` |
+| Active listings | **more to choose from** | `TRUE` |
+| Share of tracts affordable | more of the island within reach | `TRUE` |
+| Income required, lower bound | a higher bar to clear | `FALSE` |
+| Tracts evaluated | *nothing* — it is the denominator | *never coloured* |
+
+**This convention is declared on screen**, in `Colour convention note` (14.9).
+An unexplained green on a falling price reads as a bug.
+
+⚠️ **The colour is never the only carrier.** Every badge starts with ▲, ▼ or —.
+A reader who sees no colour at all still reads the direction, which is what
+makes the palette below a refinement rather than a dependency.
+
+## 14.5 The palette, measured on the theme this report actually uses
+
+**⚠️ The report is on a dark theme and that changes the whole answer.**
+`Montreal Immobilier - Executive PropTech Dark`, canvas `#0E1A25`, visual
+background `#192A3A`, read out of the `.pbix`. Colours picked for a white page
+are the wrong colours here, and none of the obvious candidates survives.
+
+Run through `scripts/validate_palette.py` — CIEDE2000 across normal vision and
+the three dichromacies, threshold 10:
+
+| Candidate | Worst pair | Verdict |
+|---|---|---|
+| The theme's own `good` / `bad` / `neutral` | **2.2** — bad vs neutral in tritanopia | FAIL |
+| Fluent green `#107C10` / red `#A80000` | **4.2** in deuteranopia | FAIL |
+| Okabe-Ito teal / vermilion | 6.6 in deuteranopia | FAIL |
+| Theme `good` / `bad` with a grey neutral | 8.5 in deuteranopia | FAIL |
+| **`#B8E0C5` / `#FA584C` / `#8FA3B5`** | **24.0** | **PASS** |
+
+**Red and green collapse onto one axis in protanopia and deuteranopia — that is
+what those conditions are.** The only thing left to separate them with is
+*lightness*, and on a dark background every usable colour has to be light, which
+spends most of the lightness range before the palette starts. The pair that
+passes is therefore a **pale** green against a **mid** red, and it is still a
+green (hue 140) and still a red (hue 4): a search over 5 696 passing
+combinations returned this as the least drifted from canonical green and red.
+
+| Role | Colour | L\* | Contrast on `#192A3A` | Contrast on `#0E1A25` |
+|---|---|---|---|---|
+| Favourable | `#B8E0C5` | 86 | 10.12 : 1 | 12.16 : 1 |
+| Unfavourable | `#FA584C` | 60 | 4.58 : 1 | 5.50 : 1 |
+| Flat, and the denominator badge | `#8FA3B5` | 66 | 5.63 : 1 | 6.77 : 1 |
+
+All three clear WCAG 4.5 : 1 for normal text on the darker of the two
+backgrounds.
+
+⚠️ **This palette is FOR THE DARK THEME and fails on a light one.** `#B8E0C5`
+on white is **1.45 : 1** — invisible. If the theme is ever swapped, these three
+values are the first thing to remeasure, and `validate_palette.py --palette
+page1-badge` is how.
+
+⚠️ **A thing to look at in Desktop, not decided here.** The same measurement,
+turned on the palettes already in the report, puts `page2-off-ramp`'s
+`#0d366b` at **1.23 : 1** and CIEDE2000 **10.2** against the visual background,
+and `page3-verdict`'s `#17527A` at 1.76 : 1. Those were chosen on 2026-09-02 and
+2026-09-09 without the theme in the measurement. **This is not a verdict** — a
+shape map may paint on its own background, and Desktop is the authority (the
+`albersUsa` lesson of 2026-09-01). **Look at the deepest blue on the page-2 map
+and say whether it reads.** If it does not, that is its own session, not this
+one.
+
+## 14.6 Five ways a badge must be ABSENT rather than zero
+
+This is the **ninth and tenth appearance** of the blank/zero trap on this
+project, and the shape is always the same: DAX compares BLANK as if it were 0,
+so a missing previous quarter becomes "−100 %" or "0.0 %" instead of nothing.
+
+| # | Situation | What a naive measure shows | Handled by |
+|---|---|---|---|
+| 1 | 2019 Q2 — the first quarter in `fact_market`, nothing before it | `▼ 100.0 %` | `ISBLANK ( Before )` |
+| 2 | A sector priced this quarter and not last | `▲ …` from zero | `ISBLANK ( Before )` |
+| 3 | Two quarters selected | a one-quarter comparison under a two-quarter figure | `SELECTEDVALUE` returning BLANK |
+| 4 | A previous value of exactly 0 | division error, or ∞ | `Before = 0` in percent mode |
+| 5 | Active listings on a quarter APCIQ contradicts | a change derived from a figure the mart declares unreliable | 14.7 |
+
+**Cases 1 and 3 fire on the island; case 2 fires only on sectors, and it is the
+acceptance case worth running.** Measured across the archive:
+
+| Where | Transitions | Badges that must vanish |
+|---|---|---|
+| Island, all four metrics | 84 | **0** |
+| Sectors, condominium price | 504 | 6 |
+| Sectors, plex price | 504 | **24** |
+| Sectors, single-family price | 504 | **35** |
+
+So the island never exercises the guard and the report looks finished without
+it. **Select a sector on plex and step through the quarters** — that is where a
+badge has to disappear, 24 times.
+
+## 14.7 The listings badge refuses a contradicted quarter
+
+`fact_market` carries `active_listings_corroboration`, three states, from J3.2:
+1 425 rows `corroborated`, 168 `contradicted_on_its_page`, 60
+`not_reconciled_across_pages`. The negative verdicts sit on **2021 Q4, 2022 Q1,
+2022 Q2 and 2023 Q4** — the editions declared defective in J3.2, where active
+listings reconcile nowhere.
+
+**A change derived from two figures, one of which the mart says is unreliable,
+is not a change.** And the three defective inventory quarters are *adjacent*, so
+a sequential comparison is contaminated on both sides of each:
+
+```dax
+Listings change =
+VAR ThisOne = SELECTEDVALUE ( fact_market[active_listings_corroboration] )
+VAR Earlier =
+    CALCULATE (
+        SELECTEDVALUE ( fact_market[active_listings_corroboration] ),
+        REMOVEFILTERS ( 'date' ),
+        'date'[date_key] = EDATE ( SELECTEDVALUE ( 'date'[quarter_start_date] ), -3 )
+    )
+RETURN
+    IF (
+        ThisOne = "corroborated" && Earlier = "corroborated",
+        QuarterBadge ( [Active listings (selected area)], "percent" ),
+        "inventory not reconciled this quarter"
+    )
+```
+
+`Listings change colour` gets the same guard, returning `"#8FA3B5"` on the
+refusal so the sentence is not painted as a verdict.
+
+**Six quarters lose the badge**: 2021 Q4, 2022 Q1, 2022 Q2 and 2023 Q4 for their
+own figure, plus **2022 Q3 and 2024 Q1** because the quarter they subtract is
+defective. Two of those six are quarters whose own inventory figure is fine —
+which is the whole point, and which no guard written on the current quarter
+alone would catch.
+
+⚠️ **This makes `Listings change` the one measure that is not a one-liner**, and
+it is written out here in full rather than described as "the same shape as the
+others". That shortcut was taken on 2026-09-01, three measures were left
+unwritten, and only a reader noticed.
+
+## 14.8 The callout icons
+
+The card visual takes an image inside the callout from a measure, when the
+measure returns a data URI and its **data category is set to Image URL**. So the
+icons are DAX, versioned in this file, with no file to lose and nothing to
+attribute.
+
+The seven are drawn here rather than lifted from Lucide or Feather — 24 × 24,
+stroke only, 1.6 px, round caps, painted in the neutral `#8FA3B5` because an
+icon is chrome and must not compete with the badge that carries data.
+
+⚠️ **All seven were parsed before being written into this file.** An SVG with a
+malformed path renders as *nothing* in Power BI, with no error — a missing icon
+looks exactly like a formatting toggle left off. `scratchpad/make_icons.py`
+built and parsed them; the check is one line of `xml.etree` and it is the
+difference between an icon that is absent and an icon that was never valid.
+
+```dax
+Sales icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12.5V4a1 1 0 0 1 1-1h8.5L21 11.5a1.5 1.5 0 0 1 0 2.1l-7.4 7.4a1.5 1.5 0 0 1-2.1 0L3 12.5Z'/%3E%3Ccircle cx='7.5' cy='7.5' r='1.4'/%3E%3C/svg%3E"
+
+Median price icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 6.5v11M14.8 9.2a2.8 2.8 0 0 0-2.8-1.4h-.4a2.2 2.2 0 0 0 0 4.4h.8a2.2 2.2 0 0 1 0 4.4H12a2.8 2.8 0 0 1-2.8-1.4'/%3E%3C/svg%3E"
+
+Days on market icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 6.8V12l3.6 2.2'/%3E%3C/svg%3E"
+
+Active listings icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5h10M4 12h10M4 17.5h10'/%3E%3Ccircle cx='19' cy='6.5' r='1.3'/%3E%3Ccircle cx='19' cy='12' r='1.3'/%3E%3Ccircle cx='19' cy='17.5' r='1.3'/%3E%3C/svg%3E"
+
+Share affordable icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='15.5' r='4.2'/%3E%3Cpath d='M11 12.5 20 3.5M17 6.5l2.4 2.4M14.6 8.9l2.4 2.4'/%3E%3C/svg%3E"
+
+Tracts evaluated icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 3.5h7v7h-7zM13.5 3.5h7v7h-7zM3.5 13.5h7v7h-7zM13.5 13.5h7v7h-7z'/%3E%3C/svg%3E"
+
+Income required icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 7.5A2 2 0 0 1 5.5 5.5h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z'/%3E%3Cpath d='M20.5 10.5h-4a2 2 0 0 0 0 4h4'/%3E%3C/svg%3E"
+```
+
+**Two encoding rules that make the difference between an icon and a blank:**
+`#` must be written `%23` — a raw `#` truncates the URI at the fragment — and
+every attribute uses **single** quotes, because DAX delimits the string with
+double ones.
+
+⚠️ **The largest number in any of these is 24.** `scripts/check_powerbi_project.py`
+flags numbers above 10 000 in a `.pbip` definition, so seven SVGs of viewBox
+coordinates cannot trip it. Worth stating because it is the kind of thing that
+gets discovered at the gate instead of here.
+
+## 14.9 The two notes, and why they are constant strings
+
+```dax
+Quarter comparison note =
+"Change is against the previous quarter. Montréal sales, listings and time on
+market are strongly seasonal: sales rose in 18 of 21 first-to-second quarters
+and fell in 18 of 21 second-to-third. Median price is not seasonal in the same
+way. Read a single quarter's move as a season before reading it as a market."
+
+Colour convention note =
+"Green marks a move that favours a first-time buyer, red one that does not — so
+a falling price and a lengthening time on market are both green."
+```
+
+⚠️ **Both are constant strings that read no table and no parameter, by
+construction.** `Down payment assumption` was made dynamic on 2026-09-09 and
+silently broke page 2, where the same card announced a typed down payment over
+figures computed at the legal minimum — **and the acceptance case "page 2
+unchanged at every slider position" could not catch it, because no figure moved,
+only a sentence.** A note that cannot vary cannot repeat that.
+
+`Quarter comparison note` goes on page 1 and page 2. `Colour convention note`
+goes on page 1, where four badges point in two directions at once and the
+question actually arises.
+
+## 14.10 The build, in Desktop
+
+Everything below is formatting on cards that already exist. **All seven are
+already `cardVisual`** — the new card visual, generally available since November
+2025, read out of `Report/Layout`. Nothing is replaced.
+
+1. Create the three functions (TMDL view → *Apply*).
+2. Create the fourteen measures and the seven icon measures in `_Measures`.
+   **Home table matters**: two measures were left in `Down payment input` on
+   2026-09-09, and recreating a what-if parameter takes its lodgers with it.
+3. On each icon measure: *Column tools* → **Data category** → **Image URL**.
+4. Per card, *Format visual* → **Callout** → **Image** → on → *Image type* =
+   **Select from data** → the icon measure → *Image fit* **Center**, *Size*
+   **32 px**.
+5. Per card, *Format visual* → **Reference labels** → *Apply settings to* = that
+   card → drag the badge measure into **Add label** → select it.
+6. On the reference label, *Values* → **fx** → *Format style* **Field value** →
+   the matching colour measure.
+7. Turn the reference-label **background off** (*Reference labels layout* →
+   *Background*). It defaults on since the November 2025 release and puts a
+   panel behind a one-line badge.
+8. Add the two note cards.
+
+⚠️ **Step 6 is where a badge silently loses its colour.** *Field value* is the
+only style that takes a `#RRGGBB` measure; the rule-based styles will happily
+accept the text measure and colour nothing.
+
+## 14.11 Acceptance
+
+Run `.venv/Scripts/python.exe scripts/report_oracle.py --quarter <q>` beside
+Desktop. The oracle prints, for each of the seven cards, the current value, the
+previous quarter's value, the movement, the arrow and the colour it must show.
+
+| # | Set this | Expect |
+|---|---|---|
+| 1 | Page 1, condominium, **2019 Q2**, no sector | **all four badges absent.** Nothing precedes the first quarter |
+| 2 | Page 1, condominium, 2026 Q2, no sector | four badges, each naming **2026 Q1**, matching the oracle to one decimal |
+| 3 | Page 1, **plex**, one sector, step through the quarters | the price badge **disappears** on the quarters the oracle lists — 24 of them across the sectors |
+| 4 | Page 1, **2022 Q3**, any type | `Listings change` reads *inventory not reconciled this quarter*, in grey. The other three badges are normal |
+| 5 | Page 1, **2024 Q1** | same refusal — the quarter it subtracts is 2023 Q4 |
+| 6 | Page 1, ctrl-click a **second quarter** if the slicer allows it | every badge vanishes. Nothing reads "0.0 %" |
+| 7 | Page 2, **single-family**, 2026 Q2 | the share badge in **points**; the `Tracts evaluated` badge **grey**, showing a count that the oracle confirms moved |
+| 8 | Page 2, any quarter | the two note cards are unchanged when the down-payment slider moves — they are on page 2 and constant |
+| 9 | Page 3 and page 4 | **unchanged.** No badge, no icon, no note. If anything moved there, a measure was rebranded instead of added |
+
+**Case 3 is the one that fails if the guards were written from the island.**
+Cases 4 and 5 are the ones that fail if the corroboration guard was written on
+the current quarter only.

@@ -99,7 +99,7 @@ parameter as (
 ),
 
 base as (
-    select s.area_code, s.property_type_code, s.edition_label,
+    select s.area_code, s.geography_key, s.property_type_code, s.edition_label,
            s.median_price, s.contract_rate_percent, s.minimum_down_payment,
            s.loan_amount                     as mart_loan_amount,
            s.insurance_premium               as mart_premium,
@@ -264,6 +264,38 @@ def _verdict_grid_sql() -> str:
     """
 
 
+def _kpi_and_shapes_sql(down_payment: int) -> str:
+    """The six verdict classes, counted as sectors AND as drawn shapes.
+
+    Rewritten on 2026-09-09. It used to classify income_required_lower_bound,
+    which is the mart's own scenario -- the LEGAL MINIMUM down payment. Page 3
+    stopped reading that column the moment the slider was built, so the block
+    was computing the colours of a map the report no longer draws. It now runs
+    the same parameterised chain as every other page-3 block, at the same down
+    payment.
+    """
+    return _CHAIN.format(
+        grid="select %d as down_payment" % int(down_payment),
+        where="and not s.is_island_aggregate "
+              "and s.edition_year = %s and s.edition_quarter = %s",
+        down_expr="grid.down_payment",
+    ) + f"""
+    select coalesce(v.property_type_code, '')                  as property_type_code,
+           coalesce(v.verdict, 'TOTAL -- 18 sectors, 36 shapes') as verdict,
+           count(distinct v.area_code)                         as sectors,
+           count(m.place_key)                                  as shapes
+    from (
+        select property_type_code, area_code, geography_key,
+               {_VERDICT} as verdict
+        from final
+    ) v
+    join marts.map_place m on m.apciq_geography_key = v.geography_key
+    group by rollup (v.property_type_code, v.verdict)
+    having grouping(v.property_type_code) = 0
+    order by v.property_type_code, v.verdict nulls last
+    """
+
+
 def _reproduction_sql() -> str:
     """Fed the legal minimum, the chain must land on the mart. Every count 0."""
     return _CHAIN.format(
@@ -283,6 +315,181 @@ def _reproduction_sql() -> str:
            count(*) filter (where regime = 2)                                 as below_minimum
     from final
     where median_price is not null
+    """
+
+
+# ----------------------------------------------------------------------------
+# The quarter-over-quarter badges of section 14, added 2026-09-10.
+#
+# Almost everything else this script checks is an observation read out of a
+# mart. A badge is a DERIVATION, so the oracle has to compute it the same way
+# the DAX does or it is not a check at all. Three things are therefore
+# reproduced literally rather than approximated:
+#
+#   - the direction comes off the sign and the number is shown unsigned, because
+#     a badge reading "down -4.2 %" says it twice;
+#   - a badge that cannot be computed prints as ABSENT, never as 0. That is the
+#     blank/zero trap, and printing a 0 here would licence a 0 on screen;
+#   - green means FAVOURABLE TO A FIRST-TIME BUYER, not "up". A rising price is
+#     unfavourable; a lengthening time on market is favourable, because it is
+#     time to decide.
+# ----------------------------------------------------------------------------
+
+_BADGE_METRICS = (
+    # column,           card label,        a rise favours the buyer
+    ("sales_count",     "Sales",           False),
+    ("median_price",    "Median price",    False),
+    ("days_on_market",  "Days on market",  True),
+    ("active_listings", "Active listings", True),
+)
+
+
+def _badge_sql() -> str:
+    """What each page-1 badge must read, on the island row."""
+    branches = []
+    for column, label, higher_is_better in _BADGE_METRICS:
+        favourable = ">" if higher_is_better else "<"
+        branches.append(f"""
+            select '{label}'                                    as card,
+                   now_value                                    as this_quarter,
+                   prev_value                                   as previous_quarter,
+                   case when prev_value is null or now_value is null
+                             or prev_value = 0 then null
+                        else round(100.0 * (now_value - prev_value)
+                                   / prev_value, 1) end         as movement_pct,
+                   case when prev_value is null or now_value is null
+                             or prev_value = 0 then 'ABSENT -- no badge'
+                        when now_value > prev_value then 'up'
+                        when now_value < prev_value then 'down'
+                        else 'flat' end                         as direction,
+                   case when prev_value is null or now_value is null
+                             or prev_value = 0 then '(none)'
+                        when now_value = prev_value then '#8FA3B5'
+                        when now_value - prev_value {favourable} 0 then '#B8E0C5'
+                        else '#FA584C' end                      as colour
+            from windowed
+            where metric = '{column}' and quarter_start_date = %s""")
+    return f"""
+        with island as (
+            select quarter_start_date, sales_count, median_price,
+                   days_on_market, active_listings
+            from marts.fact_market
+            where is_island_aggregate and property_type_code = %s
+        ),
+        long as (
+            select quarter_start_date, 'sales_count' as metric,
+                   sales_count::numeric as v from island
+            union all select quarter_start_date, 'median_price',
+                   median_price::numeric from island
+            union all select quarter_start_date, 'days_on_market',
+                   days_on_market::numeric from island
+            union all select quarter_start_date, 'active_listings',
+                   active_listings::numeric from island
+        ),
+        windowed as (
+            select metric, quarter_start_date, v as now_value,
+                   lag(v) over (partition by metric
+                                order by quarter_start_date) as prev_value
+            from long
+        )
+        {" union all ".join(branches)}
+    """
+
+
+def _badge_absent_sql() -> str:
+    """Where a badge must VANISH. The island never exercises this guard."""
+    return """
+        with s as (
+            select property_type_code, geography_key, quarter_start_date, median_price,
+                   lag(median_price) over (partition by property_type_code, geography_key
+                                           order by quarter_start_date) as prev_price
+            from marts.fact_market
+            where not is_island_aggregate
+        )
+        select property_type_code                                         as property_type,
+               count(*) filter (where quarter_start_date > '2019-04-01')  as sector_quarters,
+               count(*) filter (where median_price is not null
+                                  and prev_price is null
+                                  and quarter_start_date > '2019-04-01')  as badge_must_vanish,
+               count(*) filter (where median_price is not null
+                                  and prev_price is not null
+                                  and quarter_start_date > '2019-04-01')  as badge_must_show
+        from s group by 1 order by 1
+    """
+
+
+def _badge_refusal_sql() -> str:
+    """The quarters where Listings change must refuse rather than compute."""
+    return """
+        with s as (
+            select d.quarter_label, f.quarter_start_date,
+                   f.active_listings_corroboration                  as this_quarter_verdict,
+                   lag(f.active_listings_corroboration)
+                       over (order by f.quarter_start_date)         as previous_quarter_verdict
+            from marts.fact_market f
+            join marts.dim_date d on d.date_key = f.quarter_start_date
+            where f.is_island_aggregate and f.property_type_code = %s
+        )
+        select quarter_label, this_quarter_verdict, previous_quarter_verdict,
+               case when this_quarter_verdict <> 'corroborated'
+                    then 'REFUSE -- its own inventory figure'
+                    else 'REFUSE -- the quarter it subtracts' end   as why
+        from s
+        where this_quarter_verdict <> 'corroborated'
+           or previous_quarter_verdict <> 'corroborated'
+        order by quarter_start_date
+    """
+
+
+def _badge_page2_sql() -> str:
+    """The three page-2 badges. The share moves in POINTS, never per cent."""
+    return """
+        with q as (
+            select quarter_start_date,
+                   100.0 * count(*) filter (where meets_income_requirement_indexed)
+                         / nullif(count(*) filter (
+                               where meets_income_requirement_indexed is not null), 0)
+                                                                     as share,
+                   count(*) filter (where meets_income_requirement_indexed is not null)
+                                                                     as evaluated,
+                   avg(income_required_lower_bound)                  as required
+            from marts.fact_affordability
+            where property_type_code = %s and household_profile_code = %s
+            group by 1
+        ),
+        w as (
+            select quarter_start_date, share, evaluated, required,
+                   lag(share)     over o as prev_share,
+                   lag(evaluated) over o as prev_evaluated,
+                   lag(required)  over o as prev_required
+            from q window o as (order by quarter_start_date)
+        ),
+        here as (select * from w where quarter_start_date = %s)
+        select 'Share of tracts affordable  [POINTS]'            as card,
+               round(share::numeric, 1)                          as this_quarter,
+               round(prev_share::numeric, 1)                     as previous_quarter,
+               round((share - prev_share)::numeric, 1)           as movement,
+               case when prev_share is null then '(none)'
+                    when share > prev_share then '#B8E0C5'
+                    when share < prev_share then '#FA584C'
+                    else '#8FA3B5' end                           as colour
+        from here
+        union all
+        select 'Tracts evaluated  [count, ALWAYS grey]',
+               evaluated::numeric, prev_evaluated::numeric,
+               (evaluated - prev_evaluated)::numeric,
+               case when prev_evaluated is null then '(none)' else '#8FA3B5' end
+        from here
+        union all
+        select 'Income required, lower bound  [PER CENT]',
+               round(required::numeric, 0), round(prev_required::numeric, 0),
+               round((100.0 * (required - prev_required)
+                      / nullif(prev_required, 0))::numeric, 1),
+               case when prev_required is null then '(none)'
+                    when required < prev_required then '#B8E0C5'
+                    when required > prev_required then '#FA584C'
+                    else '#8FA3B5' end
+        from here
     """
 
 
@@ -517,46 +724,31 @@ def main() -> int:
 
         table(
             cur,
-            f"PAGE 3 -- KPI row AND map colours, which must add up to eighteen",
-            "within_reach + borderline + out_of_reach + no_price = 18. Four counts,\n"
-            "one definition each. If Power BI shows a blank rather than a zero in\n"
-            "any of them, the measure is missing its IF ( ISBLANK ( .. ), 0, .. ) --\n"
-            "COUNTROWS and DISTINCTCOUNT both return blank over an empty set, and\n"
-            "no sector is within reach at the low end of the slicer.\n"
+            "PAGE 3 -- KPI row AND map colours, at the typed down payment",
+            "Six classes now, not four, and they must add up to 18 sectors and\n"
+            "36 shapes on every property type. The two new ones are refusals:\n"
+            "Below the legal minimum and Cash purchase. A measure applying its own\n"
+            "threshold instead of reading the verdict shows up here as a total\n"
+            "that is not 18.\n"
             "\n"
-            "⚠️ THE MAP NO LONGER COUNTS EIGHTEEN. Since 2026-09-09 page 3 draws\n"
-            "the 36 administrative places, not the 18 sectors, so the shapes\n"
-            "column below is what to count on screen. The KPI cards still count\n"
-            "sectors: 12 blue shapes beside a card reading 6 is correct, and the\n"
-            "text box under the map is what tells the reader not to count shapes.",
-            """
-            with per_sector as (
-              select a.apciq_sector_number,
-                     a.apciq_geography_key,
-                     avg(a.income_required_lower_bound) as required
-              from marts.fact_affordability a
-              where a.property_type_code = 'condo'
-                and a.household_profile_code = 'couple'
-                and a.edition_year = %s and a.edition_quarter = %s
-              group by 1, 2
-            ),
-            classified as (
-              select per_sector.*,
-                     case when required is null              then 'no published price'
-                          when %s >= required * 1.10         then 'within reach'
-                          when %s >= required                then 'borderline'
-                          else                                    'out of reach'
-                     end as verdict
-              from per_sector
-            )
-            select coalesce(c.verdict, 'TOTAL -- must read 18 and 36') as verdict,
-                   count(distinct c.apciq_sector_number)               as sectors,
-                   count(m.place_key)                                  as shapes
-            from classified c
-            join marts.map_place m on m.apciq_geography_key = c.apciq_geography_key
-            group by rollup (c.verdict)
-            order by c.verdict nulls last
-            """,
+            "⚠️ COMPUTED AT THE DOWN PAYMENT PASSED TO THIS SCRIPT, not at the\n"
+            "legal minimum. Until 2026-09-09 this block classified\n"
+            "income_required_lower_bound, which is the mart's own scenario -- the\n"
+            "legal minimum. Page 3 stopped reading that column when the slider was\n"
+            "built, so the block was printing the colours of a map the report no\n"
+            "longer draws. Pass --down-payment to match the slider on screen.\n"
+            "\n"
+            "⚠️ THE MAP DOES NOT COUNT EIGHTEEN. Page 3 draws the 36 administrative\n"
+            "places, not the 18 sectors, so the shapes column is what to count on\n"
+            "screen. The KPI cards still count sectors: more blue shapes than the\n"
+            "card reads is correct, and the text box under the map is what tells\n"
+            "the reader not to count patches.\n"
+            "\n"
+            "⚠️ A blank rather than a zero in any KPI card means the measure is\n"
+            "missing its IF ( ISBLANK ( .. ), 0, .. ). COUNTROWS returns blank over\n"
+            "an empty set, and at the low end of the slider two of the three\n"
+            "counting measures are legitimately zero.",
+            _kpi_and_shapes_sql(args.down_payment),
             (year, quarter, args.income, args.income),
         )
 
@@ -946,6 +1138,67 @@ def main() -> int:
             "was transcribed from this chain, the report drifted with it.",
             _reproduction_sql(),
             (),
+        )
+
+        quarter_start = f"{year}-{quarter * 3 - 2:02d}-01"
+
+        table(
+            cur,
+            "PAGE 1 -- the four quarter-over-quarter badges (island, condominium)",
+            "Section 14. The badge under each KPI card. Compare the arrow, the\n"
+            "size and the colour -- and read the number UNSIGNED, because the\n"
+            "direction is in the arrow.\n"
+            "\n"
+            "A row printed ABSENT must show NO badge on screen. A card showing\n"
+            "'0.0 %' there is the blank/zero trap, ninth appearance.\n"
+            "\n"
+            "Colour is favourable TO A FIRST-TIME BUYER, not 'up': #B8E0C5 on a\n"
+            "falling price and on a lengthening time on market, #FA584C on a\n"
+            "rising price and on rising sales.",
+            _badge_sql(),
+            ("condo",) + (quarter_start,) * 4,
+        )
+
+        table(
+            cur,
+            "PAGE 1 -- where a price badge must VANISH, by property type",
+            "The island exercises this guard ZERO times over its 84 transitions,\n"
+            "so the report looks finished without it. The sectors do not.\n"
+            "\n"
+            "Select a sector on plex and step through the quarters: the badge has\n"
+            "to disappear on the quarters where APCIQ published no price in the\n"
+            "one before. If it shows a rise from nothing, the guard is missing.",
+            _badge_absent_sql(),
+            (),
+        )
+
+        table(
+            cur,
+            "PAGE 1 -- the quarters where Listings change must REFUSE",
+            "active_listings_corroboration carries the J3.2 verdicts. A change\n"
+            "derived from two figures, one of which the mart declares unreliable,\n"
+            "is not a change.\n"
+            "\n"
+            "Two of these quarters have a perfectly good inventory figure of\n"
+            "their own and refuse because the quarter they SUBTRACT is defective.\n"
+            "A guard written on the current quarter alone would miss them.",
+            _badge_refusal_sql(),
+            ("condo",),
+        )
+
+        table(
+            cur,
+            "PAGE 2 -- the three badges (condominium, couple)",
+            "The share badge is in POINTS. A share going from 40 to 44 has risen\n"
+            "four points and ten per cent, and both sentences are true about\n"
+            "different things.\n"
+            "\n"
+            "Tracts evaluated is the DENOMINATOR, so its badge is always grey:\n"
+            "more tracts evaluated is neither good nor bad news, it means the\n"
+            "base of comparison moved. On single-family it moves by 85 tracts on\n"
+            "average and once by 258.",
+            _badge_page2_sql(),
+            ("condo", "couple", quarter_start),
         )
 
         print(f"\n{'=' * 78}")
