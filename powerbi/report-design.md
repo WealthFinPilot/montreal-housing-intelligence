@@ -1392,8 +1392,8 @@ step with it.
 | First-time buyer | `Sectors priced` | `_Measures` | `fact_affordability` | Whole number | 3 |
 | First-time buyer | `Tracts priced` | `_Measures` | `fact_affordability` | Whole number | 3 |
 | First-time buyer | `Down payment regime code` | `_Measures` | `fact_mortgage_scenario`, `Down payment input` | Whole number | 3 |
-| First-time buyer | `Income required at this down payment` | `_Measures` | `fact_mortgage_scenario`, the two seed tables, `Down payment input` | Currency, 0 dec., thousands sep. | 3 |
-| First-time buyer | `Verdict at this down payment` | `_Measures` | `Down payment regime code`, `Income required at this down payment`, `Income input` | Text | 3 |
+| First-time buyer | `Income required at this down payment` | **`Down payment input`** | `fact_mortgage_scenario`, the two seed tables, `Down payment input` | Currency, 0 dec., thousands sep. | 3 |
+| First-time buyer | `Verdict at this down payment` | **`Down payment input`** | `Down payment regime code`, `Income required at this down payment`, `Income input` | Text | 3 |
 | First-time buyer | `Sectors within reach of this income` | `_Measures` | `Verdict at this down payment` | Whole number | 3 |
 | First-time buyer | `Sectors borderline` | `_Measures` | `Verdict at this down payment` | Whole number | 3 |
 | First-time buyer | `Sectors below the legal minimum` | `_Measures` | `Verdict at this down payment` | Whole number | 3 |
@@ -1425,6 +1425,27 @@ step with it.
 | Icons | `Income required icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
 | — | `Income input Value` | `Income input` | the slicer selection | Currency, 0 dec. | 3 |
 | — | `Down payment input Value` | `Down payment input` | the slicer selection | Currency, 0 dec. | 3 |
+
+⚠️ **Two measures live in `Down payment input`, not `_Measures`, and that is a
+decision rather than an oversight (2026-09-10).** Moving
+`Income required at this down payment` and `Verdict at this down payment` into
+`_Measures` broke other measures in Desktop, so they were left where they
+are. DAX does not care — a measure is referenced as `[Name]` whatever table
+holds it — and the index above says where they really are so nobody hunts for
+them under `_Measures`.
+
+**What it costs, written here so a future session does not have to rediscover
+it**: ⚠️ **changing this what-if parameter's minimum, maximum or increment can
+mean Desktop recreates the `Down payment input` table, and measures lodged
+inside it go with it.** If the slider's range is ever changed and two measures
+vanish, they are section 13.7 and 13.8 of this file — retype them, and put them
+back wherever they will live.
+
+`Down payment regime code`, `Sector bar colour` and whether
+`Verdict for this income` still exists at all are **not readable from
+`Report/Layout`** — one is on no visual, one is bound through `fx`, and absence
+from every visual does not prove absence from the model. They have to be looked
+at in Desktop, and they have not been.
 
 ⚠️ **Three DAX user-defined functions are NOT in this table, because they are
 not measures.** `ValueOneQuarterEarlier`, `QuarterBadge` and
