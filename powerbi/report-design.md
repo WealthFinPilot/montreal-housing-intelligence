@@ -4637,6 +4637,12 @@ section announced it and stopped. Written above, in full.
 > formatting, and one page of refusals. The build stays at PASS=353 and 140
 > pytest, and `git status` on `dbt/` is how that claim is checked.
 
+**"Badge" is this file's word, not Power BI's.** It means the small line under a
+card's main figure -- what Power BI calls a **reference label**, and what reads
+as "▲ 4.2 % vs 2026 Q1" on screen. Three things are wired per card: the icon
+beside the big number (*Callout > Image*), the badge text (*Reference labels >
+Add label*), and its colour (the **fx** on that label).
+
 Seven KPI cards gain a small line under the figure: how the same measure stood
 **one calendar quarter earlier**, as a signed percentage (or in points, where a
 percentage would be wrong), coloured, with an arrow, and **naming the quarter it
@@ -4706,11 +4712,20 @@ Seven badges, seven colours, and three notes would otherwise hold seven copies
 of one rule. **DAX user-defined functions are generally available since June
 2026** and this model runs on Desktop **2026.08**, so the rule is a function.
 
-⚠️ **The function is NOT called `PreviousQuarter`.** `PREVIOUSQUARTER` is a DAX
-function, and a user-defined name that collides with a built-in one is rejected.
-This is the **fifth** collision of its kind on this project after `trailing` in
-PostgreSQL, `Current`, `Name` and `RANK` — the habit is now to check the name
-before typing the body.
+⚠️ **THREE names in these eleven lines collide with DAX built-ins, and two of
+them were found the hard way on 2026-09-10.** `PREVIOUSQUARTER` is a function,
+so the first one cannot be called `PreviousQuarter`. **`NOW` is a function**, so
+no variable may be called `Now`. **`EARLIER` is a function** — the one from
+calculated columns — so no variable may be called `Earlier` either, which is how
+a rename from `Before` (itself a visual-calculation keyword, with `AFTER` and
+`CURRENT`) moved the error instead of fixing it.
+
+⚠️ **An error that follows a rename is still about the name.** Both names were
+reserved, which made a single symptom look like two different causes and sent
+the first reading of it in the wrong direction. Sixth, seventh and eighth
+collisions of this kind on this project, after `trailing` in PostgreSQL,
+`Current`, `Name` and `RANK`. **The habit is now to check a name against the DAX
+function list before typing the body, not after.**
 
 Create these in **TMDL view** (*Apply*) or **DAX query view** (*Update model*).
 They land under *Functions* in Model explorer.
@@ -4721,7 +4736,7 @@ createOrReplace
 	/// filter context. BLANK when the context does not hold exactly one quarter.
 	/// @param {AnyRef} m - the measure to re-evaluate
 	/// @returns its value one quarter earlier, or BLANK
-	function ValueOneQuarterEarlier = (m : ANYREF EXPR) =>
+	function ValueOneQuarterEarlier = (m : ANYREF) =>
 		VAR ThisQuarterStart = SELECTEDVALUE ( 'date'[quarter_start_date] )
 		VAR EarlierQuarterStart = EDATE ( ThisQuarterStart, -3 )
 		RETURN
@@ -4762,19 +4777,27 @@ guard.**
 - **`EDATE ( .., -3 )` handles the year boundary and cannot land on a short
   month**, because a quarter always starts on the first.
 
+✅ **Verified in DAX query view on 2026-09-10: this works.** The parser accepts
+all three and the query runs. That matters because `QuarterBadge` hands its own
+`expr` parameter on to `ValueOneQuarterEarlier`, another `expr` parameter —
+nesting UDFs is documented, **forwarding an unevaluated expression from one lazy
+parameter into another is not**, and the reference warns of parser
+inconsistencies in exactly that area. It was tested before fourteen measures
+were laid on top, which is what 14.2 bis exists for.
+
 Two more functions compose what the reader sees, so each of the fourteen
-measures below is a single line.
+measures below is a single line. **They go in the same script, below the
+first** — `createOrReplace` appears once, at the top.
 
 ```tmdl
-createOrReplace
 	/// The badge text for a measure: arrow, size of the change, and the quarter
 	/// it is measured against. BLANK whenever the comparison cannot be made.
 	/// @param {AnyRef} m - the measure to compare
-	/// @param {String} mode - "percent", "points" or "count"
+	/// @param {String} unitMode - "percent", "points" or "count"
 	/// @returns e.g. "▲ 4.2 % vs 2026 Q1", or BLANK
-	function QuarterBadge = (m : ANYREF EXPR, mode : STRING) =>
-		VAR Now = m
-		VAR Before = ValueOneQuarterEarlier ( m )
+	function QuarterBadge = (m : ANYREF, unitMode : STRING) =>
+		VAR Latest = m
+		VAR PriorValue = ValueOneQuarterEarlier ( m )
 		VAR EarlierLabel =
 			CALCULATE (
 				SELECTEDVALUE ( 'date'[quarter_label] ),
@@ -4783,23 +4806,23 @@ createOrReplace
 			)
 		VAR Movement =
 			SWITCH (
-				mode,
-				"percent", DIVIDE ( Now - Before, Before ),
-				Now - Before
+				unitMode,
+				"percent", DIVIDE ( Latest - PriorValue, PriorValue ),
+				Latest - PriorValue
 			)
-		VAR Arrow = SWITCH ( TRUE (), Movement > 0, "▲ ", Movement < 0, "▼ ", "— " )
-		VAR Size =
+		VAR Marker = SWITCH ( TRUE (), Movement > 0, "▲ ", Movement < 0, "▼ ", "— " )
+		VAR Magnitude =
 			SWITCH (
-				mode,
-				"percent", FORMAT ( ABS ( Movement ), "0.0" ) & " %",
-				"points",  FORMAT ( ABS ( Movement ), "0.0" ) & " pts",
+				unitMode,
+				"percent", FORMAT ( ABS ( Movement ) * 100, "0.0" ) & " %",
+				"points",  FORMAT ( ABS ( Movement ) * 100, "0.0" ) & " pts",
 				FORMAT ( ABS ( Movement ), "#,0" )
 			)
 		RETURN
 			IF (
-				NOT ISBLANK ( Now ) && NOT ISBLANK ( Before )
-					&& NOT ( mode = "percent" && Before = 0 ),
-				Arrow & Size & " vs " & EarlierLabel
+				NOT ISBLANK ( Latest ) && NOT ISBLANK ( PriorValue )
+					&& NOT ( unitMode = "percent" && PriorValue = 0 ),
+				Marker & Magnitude & " vs " & EarlierLabel
 			)
 
 	/// The badge colour. higherIsBetter says which direction is good FOR A
@@ -4807,14 +4830,14 @@ createOrReplace
 	/// @param {AnyRef} m - the measure the badge is about
 	/// @param {Boolean} higherIsBetter - TRUE when a rise favours the buyer
 	/// @returns a #RRGGBB string, or BLANK when there is no badge to colour
-	function QuarterBadgeColour = (m : ANYREF EXPR, higherIsBetter : BOOLEAN) =>
-		VAR Now = m
-		VAR Before = ValueOneQuarterEarlier ( m )
-		VAR Movement = Now - Before
+	function QuarterBadgeColour = (m : ANYREF, higherIsBetter : BOOLEAN) =>
+		VAR Latest = m
+		VAR PriorValue = ValueOneQuarterEarlier ( m )
+		VAR Movement = Latest - PriorValue
 		VAR Favourable = IF ( higherIsBetter, Movement > 0, Movement < 0 )
 		RETURN
 			IF (
-				NOT ISBLANK ( Now ) && NOT ISBLANK ( Before ),
+				NOT ISBLANK ( Latest ) && NOT ISBLANK ( PriorValue ),
 				SWITCH (
 					TRUE (),
 					Movement = 0,  "#8FA3B5",
@@ -4824,6 +4847,35 @@ createOrReplace
 			)
 ```
 
+⚠️ **THE `* 100` WAS MISSING WHEN THIS WAS FIRST WRITTEN, AND SIX OF THE SEVEN
+BADGES SHIPPED WRONG (found 2026-09-11).** `DIVIDE ( Latest - PriorValue,
+PriorValue )` is a **fraction** — 0.042 for a rise of 4.2 % — and
+`FORMAT ( 0.042, "0.0" )` is the string `"0.0"`. Every percent badge read
+`▲ 0.0 %` or `▲ 0.1 %`; only `Tracts evaluated change`, the one in `"count"`,
+was right. **It was found on screen, by reading four badges that all
+claimed a tenth of a percent.**
+
+**It is a defect of this section, not of the build** — the DAX in Desktop was a
+faithful copy of what was written here. Two things follow. The acceptance case
+that would have caught it exists and is precise — case 2, *"matching the oracle
+to one decimal"* — and **it had not been run yet**: the badges were wired,
+looked plausible and were believed. And the fault is the reverse of every other
+one this project has found: it **did** show, loudly, in the only place a reader
+looks. A percentage stuck at 0.0 across four unrelated cards is not a subtle
+fault; it survived twenty-four hours because nobody had compared it to anything.
+
+⚠️ **`"points"` expects a measure that is a proportion between 0 and 1** — that
+is the function's contract, and the `* 100` in that branch is what makes it one.
+`Share of tracts affordable` is a `DIVIDE`, so 0.781, and the badge must read
+`43.1 pts`, not `0.4 pts`. `"percent"` needs no such assumption: a relative
+change is a fraction whatever the measure's own scale is.
+
+⚠️ **`Movement` itself is deliberately left unscaled.** The arrow and
+`QuarterBadgeColour` both read only its **sign**, which no multiplication
+changes. Scaling the display and not the value keeps the two functions in
+agreement about when a badge exists and which way it points — scaling `Movement`
+would have been the same number of characters and one more thing to keep in step.
+
 ⚠️ **`ABS` in the text and the sign in the arrow, deliberately.** A badge
 reading `▼ -4.2 %` says the same thing twice and reads as a double negative. The
 arrow carries the direction; the number carries the size.
@@ -4832,6 +4884,91 @@ arrow carries the direction; the number carries the size.
 evaluation per card, on a model of 1 653 rows, and it buys something worth more:
 neither function can be used without the other agreeing on when a badge exists.
 Passing the value between them would mean a third measure per card.
+
+## 14.2 bis The query that tests the functions before they are saved
+
+**DAX query view, not TMDL view** — it is the one place in the Power BI half of
+this project where something can be evaluated *without* being written into the
+model. TMDL view has *Apply*, which saves first and asks questions later.
+
+**The query is already in the file.** It was written on 2026-09-10 and Power BI
+keeps query tabs inside the `.pbix`, at `DAXQueries/Requête 1.dax`. Open the
+report, go to DAX query view, and the three functions are there as typed.
+
+```dax
+DEFINE
+    FUNCTION ValueOneQuarterEarlier = ( m : ANYREF ) => …
+    FUNCTION QuarterBadge           = ( m : ANYREF, unitMode : STRING ) => …
+    FUNCTION QuarterBadgeColour     = ( m : ANYREF, higherIsBetter : BOOLEAN ) => …
+
+EVALUATE
+SUMMARIZECOLUMNS (
+    'date'[quarter_label],
+    TREATAS ( { "Condominium" }, property_type[name_en] ),
+    "Now",    [Sales (island, as published)],
+    "Before", ValueOneQuarterEarlier ( [Sales (island, as published)] ),
+    "Badge",  QuarterBadge ( [Sales (island, as published)], "percent" ),
+    "Colour", QuarterBadgeColour ( [Sales (island, as published)], FALSE )
+)
+ORDER BY 'date'[quarter_label]
+```
+
+The bodies are in 14.2. What matters here is the **shape**: `Now` and `Before`
+beside the `Badge` that is derived from them, so the badge can be checked
+against its own inputs on the same row, with no oracle and no second screen.
+
+**What it must return**
+
+| Column | Must read |
+|---|---|
+| `Now`, `Before` | the measure, and the measure one quarter earlier. The first quarter of the archive has a `Now` and **no** `Before` |
+| `Badge` | `▲`/`▼`/`—`, a size, ` vs `, and the label of the quarter in `Before` |
+| | **and the size must equal `\|Now − Before\| / Before` as a percentage** — check one row by hand |
+| `Colour` | `#B8E0C5`, `#FA584C` or `#8FA3B5`, and BLANK on exactly the rows where `Badge` is blank |
+| First row | `Badge` and `Colour` both **blank**. Nothing precedes the first quarter |
+
+⚠️ **DO NOT PASTE THE OUTPUT ANYWHERE.** `Now` and `Before` are APCIQ sales
+counts. Same rule as `scripts/report_oracle.py`: read it on screen, close it.
+
+**Then, and only then**, the *Update model with changes* link above `DEFINE`.
+
+### The scale check, which needs no data at all
+
+⚠️ **This is the one that was skipped on 2026-09-10, and it costs two lines.**
+
+```dax
+EVALUATE
+ROW (
+    "as first written", FORMAT ( 0.042, "0.0" ) & " %",
+    "as written now",   FORMAT ( 0.042 * 100, "0.0" ) & " %"
+)
+```
+
+`0.0 %` and `4.2 %`. `DIVIDE` returns a **fraction**, and a format string is not
+a multiplication: `"0.0"` rounds 0.042 to one decimal and gets zero. Every
+percent badge in the report read `0.0 %` or `0.1 %` for a day because of it.
+
+**The check that would have caught it was already on screen.** The query above
+prints `Now` and `Before` next to `Badge`. On 2026-09-10 it was read for one
+question — *does the parser accept a UDF that forwards an `expr` parameter into
+another UDF* — and the answer was yes, so the tab was closed. **The columns that
+disagreed were in the same table, unread.** A query that returns three things
+answers three questions only if three are asked.
+
+### Three things that make this tab fail for reasons that are not the DAX
+
+- ⚠️ **Clear the tab before pasting.** DAX query view opens with a sample query
+  in it and `DEFINE` must precede every `EVALUATE`. Pasting underneath gives
+  *The syntax for 'DEFINE' is incorrect*, pointing at your `DEFINE` rather than
+  at the sample that caused it.
+- ⚠️ **User-defined functions need compatibility level 1702.** If the model
+  refuses them outright, look there before suspecting the syntax.
+- ⚠️ **Three names in these bodies collide with DAX built-ins**: no function
+  called `PreviousQuarter`, no variable called `Now` or `Earlier`. The variables
+  here are `Latest` and `PriorValue` for that reason, and the column headers in
+  the `EVALUATE` are strings, which is why `"Now"` is allowed there and
+  `VAR Now` is not.
+
 
 ## 14.3 The fourteen measures
 
@@ -4961,6 +5098,17 @@ on white is **1.45 : 1** — invisible. If the theme is ever swapped, these thre
 values are the first thing to remeasure, and `validate_palette.py --palette
 page1-badge` is how.
 
+✅ **The theme WAS swapped, and the palette was remeasured on 2026-09-11 rather
+than assumed to survive.** `v10` runs *Montreal Immobilier — Reference Dark v3*,
+read out of the `.pbix`: canvas still `#0E1A25`, visual background **`#192938`**
+instead of `#192A3A`. The two backgrounds are **CIEDE2000 0.5** apart — one
+colour, as far as a reader is concerned — and every badge colour still separates
+from the panel by at least **39.8**, the closest being the red in protanopia.
+The three badge-against-badge pairs are untouched at 24.0, 14.1 and 32.6. **The
+palette holds.** What the new theme actually adds is `listSlicer` and
+`advancedSlicerVisual` styling, which is why the slicers changed and the badges
+did not.
+
 ⚠️ **A thing to look at in Desktop, not decided here.** The same measurement,
 turned on the palettes already in the report, puts `page2-off-ramp`'s
 `#0d366b` at **1.23 : 1** and CIEDE2000 **10.2** against the visual background,
@@ -5014,7 +5162,7 @@ a sequential comparison is contaminated on both sides of each:
 ```dax
 Listings change =
 VAR ThisOne = SELECTEDVALUE ( fact_market[active_listings_corroboration] )
-VAR Earlier =
+VAR PriorOne =
     CALCULATE (
         SELECTEDVALUE ( fact_market[active_listings_corroboration] ),
         REMOVEFILTERS ( 'date' ),
@@ -5022,7 +5170,7 @@ VAR Earlier =
     )
 RETURN
     IF (
-        ThisOne = "corroborated" && Earlier = "corroborated",
+        ThisOne = "corroborated" && PriorOne = "corroborated",
         QuarterBadge ( [Active listings (selected area)], "percent" ),
         "inventory not reconciled this quarter"
     )
@@ -5137,6 +5285,25 @@ already `cardVisual`** — the new card visual, generally available since Novemb
 only style that takes a `#RRGGBB` measure; the rule-based styles will happily
 accept the text measure and colour nothing.
 
+⚠️ **STEP 4 TRAVELS BETWEEN VISUALS, AND THIS SECTION DID NOT SEE IT COMING.**
+The trap written above was *Apply settings to* = **All** inside one visual. What
+happened on 2026-09-11 is one level up: setting the callout image on one card
+and then reaching for a format painter — or formatting several cards at once —
+carries **the image binding itself, measure and all**, onto every card it
+touches. Measured `v09` against `v10`: one card carried a callout image before,
+**twelve** after, where seven were asked for. Four of the five strays are on
+page 3, which acceptance case 9 requires to be untouched, and they carry the
+sales price-tag icon.
+
+**The reference label that travels with it is harmless and the image is not, for
+a reason worth keeping.** A reference label is scoped to a metadata key — the
+field it belongs to — so on a card that does not have that field it is inert;
+the proof is that page 1's `Median price` card holds the orphan `Sales change`
+label and **shows one badge, not two**. The callout image is scoped to
+`{"id": "default"}`, that is, to nothing, **so it renders wherever it lands**.
+Set the image card by card, and read case 9 as a real case rather than a
+formality.
+
 ## 14.11 Acceptance
 
 Run `.venv/Scripts/python.exe scripts/report_oracle.py --quarter <q>` beside
@@ -5158,3 +5325,279 @@ previous quarter's value, the movement, the arrow and the colour it must show.
 **Case 3 is the one that fails if the guards were written from the island.**
 Cases 4 and 5 are the ones that fail if the corroboration guard was written on
 the current quarter only.
+
+⚠️ **Case 9 is not a formality, and on 2026-09-11 it failed.** It costs one look
+— open page 3, look to the left of the four KPI figures, a small grey tag icon
+is the defect — and it can also be answered off the file, which is how it was
+actually caught: `Report/Layout` names the measure behind every callout image,
+so listing the cards that carry one and comparing that list against the seven of
+this section is a mechanical check on a saved `.pbix`. **The case exists because
+formatting propagates; see the warning at the end of 14.10.**
+
+# 15. J4.2¾ · 5 — The page menu
+
+> **Specified 2026-09-11.** Nothing in dbt moves: this section is a layout pass
+> and four buttons. `dbt build` stays at PASS=353 and pytest at 140, and
+> `git status` on `dbt/` is how that claim is checked.
+>
+> ⚠️ **This section gains none of the eleven criteria of brief §44**, which stay
+> at 8 of 11. It is finish work, taken on by decision on
+> 2026-09-11, with the cost measured before the choice was made.
+
+The Back button of page 1 was deleted on 2026-09-11, deliberately. In its place:
+a vertical menu of the four pages, with an unselected state, a hover state, a
+selected state that says which page the reader is on, and an icon per entry.
+
+> ## ⚠️ WHAT WAS BUILT ON 2026-09-11 IS NOT WHAT 15.3 AND 15.4 SPECIFY
+>
+> Read out of `mhi-Dashboard_v11.pbix`, saved at 22:38. **What was built is the
+> Page navigator, not sixteen buttons**, laid out differently:
+>
+> | | Specified in 15.3 / 15.4 | Built |
+> |---|---|---|
+> | Control | 16 `actionButton` | **1 `pageNavigator` per page**, 262 × 300 |
+> | Frame | none | a `shape` panel, **263 × 352**, behind it |
+> | Place | full-height rail, x 0→176 | **top-left block**, x 0→263, y 0→352 |
+> | Pages carrying it | 4 | **2** — Market and Affordability |
+> | Layout pass | `plan_left_rail.py` | **done by hand**, on those two pages only |
+> | Glyphs | in the button text | **none yet** — the four pages keep their plain names |
+>
+> **15.3 and 15.4 are therefore superseded as instructions.** They are kept
+> because the measurement in 15.1, the palette in 15.5 and the acceptance in
+> 15.6 still hold whichever control carries the menu — and because the reason
+> the sixteen-button route existed is the same reason the icons are still
+> missing.
+>
+> **The open question of 15.4 is answered, by the file itself.** The navigator's
+> formatting objects are `accentBar, fill, glow, layout, pages, rotation,
+> shadow, shape, text`. **There is no `icon`.** The documentation was right:
+> the only way to put a mark in front of an entry is the **page display name**.
+>
+> ✅ **And the file turned up a formatting card the documentation does not
+> list: `accentBar`**, already bound to *hover* in the file. A bar is a
+> better carrier than a fill on a dark theme — it does not have to clear a
+> contrast threshold against the panel to be seen, it only has to exist. That
+> is worth knowing before anyone reaches for the fill-based hover of 15.5.
+>
+> **What remains, and it is small**: the navigator on pages 3 and 4, their
+> layout pass, and the glyphs if they are wanted. `Sectors priced` is still on
+> two cards of page 3 (E6), and the two note cards of E5 are still absent.
+
+
+## 15.1 The one measurement that decides the whole shape
+
+**A Power BI button has no *selected* state.** Its states are *Default*,
+*On hover*, *On press*, *Disabled* and *Loading* — and none of them means "this
+button is the page you are looking at", because a button does not know.
+
+That was confirmed twice, from two independent places, before anything was
+designed:
+
+| Where | What it says |
+|---|---|
+| Microsoft's button documentation | the four cards that vary by state are Shape, Style and Rotation, over *Default · On hover · On press · Disabled · Loading* |
+| **`powerbi/Theme/Montreal_Immobilier_Dark_v02.json`** | `pageNavigator` and `bookmarkNavigator` each carry a `"$id": "selected"` for `fill` **and** `text`. **`actionButton` does not.** |
+
+The second is the stronger of the two: it is not a doc page that could be out of
+date, it is the schema Power BI accepted from this very report.
+
+**And the Page navigator, which does have a selected state, has no icon.** Its
+formatting cards are Fill, Text, Outline, Shape, Shape shadow, Shape glow,
+Rotation, plus Grid layout and Selected state. There is no Icon card, and the
+button labels are the page display names, so the only way to put a mark in front
+of one is to rename the page.
+
+**Icon and selected state are therefore mutually exclusive in the native
+controls.** The icon was chosen on 2026-09-11, which means the selected
+state has to be simulated: **four buttons, copied onto four pages, and on each
+page the one that stands for that page is styled differently.** Sixteen objects,
+and that number is the price of the choice, not an accident of it.
+
+## 15.2 There is no free space, and clearing it is the real work
+
+The canvas is **1920 × 1080** and on 2026-09-11 the visuals filled it to both
+edges on all four pages. Free margin at the top: 16 px on Market, 44 on
+Affordability, **0** on the other two. At the left: **0 everywhere.**
+
+A 176 px rail intrudes on **20 visuals**, and seven of them are full width, so
+they have to be narrowed as well as moved:
+
+| Page | Visuals inside the rail | Full-width among them |
+|---|---|---|
+| Market | 3 | 1 |
+| Affordability | 7 | 3 |
+| First-time buyer | 5 | 1 |
+| Rates | 5 | 2 |
+
+**The rule, and it is the only one a script may apply.** Every visual is
+compressed horizontally into the band that is left:
+
+```
+k         = (1920 − 176) / 1920 = 0.90833
+new_left  = 176 + left  × k
+new_right = 176 + right × k
+```
+
+Y and Height are never touched. This preserves every proportion and every
+gutter, cannot create a collision that did not already exist, and cannot push
+anything off the canvas — a visual flush against 1920 lands on exactly 1920.
+The tempting alternative, *move only what intrudes*, leaves a visual that was at
+x = 0 sitting against one that was at x = 180 and needs an eye on every page:
+that is Desktop's job, not a script's.
+
+**`scripts/plan_left_rail.py` does it**, and prints the plan whether or not you
+let it write:
+
+```
+.venv/Scripts/python.exe scripts/plan_left_rail.py
+.venv/Scripts/python.exe scripts/plan_left_rail.py --write powerbi/mhi-Dashboard_v11.pbix
+.venv/Scripts/python.exe scripts/plan_left_rail.py --verify powerbi/mhi-Dashboard_v11.pbix
+```
+
+It reads the geometry out of the `.pbix` rather than out of this file, so
+re-running it after any layout change is what stops the plan going quietly
+stale — the same arrangement as `scripts/generate_erd.py`.
+
+**What the rewrite was proved to do, on 2026-09-11**: `v11` holds the same zip
+entries in the same order as `v10`; **`Report/Layout` is the only entry whose
+bytes differ** — DataModel, SecurityBindings, the theme, the three GeoJSON
+resources and the saved DAX query are byte-identical; and the layout JSON is
+**identical once X and Width are removed from every visual**, so not one other
+property moved.
+
+⚠️ **That is a structural proof, not a verdict.** Whether Desktop opens a
+rezipped `.pbix` is Desktop's answer and nobody else's — the file carries a
+`SecurityBindings` entry the script copies without understanding. The script
+refuses to write over its input for exactly that reason: `v10` stays whole, and
+if `v11` will not open, the printed plan is the fallback and the cost was one
+attempt. **Same rule as `albersUsa` on 2026-09-01: the product is the
+authority.**
+
+⚠️ **Typing is the fallback, and it is not dragging.** *Format visual > General
+> Properties* has numeric **X / Y / Width / Height** fields. The plan prints
+`X now → X` and `W now → W` per visual, sorted top to bottom, labelled by title
+or by the field the visual carries. 56 visuals, two numbers each.
+
+## 15.3 Four buttons, built once and pasted three times  — SUPERSEDED, see the note under 15
+
+Rail from x = 0 to 176, full height. Buttons at **x = 8, width 160, height 44**,
+tops at **y = 32, 88, 144, 200**.
+
+1. *Insert > Buttons > Blank*, four times, on **Market**.
+2. Each one: *Style > Text* = the page name with its glyph (15.4) ·
+   *Action* **On** · *Type* **Page navigation** · *Destination* = its page.
+3. Select all four, **Ctrl+C**, then **Ctrl+V** on each of the other three
+   pages. Paste preserves position, which is what keeps the menu from jumping
+   as the reader moves between pages.
+4. On each page, restyle **the one button that stands for that page**: *Style >
+   Fill*, state **Default**, `#87CEFA`; *Style > Text*, state **Default**,
+   `#0E1A25`, **bold**.
+
+⚠️ **On the selected button, set the *On hover* fill to `#87CEFA` as well.**
+Otherwise it drops back to the ordinary hover colour under the mouse, and the
+"you are here" mark disappears at the exact moment the reader points at it.
+
+**Leave its Action on.** Navigating to the page you are already on is invisible,
+and turning the action off is an invitation to the *Disabled* state's grey,
+which means something else.
+
+## 15.4 The icon goes in the text, and that is not a downgrade  — SUPERSEDED for the control, still true for the glyph
+
+⚠️ **To be constated in Desktop, because the documentation does not answer it**:
+does *Style > Icon > Icon type* offer **Custom**, and is there an **fx** beside
+it? The button documentation lists built-in icon types and **fill images browsed
+from disk**, and documents conditional formatting for the *tooltip* and the
+*destination* — **not for the icon**. The theme's `actionButton` has no `icon`
+entry either.
+
+There is a route that needs neither an answer nor a file: **put the glyph in the
+button's text**, `▦  Market`.
+
+**It is better than an image here, for a reason that is measured rather than
+aesthetic.** *Style > Icon* can be set per state, but an image carries its own
+colours into every state; a glyph inside the text **takes the text colour of the
+state it is in** — `#C2D0DE` at rest, `#F2F6FA` on hover, `#0E1A25` bold on the
+selected button. The four-variant icon set that the image route would need in
+order to look right on the selected button is what the text route gets for free.
+
+The objection that ruled the glyph out for the Page navigator does not apply
+here: **that** route took its labels from the page display names, so a glyph
+meant renaming the pages. A hand-built button has text of its own.
+
+| Page | Glyph | Codepoint | Reads as |
+|---|---|---|---|
+| Market | `▦` | U+25A6 | a grid — the board of sectors |
+| Affordability | `◑` | U+25D1 | a share of a whole |
+| First-time buyer | `◈` | U+25C8 | a single household |
+| Rates | `◉` | U+25C9 | a target, a rate to clear |
+
+Two spaces between the glyph and the word; the theme already puts a 12 px left
+margin on button text.
+
+⚠️ **Do not use `▲` or `▼`.** Since section 14 those two mean *change against
+the previous quarter* everywhere on this report, and a menu is not a change.
+
+⚠️ **All four are from the Geometric Shapes block, U+25A0–U+25FF**, which Segoe
+UI covers. If one comes out as an empty box in Desktop it is the font and not
+the character: take another from the same block rather than reaching for an
+emoji, which renders in colour and would be the only coloured thing on the page.
+
+## 15.5 The palette already exists, and one value of it has to change
+
+Every colour below is taken from `pageNavigator` in
+`Montreal_Immobilier_Dark_v02.json` — the states already defined
+for the control that ended up not being used. Nothing new to invent, and the text
+contrasts are comfortable:
+
+| State | Fill | Text | Contrast |
+|---|---|---|---|
+| Default | `#182735` | `#C2D0DE` | **9.69 : 1** |
+| On hover | `#23394C` → **`#2B4760`** | `#F2F6FA` | 10.98 → **8.90 : 1** |
+| Selected | `#87CEFA` | `#0E1A25` bold | **10.26 : 1** |
+
+All three clear WCAG AAA for normal text, before and after the change below.
+
+⚠️ **THE HOVER FILL HAS TO CHANGE, AND THIS IS THE FINDING OF THE SECTION.**
+`#23394C` is **CIEDE2000 6.0** from the default `#182735` — below the floor of
+**10** this project uses for colours a reader must tell apart without comparing
+them deliberately. On a page navigator that is survivable, because the selected
+state carries the signal. **Here hover is one of the three things that were
+asked for**, and at 6.0 it barely registers.
+
+`#2B4760` was chosen by walking the ramp and stopping at the first value that
+clears the floor:
+
+| Candidate | ΔE vs default | ΔE vs selected | ΔE vs canvas | white text |
+|---|---|---|---|---|
+| `#23394C` *(current)* | **6.0** | 57.2 | 10.1 | 10.98 : 1 |
+| `#274156` | 8.6 | 52.7 | 12.8 | 9.78 : 1 |
+| **`#2B4760`** | **10.8** | 49.2 | 15.0 | 8.90 : 1 |
+| `#2F4D6A` | 13.1 | 45.8 | 17.2 | 8.09 : 1 |
+
+**Change it in the theme, not on sixteen buttons** —
+`visualStyles.actionButton.*.fill`, the entry with `"$id": "hover"`. There is no
+other action button in the report since the Back button was deleted, so the
+theme is a single place and the sixteen inherit *Default* and *On hover* from it
+without being touched. Only the four selected buttons need per-visual overrides.
+
+⚠️ **At rest the menu is text, not tiles.** `#182735` against the `#0E1A25`
+canvas is **1.16 : 1**. That is a consequence of the theme itself and it is why the
+selected state carries all the signal. Making the tiles visible at rest is a
+second theme edit and it would have to be remeasured against the canvas, the
+hover and the selected fill — it is not free, and it is not part of this section.
+
+## 15.6 Acceptance
+
+| # | Set this | Expect |
+|---|---|---|
+| 1 | Open each of the four pages | **exactly one** button selected, and it is that page's |
+| 2 | Hover the selected button | **nothing changes** — this is the flicker guard of 15.3 |
+| 3 | Hover any other button | it visibly lightens. **The case the ΔE 6.0 finding exists for**: if it looks the same, the theme edit did not land |
+| 4 | Click each button in turn | the right page, and **the menu does not jump** — identical geometry on all four |
+| 5 | `plan_left_rail.py --verify` on the saved file | the rail is clear on every page and nothing overflows |
+| 6 | Page 1 and page 2, against the oracle | **the block-E badges read what they read before.** A layout pass touches geometry only: a figure that moved means something else happened |
+
+**Case 6 is the one that gets skipped**, and it is the cheapest insurance in the
+section: 56 visuals were repositioned by a script, and the only way to know it
+repositioned rather than rebound them is to read a number that has nothing to do
+with geometry.
