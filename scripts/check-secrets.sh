@@ -9,7 +9,7 @@
 # never written anywhere: they are piped into grep on standard input, and only
 # the NAME of an offending file is ever shown.
 #
-# Section 6 is a positive control. A checker that always answers OK proves
+# Section 8 is a positive control. A checker that always answers OK proves
 # nothing, so the script ends by looking for two strings it KNOWS are present.
 # If it fails to find them, the clean result above is worthless and the script
 # says so.
@@ -131,7 +131,34 @@ else
 fi
 
 echo
-echo "== 6. Files this scan could NOT look inside =="
+echo "== 6. APCIQ figures, directly or indirectly =="
+# The APCIQ licence forbids reproduction "en tout ou en partie, directement ou
+# indirectement". A text search for a secret cannot see that, because the figure
+# is not a secret -- it is a number that must not be redistributed. The check
+# lives in its own script because it needs the database to know what those
+# numbers actually are, rather than guessing from a pattern.
+#
+# It needs the tunnel open. When it cannot reach the database it says so and
+# does NOT pass silently: a clean verdict from sections 1 to 5 says nothing
+# about APCIQ figures.
+if command -v python >/dev/null 2>&1; then
+  PY=python
+elif [ -x .venv/Scripts/python.exe ]; then
+  PY=.venv/Scripts/python.exe
+else
+  PY=python3
+fi
+APCIQ_OUT="$("$PY" scripts/check_apciq_figures.py 2>&1)"
+APCIQ_RC=$?
+echo "$APCIQ_OUT"
+case "$APCIQ_RC" in
+  0) : ;;
+  2) WARNINGS=1 ;;
+  *) FAILURES=$((FAILURES + 1)) ;;
+esac
+
+echo
+echo "== 7. Files this scan could NOT look inside =="
 # The most dangerous failure mode of a secret scanner is silence about what it
 # could not read. A .pbix, a .zip or any compressed file stores its content
 # compressed: grep finds nothing in it, and a clean verdict above says NOTHING
@@ -157,7 +184,7 @@ else
 fi
 
 echo
-echo "== 7. Positive control: the checker must be able to find something =="
+echo "== 8. Positive control: the checker must be able to find something =="
 if [ -n "$(in_files mhi_pgdata)" ]; then
   pass "file scan detects a known-present string (mhi_pgdata)"
 else
@@ -175,7 +202,7 @@ if [ "$FAILURES" -eq 0 ] && [ "$WARNINGS" -eq 0 ]; then
   exit 0
 fi
 if [ "$FAILURES" -eq 0 ]; then
-  echo "NO LEAK FOUND in the files that could be searched, but section 6 lists"
+  echo "NO LEAK FOUND in the files that could be searched, but section 7 lists"
   echo "files this scan cannot see inside. Read it before committing."
   exit 0
 fi

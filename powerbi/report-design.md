@@ -502,7 +502,7 @@ profile **Couple, two persons**, quarter **2026 Q2**:
 |---|---|
 | `Tracts evaluated` | 512 |
 | `Tracts affordable` | 179 |
-| `Share of tracts affordable` | 35.0 % |
+| `Share of tracts affordable` | 34.9 % |
 | `Income required, lower bound (mean)` | the figure `report_oracle.py` prints -- not reproduced here |
 | `Price to income (median)` | the figure `report_oracle.py` prints -- not reproduced here |
 | Sectors with at least one evaluable tract | 17 of 18 |
@@ -559,8 +559,9 @@ put in the tooltip are added to the **Tooltips** well by hand.
 autoscaled map repaints itself every time a slicer moves, which hides exactly
 the trend the page exists to show. Clipping at 15 costs **2.09 %** of rows
 overall, **0 %** on condominium and 4.51 % on single-family — measured
-2026-08-30, where the single-family maximum is 2.4 times its own 99th
-percentile. A scale stretched to that outlier would flatten everything else.
+2026-08-30, where the single-family maximum is **2.4 times its own 99th
+percentile**. (The ratios themselves are not written here: a price-to-income
+ratio in level is invertible into an APCIQ price. A ratio of two ratios is not.) A scale stretched to that outlier would flatten everything else.
 
 **`Verdict` gained a branch because of this map.** The table on this page
 carries `Sector[name]` *and* `Census_Tract[name]`, so every row is unique. **The
@@ -755,12 +756,16 @@ Measured 2026-08-30, quarter **2026 Q2**. The three colour classes must add up
 to 541 — the shape count of the file — which is the cheapest check that no
 tract is drawn twice or lost:
 
-| Type / profile | Shaded | Grey, no price | Beige, no income | Affordable | Median ratio |
-|---|---|---|---|---|---|
-| **Condominium / Couple** | **512** | **18** | **11** | 179 | not reproduced |
-| Condominium / One person | 512 | 18 | 11 | 1 | not reproduced |
-| **Plex / Couple** | 317 | **216** | 8 | 0 | not reproduced |
-| Single-family / Couple | 395 | 138 | 8 | 2 | not reproduced |
+| Type / profile | Shaded | Grey, no price | Beige, no income | Affordable |
+|---|---|---|---|---|
+| **Condominium / Couple** | **512** | **18** | **11** | 179 |
+| Condominium / One person | 512 | 18 | 11 | 1 |
+| **Plex / Couple** | 317 | **216** | 8 | 0 |
+| Single-family / Couple | 395 | 138 | 8 | 2 |
+
+**The median ratio of each slice is deliberately not tabulated here** -- it is
+a price-to-income ratio in level, and multiplying it by a published census
+income gives the APCIQ price back. Run `report_oracle.py` for the four values.
 
 ⚠️ **512 shapes, not the 513 rows the KPI counts.** The shared tract is one
 shape and two rows; confusing the two is how a map ends up asserting a count
@@ -1986,7 +1991,8 @@ Price to income (median) =
 MEDIAN ( fact_affordability[price_to_income_ratio] )
 ```
 
-⚠️ **Format it `0.0"×"`, so it always carries the multiplier sign and never appears bare.** The column is
+⚠️ **Format it `0.0"×"`, so the value always carries the multiplier sign and
+never appears bare.** The column is
 `round(median_price / household_income, 3)` — a multiple of **annual** income,
 carrying no unit at all. A bare number beside a currency card was read as a
 dollar amount on 2026-08-29, and the reading is a reasonable one: every other

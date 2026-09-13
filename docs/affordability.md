@@ -283,11 +283,19 @@ so a thin quarter cannot pass for a full one.
 3. **Do not sum anything that depends only on the price.** The rate, the
    payment and the required income repeat across the three profiles by
    construction.
-4. **Do not publish a figure derived from these tables.** The price inside them
-   is APCIQ's, and page 65 of every edition forbids reproduction « en tout ou en
-   partie, directement ou **indirectement** ». A price-to-income ratio times a
-   published census income gives the price back. See `market.md` §7.4 — this is
-   the open question of J4.5, not a settled one.
+4. **Do not publish a figure derived from these tables that can be inverted
+   back into a price.** The price inside them is APCIQ's, and page 65 of every
+   edition forbids reproduction « en tout ou en partie, directement ou
+   **indirectement** ». A price-to-income ratio times a published census income
+   gives the price back.
+
+   **The rule was settled on 2026-09-13 and is now enforced rather than
+   stated**: a figure may appear in a tracked file only if it cannot be inverted
+   into an APCIQ price. Shares, counts, rates, rate gaps, CPI factors and
+   percentage changes pass; prices, price-to-income ratios **in level** and
+   required incomes in dollars do not. `scripts/check_apciq_figures.py` checks
+   it against the figures actually in the database, and runs inside
+   `check-secrets.sh`. See `limitations.md` limitation 4.
 
 ---
 
