@@ -93,12 +93,39 @@ fi
 
 echo
 echo "== 5. Hard-coded network addresses =="
+#
+# The address this check exists for is the VPS: it is PUBLIC, it is in .env,
+# and it must never reach a tracked file.
+#
 # 127.0.0.1 and 0.0.0.0 are allowed: they are the security model, not a leak.
-LEAKS="$(grep -n -E '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' -- "${CANDIDATES[@]}" 2>/dev/null \
-         | grep -v -E '127\.0\.0\.1|0\.0\.0\.0|255\.255' || true)"
-if [ -n "$LEAKS" ]; then
-  echo "$LEAKS" | sed 's/^/        /'
-  fail "an IPv4 address other than loopback appears above -- check each one"
+#
+# RFC 1918 private ranges (10/8, 172.16/12, 192.168/16) and the link-local
+# 169.254/16 are reported but do not fail the run. Since J4.3 the repository
+# documents a Docker bridge gateway (172.18.0.1) and the subnet an SSH key is
+# restricted to -- addresses that are identical on millions of machines, that
+# locate nothing and grant nothing, and without which the orchestration cannot
+# be understood. Failing on those would have made this check noise, and a check
+# that is routinely overridden stops being a check. They are still PRINTED, so
+# a new one has to be looked at.
+ADDR_RE='\b([0-9]{1,3}\.){3}[0-9]{1,3}\b'
+PRIVATE_RE='\b(10\.([0-9]{1,3}\.){2}[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3}|192\.168\.[0-9]{1,3}\.[0-9]{1,3}|169\.254\.[0-9]{1,3}\.[0-9]{1,3})\b'
+ALLOWED_RE='127\.0\.0\.1|0\.0\.0\.0|255\.255'
+
+FOUND="$(grep -n -E "$ADDR_RE" -- "${CANDIDATES[@]}" 2>/dev/null \
+         | grep -v -E "$ALLOWED_RE" || true)"
+PRIVATE_HITS="$(printf '%s' "$FOUND" | grep -E "$PRIVATE_RE" || true)"
+PUBLIC_HITS="$(printf '%s' "$FOUND" | grep -v -E "$PRIVATE_RE" || true)"
+
+if [ -n "$PRIVATE_HITS" ]; then
+  echo "        -- private ranges (RFC 1918 / link-local), reported not refused:"
+  echo "$PRIVATE_HITS" | sed 's/^/        /'
+fi
+if [ -n "$PUBLIC_HITS" ]; then
+  echo "        -- PUBLIC addresses:"
+  echo "$PUBLIC_HITS" | sed 's/^/        /'
+  fail "a PUBLIC IPv4 address appears above -- that is what this check is for"
+elif [ -n "$PRIVATE_HITS" ]; then
+  pass "no public IPv4 address; the private ones above are listed for review"
 else
   pass "no hard-coded IPv4 address other than loopback"
 fi
