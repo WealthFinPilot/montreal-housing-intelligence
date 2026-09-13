@@ -161,10 +161,12 @@ cost is that a column can be dark while its top sits a fraction under the line
 — 0.04 % of the axis height at 0.9985×, invisible on an axis that reaches 3.5.
 Of the two inconsistencies, the visible one is the one worth removing.
 
-⚠️ **The same hex means something different on page 3, and that is deliberate.**
-`#17527A` is *within reach* there and *dearer than the island* here. What the
-reader learns is not a meaning per colour but a direction — **darker is more of
-the thing being measured** — and the two pages are consistent in that. Which is
+⚠️ **The same hex used to mean something different on page 3, and that was
+deliberate** — `#17527A` was *within reach* there and is *dearer than the
+island* here. **Page 3 stopped using it on 2026-09-12**, so the overlap is gone
+and this page keeps the hex alone. What the reader learns is not a meaning per
+colour but a direction — **darker is more of the thing being measured** — and
+that is still what both pages say, now through different blues. Which is
 also why the map's gradient is pinned to the same two colours, Minimum
 `#5B9BC4` to Maximum `#17527A`: on this page the map and the columns must not
 disagree about which end is dear. The `#C7CCD1` *Blank area* grey stays outside
@@ -230,8 +232,11 @@ being rebuilt by hand.
 ⚠️ **The grey has to be told apart from the bottom of the scale**, which is the
 whole risk of a saturation map: "cheapest" and "not published" are adjacent
 colours by default. Set *Blank area* to a colour that is not on the ramp — the
-neutral grey `#C7CCD1` already used for *Out of reach* on page 3 — and check it
-on the acceptance slice below, where more than half the island is grey.
+neutral grey `#C7CCD1` — and check it on the acceptance slice below, where more
+than half the island is grey. ⚠️ **It was chosen because page 3 used it for
+*Out of reach*; page 3 stopped on 2026-09-12, and the choice stands on its own
+here.** It is the only grey on this page, which is precisely the condition under
+which the validator accepts it — beside a second grey it fails, at 7.0.
 
 **Both were constated in Desktop on 2026-08-31, and one of them cost a
 measure.**
@@ -642,6 +647,45 @@ zero**, blue = surplus, red = shortfall, bounds fixed at −60 000 $ / +150 000 
 | shared between two sectors | `#6B3FA0` |
 | never | `#FF00FF` |
 
+> ### ⚠️ THE FIXED BOUNDS ARE MISCALIBRATED FOR THE QUARTER ON SCREEN — measured
+> ### 2026-09-12, and DELIBERATELY NOT FIXED
+>
+> **Left as it is, deliberately:** further tuning of the scale was judged not
+> worth its cost. The finding is recorded so nobody has
+> to measure it again; **it is not a to-do.**
+>
+> The clipping figure above — 1.31 % low, 3.05 % high — is true over the
+> **103 854 rows of the whole archive**. The map shows **one slice at a time**,
+> and on 2026 Q2:
+>
+> | | share of shapes |
+> |---|---|
+> | outer third of the blue arm | 3.9 % |
+> | outer third of the red arm | **55.5 %** |
+> | **clipped at the red end** — all one colour | **27.2 %** |
+>
+> On plex for one person that is **313 shapes out of 317**: the map is a single
+> tone. Expressed as multiples of the current high bound, the slices run from a
+> maximum of **0.35** (condominium, couple — it never uses two thirds of the red
+> arm) to **1.78** (single-family, one person). A factor of five, on one fixed
+> scale. On the blue side the spread is worse: condominium · couple reaches
+> **7.17 times** its own bound, and two slices have **no blue shape at all**.
+>
+> ⚠️ **This is the same fact the map of page 1 measured on 2026-08-31** — "a
+> fixed colour scale common to the three types is unreadable, the condominium
+> occupies 26 % of the palette against 89 % for the single-family" — which is
+> why card 1 went to an automatic scale. **Page 2 reproduced the trap twelve days
+> later on a different quantity.** A scale calibrated on the whole population
+> says nothing about the slice a reader opens; that is the lesson of probe 3 in
+> J4.1, in a third form.
+>
+> **If it is ever reopened, the measurement already rules one option out.** A
+> symmetric automatic scale — the obvious fix, since it keeps zero at the centre
+> — starves the weaker arm to **12–16 % of the palette on four slices out of
+> nine**. The two live options are an automatic scale **per arm** (what card 1
+> does, at the price of comparing quarters) or an **asymptotic compression** of
+> the position, which clips nothing and keeps one scale.
+
 **No white at the centre, and that was measured.** A light grey midpoint sits at
 **ΔE 4.1** from the beige that used to mean "no census income" —
 indistinguishable even with full colour vision, where the floor is 15. So the
@@ -898,11 +942,20 @@ KPI row already carries:
 
 | Colour | Verdict | Shapes |
 |---|---|---|
-| `#17527A` | Within reach | **6** |
-| `#5B9BC4` | Borderline | **1** |
-| `#C7CCD1` | Out of reach | **10** |
+| `#9BD0F2` | Cash purchase | — |
+| `#4E9FD8` | Within reach | **6** |
+| `#2A6CA3` | Borderline | **1** |
+| `#FF8A7E` | Out of reach | **10** |
+| `#A8722E` | Below the legal minimum | — |
 | `#E8EAEC` | No published price | **1** (sector 17, Montréal-Nord) |
 | | **Total** | **18** |
+
+⚠️ **The counts are the 2026-08-30 ones, at the income of brief section 31 and
+before the slider existed**; the colours are the 2026-09-12 ones. Two classes
+carry a dash because they cannot occur at that setting. **What the case checks
+is the total of 18, not the split** — and since 2026-09-09 there are six classes
+to add up, not four. `report_oracle.py` prints the split for whatever slider
+position is set.
 
 Move the slider and the map has to keep answering: at **30 000 $** and at
 **60 000 $** every priced sector is *Out of reach* and exactly one stays in the
@@ -952,14 +1005,40 @@ which is the practice page 2 paid for.
 |---|---|
 | Slicer | `'date'[calendar_year]`, **Dropdown**, multi-select, nothing selected when saving |
 | KPI | `Posted minus contract (points)` |
-| Card | `Rate freshness warning` |
+| ~~Card~~ | ~~`Rate freshness warning`~~ — **removed 2026-09-12, see banner below** |
 | Line | `Rate (mean of period)` by `'date'[date_key]`, **continuous** axis, legend `interest_rate_series[rate_kind]` |
 | Combo (line and stacked column) | columns `Sales (island, 12 months)`, line `Contract rate (mean)`, by `'date'[quarter_label]` — **both Y-axis ranges pinned by hand** |
 | Card | `Trailing window` |
-| Card | `Rate grain warning` |
+| ~~Card~~ | ~~`Rate grain warning`~~ — **removed 2026-09-12, see banner below** |
 | Table — series | `series_label`, `rate_kind`, `frequency`, `Rate observations`, `First rate observation`, `Last rate observation`, `what_it_is` |
 | Table — quarters | `'date'[quarter_label]`, `Posted rate (mean)`, `Contract rate (mean)`, `Posted minus contract (points)`, `Rate observations` |
 | Text box | the association caveat — see below |
+
+> ## ⚠️ THE TWO WARNING CARDS WERE REMOVED FROM THIS PAGE — 2026-09-12
+>
+> `Rate freshness warning` and `Rate grain warning` were in
+> `mhi-Dashboard_v10.pbix` and are in neither page of `v11`. Found by diffing
+> the two files field by field, **not** reported: they fell out with the layout
+> rebuild. **Decided the same day: the removal stands — the
+> page reads better without them.** The measures remain in the model and in
+> this document; only the cards are gone.
+>
+> **What that costs, written here because nothing on screen says it any more:**
+>
+> ⚠️ **Nothing in the report now tells a reader that the contracted rate has
+> not published since 2026-06-02.** That series, `FVI_MTG_RATE_5Y_FIX`, is the
+> one `fact_mortgage_scenario` computes with, so the whole of page 3 rests on
+> it. **dbt source freshness does not answer this question and stays green** —
+> that asymmetry is the entire reason the card existed (see the paragraph near
+> "That is why `Rate freshness warning` exists").
+>
+> **Where it is paid instead:** `docs/limitations.md`, J4.4 — one entry naming
+> the series, the date it last published, and the fact that the qualifying rate
+> of every affordability figure derives from it. That entry is now **load
+> bearing**, not decorative.
+>
+> The association caveat text box **stays**: it carries brief §27, and it is
+> the only thing on the page that does.
 
 `calendar_year` is a whole number, so Power BI renders its slicer as a **numeric
 range** by default. Set the style to Dropdown: a range slider always holds a
@@ -1232,8 +1311,8 @@ With **nothing selected in the year slicer**:
 | `First rate observation` | 2015-01-01 · 2015-01-06 · 2015-01-07 |
 | `Last rate observation` | 2026-08-25 · **2026-06-02** · 2026-08-26 |
 | `Posted minus contract (points)` | 2.11 |
-| `Rate freshness warning` | fires, naming the contracted series at 2026-06-02 |
-| `Rate grain warning` | fires, naming all three series with the counts above |
+| ~~`Rate freshness warning`~~ | **card removed 2026-09-12** — nothing to check on screen. The measure still evaluates correctly if ever re-placed |
+| ~~`Rate grain warning`~~ | **card removed 2026-09-12** — same |
 | `Trailing window` | `12 months, 2018-07-01 to 2026-06-30` |
 | The combo | **29 columns**, 2019 Q2 → 2026 Q2 |
 | The three-series rate line | the contracted line stops in June 2026, the other two run on |
@@ -1247,7 +1326,7 @@ With **`calendar_year` = 2026**:
 | Quarter table, 2026 Q1 | posted 6.09 · contracted 4.10 · gap 2.00 · 13 contract observations |
 | Quarter table, **2026 Q2** | posted 6.09 · contracted 4.25 · **gap 1.84** · 9 contract observations |
 | Quarter table, **2026 Q3** | posted 6.09 · contracted **blank** · gap **blank** · 0 contract observations |
-| `Rate freshness warning` | fires, unchanged — the year slicer must not silence it |
+| ~~`Rate freshness warning`~~ | **card removed 2026-09-12** — this case is void |
 | `Trailing window` | `12 months, 2025-04-01 to 2026-06-30` |
 
 **Two rows carry the whole check, because they are the only two things on this
@@ -1257,9 +1336,12 @@ page that can be wrong while looking right.**
 subtraction of section D, and it is the only figure here a wrong measure returns
 *confidently*. Everything else either matches or goes visibly blank.
 
-**`Rate freshness warning` with a year selected.** If it disappears, the
-`ALL ( 'date' )` calls have been dropped and a publisher outage becomes
-invisible the moment anyone filters.
+~~**`Rate freshness warning` with a year selected.**~~ ⚠️ **Void since
+2026-09-12: the card was removed, so a publisher outage is now invisible
+whether or not anyone filters.** That was the trade accepted; the
+cost is carried in `docs/limitations.md`, not here. The `ALL ( 'date' )`
+calls stay in the measure — if the card ever comes back, this case comes
+back with it.
 
 The combo must run **2019 Q2 → 2026 Q2, 29 columns**. Thirty or more means the
 visual filter was lost and the empty quarters of `date` are showing. **A
@@ -1377,7 +1459,7 @@ step with it.
 | Affordability | `Income shortfall (mean)` | `_Measures` | `fact_affordability` | Currency, 0 dec., thousands sep. | 2 |
 | Affordability | `Price to income (median)` | `_Measures` | `fact_affordability` | Custom `0.0"×"` — **never a currency** | 2 |
 | Affordability | `Verdict` | `_Measures` | `fact_affordability` | Text | 2 |
-| Affordability | `Tract map colour` | `_Measures` | `Verdict`, `Price to income (median)` | Text — a `#RRGGBB` string, **never formatted** | 2 |
+| Affordability | `Tract map colour` | `_Measures` | `Verdict`, **`Income shortfall`** — corrected 2026-09-12, it stopped reading the ratio on 2026-09-02 | Text — a `#RRGGBB` string, **never formatted** | 2 |
 | Affordability | `Down payment note` | `_Measures` | nothing — a constant string | Text | 2 |
 | Affordability | `Map coverage note` | `_Measures` | `fact_affordability` | Text | 2 |
 | Rates | `Rate (mean of period)` | `_Measures` | `fact_interest_rate` | Decimal, 2 dec. | 4 |
@@ -1943,6 +2025,19 @@ names what is actually true. **A branch predicted to be unreachable is not a
 control until something tries to reach it.**
 
 ```dax
+/*  ⚠️ SUPERSEDED 2026-09-02 AND STILL PRINTED HERE UNTIL 2026-09-12.
+    This version colours by the PRICE-TO-INCOME RATIO on a 0-15 scale. The map
+    stopped doing that on 2026-09-02: it now colours the INCOME SHORTFALL, on a
+    ramp that diverges at zero, and the live colours are the table in section 6
+    ("within reach / out of reach, from the threshold outwards").
+    Two things make this block wrong rather than merely old: the 15x ceiling was
+    set against the NON-indexed ratio and never followed the measure to the
+    indexed column on 2026-08-31, and a ratio in levels is a figure this
+    repository does not keep in a tracked file — multiply it by the published
+    StatCan median income and the APCIQ median price comes back.
+    KEPT, COMMENTED OUT, as the record of what the map used to do. Do not paste
+    it into the model. The live definition is the section 6 palette.  */
+/*
 Tract map colour =
 VAR State = [Verdict]
 VAR Ratio = [Price to income (median)]
@@ -1973,7 +2068,14 @@ RETURN
         "Not evaluated",              "#FF00FF",
         Hex
     )
+*/
 ```
+
+⚠️ **The block above is commented out on purpose.** It is the 2026-08-30 version,
+kept as a record. The colours the map actually uses are the ones in the palette
+table of section 6, and the index entry in section 3.2 was corrected on
+2026-09-12 to say so — it still claimed this measure read
+`Price to income (median)`.
 
 **Leave the format string on *General*.** This measure returns a colour, not a
 number, and any currency or decimal format would corrupt the string before
@@ -2411,6 +2513,16 @@ half-done change visible immediately: the four counts stop adding up to
 eighteen.
 
 ```dax
+/*  ⚠️ SUPERSEDED TWICE, AND PRINTED HERE ONLY AS THE RECORD.
+    This is the 2026-08-30 version: four classes, reading
+    [Verdict for this income]. Block D replaced the income by the typed down
+    payment on 2026-09-09, which took it to six classes and
+    [Verdict at this down payment]; the colours were then replaced wholesale
+    on 2026-09-12.
+    THE DEFINITION IN FORCE IS THE ONE IN SECTION 13. Do not paste this one.
+    Two of its three colours also fail the validator as they stand here:
+    #C7CCD1 sits 7.0 from #E8EAEC in deuteranopia.  */
+/*
 Sector bar colour =
 SWITCH (
     [Verdict for this income],
@@ -2419,6 +2531,7 @@ SWITCH (
     "Out of reach", "#C7CCD1",
     "#E8EAEC"
 )
+*/
 ```
 
 **It reads the verdict rather than repeating its comparison, and that is the
@@ -2453,13 +2566,25 @@ as good/bad on a figure that is a floor, not a judgement — and **keep one colo
 per `rate_kind`** across every page, so posted and contracted are never the same
 colour in two charts.
 
-The page-3 verdict scale, chosen on 2026-08-30 and carried by `Sector bar
-colour`: `#17527A` within reach, `#5B9BC4` borderline, `#C7CCD1` out of reach,
-`#E8EAEC` no published price. One hue plus a neutral, and **decreasing
-luminosity in verdict order**, so the ranking survives greyscale printing and
-colour-blind vision without relying on hue at all. Blue-to-grey rather than
-green-to-red because the comparison is a floor against a typed income, not a
-pass and a fail.
+~~The page-3 verdict scale, chosen on 2026-08-30~~ — **replaced on 2026-09-12,
+and the PRINCIPLE changed with it.** It read: `#17527A` within reach, `#5B9BC4`
+borderline, `#C7CCD1` out of reach, `#E8EAEC` no published price — one hue plus
+a neutral, *blue-to-grey rather than green-to-red, because the comparison is a
+floor against a typed income, not a pass and a fail.*
+
+> ⚠️ **That reasoning no longer holds, and it was abandoned by choice rather
+> than by drift.** The scale in force (section 13) puts **coral on *out of
+> reach*** and amber on the refusal. The red was introduced on
+> 2026-09-12 and kept when choosing between measured options. So the page
+> now does read as a pass and a fail — which is defensible, since the
+> down-payment slider turned the page from "how far is this floor" into "can I
+> buy here, yes or no", but it is a reversal and it is recorded as one.
+>
+> **What survives intact is the other half of the original reasoning**:
+> decreasing luminosity in verdict order. The three favourable classes run
+> 0.585 → 0.314 → 0.139, so the ranking still survives greyscale and colour
+> blindness without leaning on hue. That is checked by the validator, not
+> assumed.
 
 The page-4 rate lines, chosen on 2026-08-30 and **validated by script rather
 than by eye** — `dataviz/scripts/validate_palette.js`, light mode, all pairs:
@@ -2476,12 +2601,14 @@ the page exists for, and they are the best-separated pair in the set. All three
 pass the lightness band, the chroma floor, colour-blind separation and contrast
 against a light surface.
 
-⚠️ **The page-3 blue `#17527A` was tried here first and the validator refused
-it** — too dark for the lightness band and too grey for the chroma floor. That
-is not a contradiction between the two pages: on page 3 it belongs to a
-single-hue scale running dark to light, which is a *sequential* job, and on page
-4 it would have to establish identity against two other hues, which is a
-*categorical* one. The same hex is right for one and wrong for the other.
+⚠️ **The blue `#17527A`, page 3's *within reach* until 2026-09-12, was tried
+here first and the validator refused it** — too dark for the lightness band and
+too grey for the chroma floor. That was not a contradiction between the two
+pages: there it belonged to a single-hue scale running dark to light, a
+*sequential* job, and here it would have to establish identity against two other
+hues, a *categorical* one. The same hex was right for one and wrong for the
+other. **The point outlives the hex**: page 3 now runs `#9BD0F2` → `#4E9FD8` →
+`#2A6CA3` and the reasoning is unchanged.
 
 The sales grey fails the chroma floor on purpose. That check says "this reads as
 grey", which is exactly the brief: sales are alone in their chart with no
@@ -4068,12 +4195,50 @@ reading it directly is not.
 
 | Verdict | Colour | What it says |
 |---|---|---|
-| Within reach | `#17527A` | the income clears the required figure by at least 10 % |
-| Cash purchase | `#17527A` | the down payment covers the price; there is no loan, and the income does not matter |
-| Borderline | `#5B9BC4` | the income clears the required figure, but by less than 10 % |
-| Out of reach | `#A6ADB4` | evaluated, and the income does not clear it |
-| Below the legal minimum | `#7A5C4B` | **a refusal, not an absence.** The law does not allow this purchase at this down payment |
+| Cash purchase | `#9BD0F2` | the down payment covers the price; there is no loan, and the income does not matter |
+| Within reach | `#4E9FD8` | the income clears the required figure by at least 10 % |
+| Borderline | `#2A6CA3` | the income clears the required figure, but by less than 10 % |
+| Out of reach | `#FF8A7E` | evaluated, and the income does not clear it |
+| Below the legal minimum | `#A8722E` | **a refusal, not an absence.** The law does not allow this purchase at this down payment |
 | No published price | `#E8EAEC` | APCIQ printed no median for this slice |
+
+> ### ⚠️ These six colours replaced the previous five on 2026-09-12
+>
+> **Six classes now carry six colours.** The row above used to give
+> `Cash purchase` and `Within reach` the same tone deliberately — a cash
+> purchase being a special case of affordable. That was reversed on
+> 2026-09-12, once the option had been seen drawn with a tone of its own. **To go
+> back, give both `#4E9FD8`** and re-run the validator.
+>
+> **The palette was searched, not picked.** 33 candidates, every pair of every
+> combination measured in the four views, 270 combinations cleared 10.0, and
+> this is the one whose worst pair is highest: **14.3**, against 14.8 for the
+> five-colour set it replaces — the same order, with one more class to place.
+>
+> **It was prompted by a defect, and the defect had three parts.** The measure
+> that was in the model on 2026-09-12 read:
+>
+> | Pair | CIEDE2000 |
+> |---|---|
+> | `Cash purchase` / `Borderline` | **0.0** — the same hex |
+> | `Within reach` `#E0F0FF` / `No published price` | **5.6** |
+> | `Out of reach` / `Below the legal minimum` | **8.3** — two reds |
+>
+> ⚠️ **The second is the one that mattered**, and it is why the pale blue was
+> asked about in the first place: **an affordable sector looked like a sector
+> with no published price.** That is the worst sentence this map can utter.
+>
+> **The three favourable verdicts are now ordered by luminance** — 0.585,
+> 0.314, 0.139 — so the ramp reads as a ramp on the dark theme. The refusal
+> leaves the red family for an amber, which is what buys it **14.3** against
+> *Out of reach* instead of 8.3.
+>
+> ⚠️ **One thing to watch on screen rather than here:** `Out of reach`
+> `#FF8A7E` is *lighter* than `Within reach`. On a dark ground a red has to be
+> light to exist at all, and the hue carries the meaning — but at the bottom of
+> the down-payment slider almost every sector is out of reach, so the map will
+> be largely coral. Judged on a contact sheet before it was chosen; judge it
+> again in Desktop.
 
 **The 10 % band is still a display convention of this project and still lives in
 one measure only.** The counting measures below read *this* verdict rather than
@@ -4095,11 +4260,15 @@ also the axis two light greys on a light background have almost none of. **Out
 of reach therefore moves from `#C7CCD1` to `#A6ADB4`** in the same pass that
 adds the fifth class.
 
-| The five, measured | |
+| The five, measured — **superseded 2026-09-12, kept as the record** | |
 |---|---|
 | pairs tested | **10** |
 | worst pair | **14.8** — Borderline / Out of reach, in protanopia |
 | pairs below the threshold of 10 | **0** |
+
+**The set in force is the six above**, measured the same way: 15 pairs, worst
+**14.3**, none below the threshold. `python scripts/validate_palette.py
+--palette page3-verdict` prints it.
 
 Negative control run the same day: putting `#C7CCD1` back alongside the new set
 still fails, at 7.0. ⚠️ **`#C7CCD1` remains correct on page 1**, where it is the
@@ -4110,11 +4279,11 @@ change, not a project-wide one.
 Sector bar colour =
 SWITCH (
     [Verdict at this down payment],
-    "Within reach",            "#17527A",
-    "Cash purchase",           "#17527A",
-    "Borderline",              "#5B9BC4",
-    "Out of reach",            "#A6ADB4",
-    "Below the legal minimum", "#7A5C4B",
+    "Cash purchase",           "#9BD0F2",
+    "Within reach",            "#4E9FD8",
+    "Borderline",              "#2A6CA3",
+    "Out of reach",            "#FF8A7E",
+    "Below the legal minimum", "#A8722E",
     "#E8EAEC"
 )
 ```
@@ -5197,30 +5366,78 @@ measure returns a data URI and its **data category is set to Image URL**. So the
 icons are DAX, versioned in this file, with no file to lose and nothing to
 attribute.
 
-The seven are drawn here rather than lifted from Lucide or Feather — 24 × 24,
-stroke only, 1.6 px, round caps, painted in the neutral `#8FA3B5` because an
-icon is chrome and must not compete with the badge that carries data.
+The thirteen are drawn here rather than lifted from Lucide or Feather — 24 × 24,
+stroke only, 1.6 px, round caps.
 
-⚠️ **All seven were parsed before being written into this file.** An SVG with a
+> ### The colour changed on 2026-09-12: `#8FA3B5` → **`#B4C8DA`**
+>
+> Changed on request, for something harmonised and slightly more
+> vivid. **The old colour was the badge's own "flat" grey**, so an icon and a
+> state of the data carried the same hue — at CIEDE2000 **0.0**. That alone
+> justified moving.
+>
+> Six candidates were measured against the three badge colours, the three map
+> ramps and the real card background `#1C2F41`. **None passes everywhere: this
+> report has spent its blue.** Every scale in it is blue, so any vivid blue
+> collides with a ramp — `#85C9F4`, the theme accent, lands at ΔE **2.4** from
+> the blue arm's threshold colour on page 2.
+>
+> | | contrast on the card | vs the green and red badges | worst collision |
+> |---|---|---|---|
+> | `#8FA3B5` old | 5.27 : 1 | 14.1 | **0.0** — it *was* the flat badge |
+> | **`#B4C8DA` chosen** | **7.97 : 1** | **5.0** | 3.0 vs the page-2 threshold blue |
+> | `#F2F6FA` rejected | 12.62 : 1 | 12.4 | 2.5 vs "no published price" |
+>
+> ⚠️ **What the choice costs, and it is written here rather than discovered
+> later: `#B4C8DA` sits only 5.0 from the green and red badge colours.** An icon
+> can therefore read as a washed-out badge state. Three things keep them apart
+> and none is the colour: the icon is a 1.6 px outline where a badge is a filled
+> glyph with an arrow, it lives in the callout area rather than under the figure,
+> and it never changes while a badge does. `#F2F6FA` measured better on that
+> pair and was declined as too vivid against the figure it sits beside.
+
+**An icon is chrome and must not compete with the badge that carries data** —
+that is still the rule, and it is now enforced by weight and position rather
+than by hue alone.
+
+⚠️ **All thirteen were parsed before being written into this file.** An SVG with a
 malformed path renders as *nothing* in Power BI, with no error — a missing icon
 looks exactly like a formatting toggle left off. `scratchpad/make_icons.py`
 built and parsed them; the check is one line of `xml.etree` and it is the
 difference between an icon that is absent and an icon that was never valid.
 
 ```dax
-Sales icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12.5V4a1 1 0 0 1 1-1h8.5L21 11.5a1.5 1.5 0 0 1 0 2.1l-7.4 7.4a1.5 1.5 0 0 1-2.1 0L3 12.5Z'/%3E%3Ccircle cx='7.5' cy='7.5' r='1.4'/%3E%3C/svg%3E"
+// ---- page 1, the four KPI cards
 
-Median price icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 6.5v11M14.8 9.2a2.8 2.8 0 0 0-2.8-1.4h-.4a2.2 2.2 0 0 0 0 4.4h.8a2.2 2.2 0 0 1 0 4.4H12a2.8 2.8 0 0 1-2.8-1.4'/%3E%3C/svg%3E"
+Sales icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12.5V4a1 1 0 0 1 1-1h8.5L21 11.5a1.5 1.5 0 0 1 0 2.1l-7.4 7.4a1.5 1.5 0 0 1-2.1 0L3 12.5Z'/%3E%3Ccircle cx='7.5' cy='7.5' r='1.4'/%3E%3C/svg%3E"
 
-Days on market icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 6.8V12l3.6 2.2'/%3E%3C/svg%3E"
+Median price icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 6.5v11M14.8 9.2a2.8 2.8 0 0 0-2.8-1.4h-.4a2.2 2.2 0 0 0 0 4.4h.8a2.2 2.2 0 0 1 0 4.4H12a2.8 2.8 0 0 1-2.8-1.4'/%3E%3C/svg%3E"
 
-Active listings icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5h10M4 12h10M4 17.5h10'/%3E%3Ccircle cx='19' cy='6.5' r='1.3'/%3E%3Ccircle cx='19' cy='12' r='1.3'/%3E%3Ccircle cx='19' cy='17.5' r='1.3'/%3E%3C/svg%3E"
+Days on market icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 6.8V12l3.6 2.2'/%3E%3C/svg%3E"
 
-Share affordable icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='15.5' r='4.2'/%3E%3Cpath d='M11 12.5 20 3.5M17 6.5l2.4 2.4M14.6 8.9l2.4 2.4'/%3E%3C/svg%3E"
+Active listings icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5h10M4 12h10M4 17.5h10'/%3E%3Ccircle cx='19' cy='6.5' r='1.3'/%3E%3Ccircle cx='19' cy='12' r='1.3'/%3E%3Ccircle cx='19' cy='17.5' r='1.3'/%3E%3C/svg%3E"
 
-Tracts evaluated icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 3.5h7v7h-7zM13.5 3.5h7v7h-7zM3.5 13.5h7v7h-7zM13.5 13.5h7v7h-7z'/%3E%3C/svg%3E"
+// ---- page 2, the four KPI cards
 
-Income required icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238FA3B5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 7.5A2 2 0 0 1 5.5 5.5h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z'/%3E%3Cpath d='M20.5 10.5h-4a2 2 0 0 0 0 4h4'/%3E%3C/svg%3E"
+Share affordable icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='15.5' r='4.2'/%3E%3Cpath d='M11 12.5 20 3.5M17 6.5l2.4 2.4M14.6 8.9l2.4 2.4'/%3E%3C/svg%3E"
+
+Tracts evaluated icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 3.5h7v7h-7zM13.5 3.5h7v7h-7zM3.5 13.5h7v7h-7zM13.5 13.5h7v7h-7z'/%3E%3C/svg%3E"
+
+Income required icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 7.5A2 2 0 0 1 5.5 5.5h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z'/%3E%3Cpath d='M20.5 10.5h-4a2 2 0 0 0 0 4h4'/%3E%3C/svg%3E"
+
+Change since peak icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 18.5 7.5 13 12 6.5'/%3E%3Ccircle cx='12' cy='6.5' r='1.5'/%3E%3Cpath d='M12 6.5 16.5 13 21 18.5'/%3E%3C/svg%3E"
+
+// ---- page 3, the five KPI cards
+
+Within reach icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M7.8 12.4 10.7 15.3 16.4 9.2'/%3E%3C/svg%3E"
+
+Borderline icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7.3v5.4'/%3E%3Cpath d='M12 16.2v.6'/%3E%3C/svg%3E"
+
+Sectors priced icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 7A2 2 0 0 1 5.5 5h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2Z'/%3E%3Cpath d='M12 8.2v7.6M13.9 10.1a2 2 0 0 0-1.9-1h-.3a1.5 1.5 0 0 0 0 3h.6a1.5 1.5 0 0 1 0 3H12a2 2 0 0 1-1.9-1'/%3E%3C/svg%3E"
+
+Below minimum icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M5.6 5.6 18.4 18.4'/%3E%3C/svg%3E"
+
+Selected sector icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21.5s7-6.1 7-11a7 7 0 0 0-14 0c0 4.9 7 11 7 11Z'/%3E%3Ccircle cx='12' cy='10.2' r='2.6'/%3E%3C/svg%3E"
 ```
 
 **Two encoding rules that make the difference between an icon and a blank:**
@@ -5228,12 +5445,111 @@ Income required icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/
 every attribute uses **single** quotes, because DAX delimits the string with
 double ones.
 
+**The six drawn on 2026-09-12**, and what each one says: a line that rises to a
+marked peak and falls for *change since peak* · a rounded price plate for
+*sectors priced*, so it cannot be taken for the pointed tag of `Sales icon` nor
+the circle-and-dollar of `Median price icon` · a map pin for the *selected
+sector* · and **one circle carrying three different marks** for the three
+verdicts of the page-3 row: a tick for *within reach*, a vertical mark for
+*borderline*, a cross for *below the legal minimum*.
+
+**The shared circle is a decision, not a collision.** Three verdicts of the same
+quantity are read faster as three states of one object than as three unrelated
+drawings, so what distinguishes them is the content of the circle and not its
+outline.
+
+⚠️ **Two of the six were redrawn the same day, and the reasons are worth
+keeping.** *Change since peak* first put its peak at x=15: the asymmetry is what
+made it read as odd, and centring it fixed it without changing the idea.
+*Borderline* was first a beam balance, which **reads as an aerial at 24 px** —
+a shape that survives at 64 px can fail at the size it will actually be used,
+which is why the contact sheet renders both sizes one above the other.
+
 ⚠️ **The largest number in any of these is 24.** `scripts/check_powerbi_project.py`
 flags numbers above 10 000 in a `.pbip` definition, so seven SVGs of viewBox
 coordinates cannot trip it. Worth stating because it is the kind of thing that
 gets discovered at the gate instead of here.
 
+## 14.8 bis The slicer icons are FILES, not measures
+
+Added 2026-09-12: a house beside the property-type
+slicer, a figure beside the household-profile slicer.
+
+> ### ⚠️ The mechanism is not the one in 14.8, and confusing them costs a session
+>
+> A measure whose data category is **Image URL** renders in the **callout of a
+> card visual**. **A slicer has no callout.** So an icon beside a slicer is a
+> canvas image — *Insert > Image* — and it needs a real file on disk. That is
+> the whole difference, and it is why these three are versioned as files while
+> the other thirteen live in this document as DAX.
+
+| File | Beside | Drawing |
+|---|---|---|
+| `powerbi/icons/house.png` | the property-type slicer | roof, walls, door |
+| `powerbi/icons/person-one.png` | the one-person profile | head and shoulders |
+| `powerbi/icons/person-two.png` | the couple profile | two figures, separated |
+
+**`scripts/generate_slicer_icons.py` draws them**, PNG and SVG from **one set of
+coordinates**, so the versioned source and the file pasted into Desktop cannot
+drift apart. `--preview out.html` writes a contact sheet. Re-running it produces
+no git diff. Same 24 × 24 grid, 1.6 stroke, round caps and `#B4C8DA` as the
+card icons, so the report keeps one hand.
+
+**The PNGs are 128 px on a transparent ground.** Take the PNG: it inserts
+without question. The SVG is kept as the readable source — whether Desktop
+accepts it at insertion was **not verified**, so it is not the one to try first.
+
+⚠️ **A canvas image is STATIC.** It does not follow the slicer: the two figures
+stay two figures when the reader picks "one person". **It names what the slicer
+filters, not what is selected** — and the household-profile slicer has *three*
+values, not two, the third being `Total × Total`. An icon per value does not
+exist on a native slicer.
+
+⚠️ **A torso is not a half circle.** The first attempt drew the shoulders as a
+true half-circle and it read as an **archway** under a ball; the second figure
+read as a dot and a comma. Both were found by **looking at the render at 36 px**,
+not by reasoning about the coordinates. The fix is a flattened half-ellipse with
+two short uprights. That is why the generator has a contact sheet at all, and
+why it renders each icon at 72 px **and** at the size it will really be used —
+a drawing that survives at 72 px can fail at 28.
+
+**Three measures carrying these same three drawings are written in the paste
+file, and they are for a CARD if one ever wants them there.** They are of no use
+beside a slicer. An unused measure in the model is one more thing to understand
+in six months: do not create them without a use.
+
+**`check-secrets.sh` lists the three PNGs in its section 6**, the files it cannot
+look inside — the same conscious decision the ERD PNG needed on 2026-08-31. It
+is an easy one here, and for a reason worth stating: **the SVG beside each PNG is
+plain text and says exactly what the PNG contains**, and `generate_slicer_icons.py`
+rebuilds both from coordinates in this repository. The binary is therefore
+verifiable by a second, readable route — which is precisely what a `.pbix` is
+not.
+
 ## 14.9 The two notes, and why they are constant strings
+
+> ## ⚠️ NEITHER NOTE WAS BUILT, AND THAT IS A DECISION — 2026-09-12
+>
+> **Decided:** neither card goes on the report. The reason: the report is
+> already well filled, and the colour convention is
+> intuitive from a buyer's point of view. Read out of
+> `mhi-Dashboard_v11.pbix` first — they appear on no page — so this records a
+> choice, not an omission.
+>
+> **The DAX below is kept, unbuilt**, for the same reason section 15.3 is kept:
+> the measurement it carries is still true and still needed elsewhere.
+>
+> **What the decision costs, and where it is paid instead — both free of
+> pixels:**
+>
+> | Lost from the screen | Where it must land |
+> |---|---|
+> | the seasonality of three of the four page-1 metrics | `docs/limitations.md`, J4.4. The badge already **names** the quarter it compares, which is the half that mattered most |
+> | green = favourable to a first-time buyer | `docs/methodology.md`, J4.4 |
+>
+> ⚠️ **The colour convention is intuitive for a buyer and counter-intuitive for
+> anyone else** — a reader who is not buying sees a falling price in green.
+> That is the reason the note is written down somewhere rather than dropped.
 
 ```dax
 Quarter comparison note =
@@ -5295,6 +5611,33 @@ touches. Measured `v09` against `v10`: one card carried a callout image before,
 page 3, which acceptance case 9 requires to be untouched, and they carry the
 sales price-tag icon.
 
+> ## ⚠️ WHAT `Report/Layout` DOES NOT TELL YOU — settled 2026-09-12
+>
+> This document leans on `Report/Layout` constantly, and rightly: it names the
+> tables, columns and measures of every visual, and it is how half the defects
+> of block D and E were found. **But it is a record of what has been SET, not of
+> what is RENDERED, and the two diverge in at least three ways now measured:**
+>
+> | What the file shows | What Desktop does |
+> |---|---|
+> | a `referenceLabel` bound to a metadata key the card does not carry | **inert** — proved on 2026-09-11 by a card holding an orphan and showing one badge |
+> | a `dataPoint` `fill` pinned to one `scopeId` **under an `fx` rule** | **inert** — the conditional rule covers it. Checked on screen, 2026-09-12: the page-2 map has no hard-coloured tract, although the entry is still in the file |
+> | **`shape.projectionEnum`** | **does not follow the setting.** The page-3 map reads `albersUsa` in a file saved 2026-09-12 at 20:04 and is **`mercator`** in Desktop |
+>
+> ⚠️ **The projection one was raised as a defect twice, on 2026-09-01 and again
+> on 2026-09-12, from the same misreading.** The first time it was written off as
+> "false, or stale". It is neither: two readings eleven days apart, on two
+> different files, both saved after the setting was made, return the same wrong
+> value. **The property is simply not authoritative in the layout.**
+>
+> **The rule this settles, and it is not "read the file again":** `Report/Layout`
+> answers *does this object exist, and what is it bound to*. It does not answer
+> *what does the reader see*. For anything about rendering — a projection, a
+> colour that a conditional rule may override, whether a toggle actually took —
+> **Desktop is the authority and the check is a glance.** Raising a rendering
+> defect from the file alone costs a look in Desktop and costs this document a
+> correction; it has now done both twice.
+
 **The reference label that travels with it is harmless and the image is not, for
 a reason worth keeping.** A reference label is scoped to a metadata key — the
 field it belongs to — so on a card that does not have that field it is inert;
@@ -5307,8 +5650,18 @@ formality.
 ## 14.11 Acceptance
 
 Run `.venv/Scripts/python.exe scripts/report_oracle.py --quarter <q>` beside
-Desktop. The oracle prints, for each of the seven cards, the current value, the
+Desktop. The oracle prints, for each of the badged cards, the current value, the
 previous quarter's value, the movement, the arrow and the colour it must show.
+
+> ⚠️ **"Seven cards" is stale: the report carries EIGHT badged cards — 2026-09-12.**
+> Read out of `mhi-Dashboard_v11.pbix`. The eighth is
+> `Affordability change since peak (points)` on page 2, added directly in
+> Desktop, which carries a live `Peak quarter` reference label and its own callout
+> icon. **It is a card that was built, not formatting that travelled** — the
+> difference is readable in the file: a live label is bound to a metadata key
+> that matches its own card's field, an orphan is bound to another card's.
+> `scripts/` has no tool for this; the check is the `badges.py` probe pattern
+> described at the end of this section.
 
 | # | Set this | Expect |
 |---|---|---|
@@ -5319,12 +5672,30 @@ previous quarter's value, the movement, the arrow and the colour it must show.
 | 5 | Page 1, **2024 Q1** | same refusal — the quarter it subtracts is 2023 Q4 |
 | 6 | Page 1, ctrl-click a **second quarter** if the slicer allows it | every badge vanishes. Nothing reads "0.0 %" |
 | 7 | Page 2, **single-family**, 2026 Q2 | the share badge in **points**; the `Tracts evaluated` badge **grey**, showing a count that the oracle confirms moved |
-| 8 | Page 2, any quarter | the two note cards are unchanged when the down-payment slider moves — they are on page 2 and constant |
-| 9 | Page 3 and page 4 | **unchanged.** No badge, no icon, no note. If anything moved there, a measure was rebranded instead of added |
+| 8 | ~~Page 2, any quarter~~ | ~~the two note cards are unchanged when the slider moves~~ — **void since 2026-09-12: neither note card was built, see 14.9.** What still has to hold on page 2 is the card that *is* dynamic: `Down payment note` must not move with the slider, which is the defect of 2026-09-09 |
+| 9 | Page 3 and page 4 | ⚠️ **REWRITTEN 2026-09-12 — page 3 now carries five icons by design.** What must hold: **no badge** on either page, **no icon at all on page 4**, and on page 3 each of the five icons is bound to *its own* measure — never `Sales icon`, which is what all five were bound to while switched off. Page 4 unchanged in full |
 
 **Case 3 is the one that fails if the guards were written from the island.**
 Cases 4 and 5 are the ones that fail if the corroboration guard was written on
 the current quarter only.
+
+### ⚠️ The icon count changed on 2026-09-12: 8 badged cards, **13 carrying an icon**
+
+An icon and a badge are **not** the same wiring, and the acceptance has to keep
+them apart:
+
+| | Badge (reference label) | Callout icon |
+|---|---|---|
+| Page 1 | 4 | 4 |
+| Page 2 | 4 | 4 |
+| **Page 3** | **0 — and that stands** | **5, added by decision** |
+| Page 4 | 0 | 0 |
+
+Icons were added to page 3 on 2026-09-12. Those five cards already held
+an `image` object, **switched off and bound to `Sales icon`** — the formatting
+that travelled on 2026-09-11. They are now bound to their own measures and
+switched on, which is why case 9 above no longer reads "no icon". **The part of
+case 9 that still bites is page 4, and the absence of badges on both pages.**
 
 ⚠️ **Case 9 is not a formality, and on 2026-09-11 it failed.** It costs one look
 — open page 3, look to the left of the four KPI figures, a small grey tag icon
@@ -5358,8 +5729,8 @@ selected state that says which page the reader is on, and an icon per entry.
 > | Control | 16 `actionButton` | **1 `pageNavigator` per page**, 262 × 300 |
 > | Frame | none | a `shape` panel, **263 × 352**, behind it |
 > | Place | full-height rail, x 0→176 | **top-left block**, x 0→263, y 0→352 |
-> | Pages carrying it | 4 | **2** — Market and Affordability |
-> | Layout pass | `plan_left_rail.py` | **done by hand**, on those two pages only |
+> | Pages carrying it | 4 | ~~2~~ → **4, since 2026-09-12** |
+> | Layout pass | `plan_left_rail.py` | **done by hand**, on all four pages |
 > | Glyphs | in the button text | **none yet** — the four pages keep their plain names |
 >
 > **15.3 and 15.4 are therefore superseded as instructions.** They are kept
@@ -5379,9 +5750,26 @@ selected state that says which page the reader is on, and an icon per entry.
 > contrast threshold against the panel to be seen, it only has to exist. That
 > is worth knowing before anyone reaches for the fill-based hover of 15.5.
 >
-> **What remains, and it is small**: the navigator on pages 3 and 4, their
-> layout pass, and the glyphs if they are wanted. `Sectors priced` is still on
-> two cards of page 3 (E6), and the two note cards of E5 are still absent.
+> ## ✅ THE MENU IS ON ALL FOUR PAGES — read out of the file, 2026-09-12
+>
+> `mhi-Dashboard_v11.pbix`, saved 16:13. A `pageNavigator` at **x=0 y=18,
+> 262 × 300**, inside a `shape` panel, on **Market, Affordability, First-time
+> buyer and Rates** — identical coordinates on all four. On Rates the panel
+> runs the full height (262 × 1080); on the other three it is 263 × 352.
+>
+> **And the layout pass came with it.** Pages 2, 3 and 4 were rebuilt by hand
+> onto the grid page 1 already used: KPI row at **y=140**, cards at
+> **x=275 / 600 / 927 / 1252**, the fifth slot at 1577, chart zones 807 wide at
+> y≈290, the trend line at y=775. Checked field by field rather than by eye:
+> **no measure of pages 1, 2 or 3 was lost in the move.**
+>
+> **The glyphs are still not placed**, and the reason is unchanged: a
+> `pageNavigator` has no `icon` object, so a mark would have to live in the
+> page display name.
+>
+> **What remains of block E**: `Sectors priced` on two cards of page 3 (E6),
+> and the acceptance of 14.11. **E5 is closed as a decision, not as work** —
+> see the banner at 14.9.
 
 
 ## 15.1 The one measurement that decides the whole shape

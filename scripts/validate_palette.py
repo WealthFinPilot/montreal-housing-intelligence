@@ -55,11 +55,36 @@ PALETTES: dict[str, list[tuple[str, str]]] = {
     # -- two greys separated by lightness alone, which is the axis dichromacy
     # leaves intact but which a light grey on a light background spends almost
     # entirely. That pair had been accepted by eye on 2026-08-30.
+    #
+    # ⚠️ REPLACED WHOLESALE ON 2026-09-12, and the six classes now carry SIX
+    # colours. The palette below was searched, not picked: 33 candidates,
+    # every pair of every combination measured in the four views, 270
+    # combinations cleared 10.0, and this is the one whose worst pair is
+    # highest at 14.3.
+    #
+    # What it fixes, measured on the palette it replaces in the model:
+    #   - "Cash purchase" and "Borderline" had become the SAME hex, at 0.0
+    #   - "Within reach" at #E0F0FF sat 5.6 from "No published price" --
+    #     an affordable sector looked like a sector with no data, which is
+    #     the worst thing this map can say
+    #   - the two refusal-side classes were two reds, 8.3 apart
+    #
+    # ⚠️ It also reverses a decision: on 2026-09-09 "Cash purchase" shared
+    # "Within reach"'s colour deliberately -- six classes, five colours, a
+    # cash purchase being a special case of affordable. Reversed on 2026-09-12,
+    # once it had been seen drawn with a tone of its own. To go back,
+    # give both #4E9FD8 and re-run this script.
+    #
+    # The three favourable verdicts are ordered by luminance so the ramp
+    # reads: light saturated blue, plain blue, deep blue. The refusal leaves
+    # the red family for an amber, which is what buys it 14.3 against
+    # "Out of reach" instead of 8.3.
     "page3-verdict": [
-        ("#17527A", "Within reach"),
-        ("#5B9BC4", "Borderline"),
-        ("#A6ADB4", "Out of reach"),
-        ("#7A5C4B", "Below the legal minimum"),
+        ("#9BD0F2", "Cash purchase"),
+        ("#4E9FD8", "Within reach"),
+        ("#2A6CA3", "Borderline"),
+        ("#FF8A7E", "Out of reach"),
+        ("#A8722E", "Below the legal minimum"),
         ("#E8EAEC", "No published price"),
     ],
     # The quarter-over-quarter badges of pages 1 and 2, added 2026-09-10.
