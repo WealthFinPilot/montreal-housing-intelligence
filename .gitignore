@@ -47,7 +47,14 @@ dbt/logs/
 #   - MAMH roll extract: 52.5 MB, regenerates in 88 s from a CC-BY source
 #     (docs/data-sources.md section 2.8).
 # ---------------------------------------------------------------------------
-data/
+# Written as data/* rather than data/ so that ONE file inside it can be tracked:
+# data/.gitkeep. The runner container mounts a writable directory at /app/data,
+# inside a repository that is bind-mounted read-only -- and Docker cannot create
+# a mount point in a read-only filesystem. The directory has to arrive with the
+# deployed code, which means git has to carry it. Everything in it is still
+# ignored, and data/apciq/ never even gets walked.
+data/*
+!data/.gitkeep
 *.pdf
 mamh_roll_*_island.csv
 

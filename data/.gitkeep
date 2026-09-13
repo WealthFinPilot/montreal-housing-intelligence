@@ -1,0 +1,11 @@
+This empty directory is tracked on purpose. Do not delete it.
+
+ingestion/apciq/run.py resolves its PDF cache as REPO_ROOT / "data/apciq", so
+on the server the runner container mounts a writable host directory at
+/app/data -- inside a repository that is bind-mounted READ-ONLY. Docker cannot
+create a mount point on a read-only filesystem, so the directory must already
+exist in the deployed tree. `git archive` only ships what git tracks, hence
+this file and the `data/*` + `!data/.gitkeep` pair in .gitignore.
+
+Its contents stay ignored: the APCIQ archive is ~200 MB and its licence forbids
+redistribution (docs/data-sources.md section 2.2).
