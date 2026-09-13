@@ -161,7 +161,8 @@ manual step done by a human.
 | The forced command intercepts an arbitrary request and runs the pipeline instead | **proven** — asked for `status` over SSH with that key, got the pipeline |
 | `from=` refuses this laptop | **proven**, refused before authentication |
 | sshd sees n8n as `172.18.0.5`, inside `172.18.0.0/16` | **measured** in the sshd log |
-| The two together, from the n8n container | **not yet** — it needs the first real execution. A refusal would read `Permission denied (publickey)`; the fix is section 7. |
+| The two together, from the n8n container | **proven on 2026-09-13** — the first execution from n8n asked for `status` and got the pipeline, `exitCode: 0` |
+| The `cd <cwd> ;` prefix is tolerated in real conditions | **proven** — every execution from n8n ran with *Working Directory* left at `/`, so the server received `cd / ; refresh` and accepted it |
 
 ---
 
@@ -194,7 +195,15 @@ manual step done by a human.
    the channel can change without this workflow ever changing.
 
    The thrown message already carries the exit code, its meaning, and the full
-   pipeline output — so the notification is a diagnosis, not an alarm.
+   pipeline output — so the notification is a diagnosis, not an alarm. Truncate
+   it in the notification node: Telegram refuses a message over 4096 characters,
+   and a failed `dbt build` produces far more than that, so the one alert that
+   matters most would be the one that never arrives.
+
+   **The alerting workflow is deliberately NOT in this repository.** It carries
+   a chat ID, which is a personal identifier; `mhi-refresh.json` carries none.
+   Same rule as the `.pbix` holding APCIQ figures: what cannot be public stays
+   out of git.
 
 5. **Activate**, and run it once by hand first.
 
@@ -215,6 +224,31 @@ manual step done by a human.
 | exit `69` | a previous run is still going. The lock is deliberate: two dbt builds racing on one schema is not a thing to discover in production |
 | exit `70` | read the output. The script names which step failed and leaves the others' results visible |
 | green execution but nothing happened | the Code node was removed or bypassed. See the note in section 6 |
+| the pipeline failed but no Telegram message arrived | one of the two traps below |
+
+### Testing the alert, and the two traps that make it look broken
+
+Both cost time on 2026-09-13, and both will cost it again.
+
+**An error workflow never fires on a manual execution.** n8n only calls it for
+*production* executions — the ones started by the trigger. So the obvious way to
+test an alert is the one way that cannot work. To test it for real: set the
+Schedule Trigger to `Minutes / 1`, **activate** the workflow, and wait. Then put
+the schedule back.
+
+> Changing only the *hour* of a `Weeks / Monday` rule does not make it fire
+> today. It is the **Trigger Interval** field that has to change.
+
+**`On Error` must stay on *Stop Workflow*** on the Code node. Set to *Continue
+(using error output)*, the error goes down a branch and **the execution finishes
+as a success** — so n8n has nothing to report and never calls the error
+workflow. The node shows something red while the execution is green. Check the
+status in the *Executions* list, not the colour of the node.
+
+A good failure to test with is `refreshh`: the server refuses the word before
+opening any connection, so nothing is ingested and the test can be replayed as
+often as needed. Expect exit `64`, and a Telegram message quoting
+`the task name was refused by the whitelist`.
 
 Nothing here ever touches `root-n8n-1`, `root-n8n-worker-1`, `n8n-postgres`,
 `redis` or `root-traefik-1`. `deploy-vps.sh` ends by listing the containers, so
