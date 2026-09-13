@@ -97,6 +97,25 @@ ssh_do "
   # The forced command lives at a stable path outside the deployed tree, so
   # the authorized_keys entry never has to change and is readable on its own.
   install -m 0755 $MHI_ROOT/repo/scripts/vps-pipeline.sh $MHI_ROOT/bin/vps-pipeline.sh
+
+  # Retire the standalone compose file left at $MHI_ROOT by J2.
+  #
+  # Measured on 2026-09-13: the first deploy RESTARTED mhi-postgres, which had
+  # been up three weeks. Not because the definition changed -- diffing the two
+  # files shows only additions, not one modified line of the postgres service --
+  # but because Compose stamps each container with the project directory and
+  # config file it came from. Invoking the same project from a different path
+  # makes every existing container look out of sync, so Compose recreates it.
+  # Harmless here, since the data lives in the named volume mhi_pgdata and was
+  # verified intact afterwards, but it is a restart of the database on every
+  # switch between the two files, forever.
+  #
+  # Renamed rather than deleted: reversible, and it makes the old path fail
+  # with a plain \"no configuration file provided\" instead of silently working
+  # and recreating containers. The file is not lost -- it is this repository.
+  if [ -f $MHI_ROOT/docker-compose.yml ]; then
+    mv $MHI_ROOT/docker-compose.yml $MHI_ROOT/docker-compose.yml.superseded
+  fi
 "
 
 # --- 5. Build the runner image ----------------------------------------------
