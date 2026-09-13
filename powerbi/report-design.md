@@ -1546,6 +1546,14 @@ step with it.
 | Icons | `Share affordable icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
 | Icons | `Tracts evaluated icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
 | Icons | `Income required icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
+| Icons | `Change since peak icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
+| Icons | `Within reach icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 3 |
+| Icons | `Borderline icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 3 |
+| Icons | `Sectors priced icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 3 |
+| Icons | `Below minimum icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 3 |
+| Icons | `Selected sector icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 3 |
+| Icons | `Posted minus contract icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 4 |
+| Icons | `Quote icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | **none yet** |
 | — | `Income input Value` | `Income input` | the slicer selection | Currency, 0 dec. | 3 |
 | — | `Down payment input Value` | `Down payment input` | the slicer selection | Currency, 0 dec. | 3 |
 
@@ -5414,8 +5422,9 @@ measure returns a data URI and its **data category is set to Image URL**. So the
 icons are DAX, versioned in this file, with no file to lose and nothing to
 attribute.
 
-The thirteen are drawn here rather than lifted from Lucide or Feather — 24 × 24,
-stroke only, 1.6 px, round caps.
+The fifteen are drawn here rather than lifted from Lucide or Feather — 24 × 24,
+1.6 px, round caps, **stroke only with one stated exception: the quote mark is
+filled**, for the reason measured below.
 
 > ### The colour changed on 2026-09-12: `#8FA3B5` → **`#B4C8DA`**
 >
@@ -5448,7 +5457,7 @@ stroke only, 1.6 px, round caps.
 that is still the rule, and it is now enforced by weight and position rather
 than by hue alone.
 
-⚠️ **All thirteen were parsed before being written into this file.** An SVG with a
+⚠️ **All fifteen were parsed before being written into this file.** An SVG with a
 malformed path renders as *nothing* in Power BI, with no error — a missing icon
 looks exactly like a formatting toggle left off. `scratchpad/make_icons.py`
 built and parsed them; the check is one line of `xml.etree` and it is the
@@ -5486,6 +5495,14 @@ Sectors priced icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/s
 Below minimum icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M5.6 5.6 18.4 18.4'/%3E%3C/svg%3E"
 
 Selected sector icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21.5s7-6.1 7-11a7 7 0 0 0-14 0c0 4.9 7 11 7 11Z'/%3E%3Ccircle cx='12' cy='10.2' r='2.6'/%3E%3C/svg%3E"
+
+// ---- page 4, the spread card
+
+Posted minus contract icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 6.5h17M3.5 17.5h17'/%3E%3Cpath d='M12 8.6v6.8'/%3E%3Cpath d='m9.9 10.7 2.1-2.1 2.1 2.1M9.9 13.3l2.1 2.1 2.1-2.1'/%3E%3C/svg%3E"
+
+// ---- not bound to a card yet: the opening quotation mark
+
+Quote icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.2 6.4c-3.4 0.9 -5.7 3.6 -5.7 6.9 0 2.4 1.6 4.1 3.8 4.1 2 0 3.5 -1.5 3.5 -3.5 0 -1.9 -1.4 -3.3 -3.2 -3.3 -0.3 0 -0.6 0 -0.9 0.1 0.5 -1.4 1.7 -2.5 3.3 -3.1z' fill='%23B4C8DA' stroke='none'/%3E%3Cpath d='M19.7 6.4c-3.4 0.9 -5.7 3.6 -5.7 6.9 0 2.4 1.6 4.1 3.8 4.1 2 0 3.5 -1.5 3.5 -3.5 0 -1.9 -1.4 -3.3 -3.2 -3.3 -0.3 0 -0.6 0 -0.9 0.1 0.5 -1.4 1.7 -2.5 3.3 -3.1z' fill='%23B4C8DA' stroke='none'/%3E%3C/svg%3E"
 ```
 
 **Two encoding rules that make the difference between an icon and a blank:**
@@ -5506,6 +5523,31 @@ quantity are read faster as three states of one object than as three unrelated
 drawings, so what distinguishes them is the content of the circle and not its
 outline.
 
+**The two added on 2026-09-12, and what each cost to get right.**
+*Posted minus contract* is **two levels with the gap measured between them** by a
+double-headed arrow — the idiom a reader already owns for "the difference between
+these two". Three other ideas were drawn and **all three failed at 24 px, which is
+the only size that counts**: two diverging rates closed by a vertical stroke
+became a **play button**; two bars with the difference bracketed on top became an
+unnamed glyph; the same two rates left open read as a plain **`<`**. None of them
+failed at 64 px.
+
+⚠️ **The quote mark is the only FILLED drawing of the fifteen, and that is a
+measurement rather than a preference.** Drawn as a 1.6 outline to match the
+others, the two commas read as the digits **`66`** — looked at before choosing,
+not reasoned about. A quotation mark is a **typographic sign, not a pictogram**:
+it is set solid wherever a pull quote is set, and hollowing it turns it into two
+numerals. The cost is that one icon of the set no longer shares the outline
+weight of the other fourteen; what keeps it in the family is the grid, the
+colour and the size.
+
+⚠️ **The quote mark is shipped in BOTH forms, because its destination is not
+fixed.** As the measure above if it goes in the callout of a card; as
+`powerbi/icons/quote-mark.png` if it sits on the canvas beside a block of text,
+which is what "opening a quotation" usually means. **The two are the same
+drawing by construction** — the measure is the file's own SVG, URL-encoded — so
+choosing one later costs nothing and they cannot drift. See 14.8 bis.
+
 ⚠️ **Two of the six were redrawn the same day, and the reasons are worth
 keeping.** *Change since peak* first put its peak at x=15: the asymmetry is what
 made it read as odd, and centring it fixed it without changing the idea.
@@ -5518,24 +5560,29 @@ flags numbers above 10 000 in a `.pbip` definition, so seven SVGs of viewBox
 coordinates cannot trip it. Worth stating because it is the kind of thing that
 gets discovered at the gate instead of here.
 
-## 14.8 bis The slicer icons are FILES, not measures
+## 14.8 bis The icons that are FILES, not measures
 
 Added 2026-09-12: a house beside the property-type
-slicer, a figure beside the household-profile slicer.
+slicer, a figure beside the household-profile slicer — and, later the same day,
+an opening quotation mark, which is a file **for a different reason**: not
+because a slicer has no callout, but because a text box has none either.
 
 > ### ⚠️ The mechanism is not the one in 14.8, and confusing them costs a session
 >
 > A measure whose data category is **Image URL** renders in the **callout of a
 > card visual**. **A slicer has no callout.** So an icon beside a slicer is a
 > canvas image — *Insert > Image* — and it needs a real file on disk. That is
-> the whole difference, and it is why these three are versioned as files while
-> the other thirteen live in this document as DAX.
+> the whole difference, and it is why these are versioned as files while
+> the icon measures live in this document as DAX. **A text box has no callout
+> either**, which is what puts the quote mark on this side of the line the day
+> it ornaments a paragraph rather than a card.
 
 | File | Beside | Drawing |
 |---|---|---|
 | `powerbi/icons/house.png` | the property-type slicer | roof, walls, door |
 | `powerbi/icons/person-one.png` | the one-person profile | head and shoulders |
 | `powerbi/icons/person-two.png` | the couple profile | two figures, separated |
+| `powerbi/icons/quote-mark.png` | a quotation, on the canvas | two filled commas — **also a measure**, see 14.8 |
 
 **`scripts/generate_slicer_icons.py` draws them**, PNG and SVG from **one set of
 coordinates**, so the versioned source and the file pasted into Desktop cannot
@@ -5721,13 +5768,13 @@ previous quarter's value, the movement, the arrow and the colour it must show.
 | 6 | Page 1, ctrl-click a **second quarter** if the slicer allows it | every badge vanishes. Nothing reads "0.0 %" |
 | 7 | Page 2, **single-family**, 2026 Q2 | the share badge in **points**; the `Tracts evaluated` badge **grey**, showing a count that the oracle confirms moved |
 | 8 | ~~Page 2, any quarter~~ | ~~the two note cards are unchanged when the slider moves~~ — **void since 2026-09-12: neither note card was built, see 14.9.** What still has to hold on page 2 is the card that *is* dynamic: `Down payment note` must not move with the slider, which is the defect of 2026-09-09 |
-| 9 | Page 3 and page 4 | ⚠️ **REWRITTEN 2026-09-12 — page 3 now carries five icons by design.** What must hold: **no badge** on either page, **no icon at all on page 4**, and on page 3 each of the five icons is bound to *its own* measure — never `Sales icon`, which is what all five were bound to while switched off. Page 4 unchanged in full |
+| 9 | Page 3 and page 4 | ⚠️ **REWRITTEN 2026-09-12 — page 3 now carries five icons by design.** What must hold: **no badge** on either page, and on page 3 each of the five icons is bound to *its own* measure — never `Sales icon`, which is what all five were bound to while switched off. ⚠️ **AMENDED again the same day: page 4 now carries ONE icon by decision** (`Posted minus contract icon`), so "no icon on page 4" is no longer the test — what is, is that the spread card carries that measure and the other three cards of page 4 carry none |
 
 **Case 3 is the one that fails if the guards were written from the island.**
 Cases 4 and 5 are the ones that fail if the corroboration guard was written on
 the current quarter only.
 
-### ⚠️ The icon count changed on 2026-09-12: 8 badged cards, **13 carrying an icon**
+### ⚠️ The icon count changed twice on 2026-09-12: 8 badged cards, **14 carrying an icon**
 
 An icon and a badge are **not** the same wiring, and the acceptance has to keep
 them apart:
@@ -5737,13 +5784,20 @@ them apart:
 | Page 1 | 4 | 4 |
 | Page 2 | 4 | 4 |
 | **Page 3** | **0 — and that stands** | **5, added by decision** |
-| Page 4 | 0 | 0 |
+| Page 4 | **0 — and that stands** | **1, added by decision** — the spread card |
+
+**Fifteen icon measures exist for fourteen cards.** The fifteenth is
+`Quote icon`, which has no card yet: it is drawn and parsed and waiting, and it
+also exists as a file for the canvas. A measure nothing reads costs nothing and
+is not a defect — but it is the kind of thing that gets counted as one, so it is
+counted here instead.
 
 Icons were added to page 3 on 2026-09-12. Those five cards already held
 an `image` object, **switched off and bound to `Sales icon`** — the formatting
 that travelled on 2026-09-11. They are now bound to their own measures and
 switched on, which is why case 9 above no longer reads "no icon". **The part of
-case 9 that still bites is page 4, and the absence of badges on both pages.**
+case 9 that still bites is the absence of badges on both pages, and that each
+icon is bound to its own measure rather than to whichever one travelled there.**
 
 ⚠️ **Case 9 is not a formality, and on 2026-09-11 it failed.** It costs one look
 — open page 3, look to the left of the four KPI figures, a small grey tag icon

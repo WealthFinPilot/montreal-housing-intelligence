@@ -1,4 +1,4 @@
-"""Slicer icons: a house, one person, two people.
+"""The icons that have to be FILES: three slicer icons and a quote mark.
 
     python scripts/generate_slicer_icons.py
     python scripts/generate_slicer_icons.py --preview out.html
@@ -24,7 +24,13 @@ half-ellipse with two short uprights, found by looking at the first attempt
 rather than by reasoning about it. Hence the contact sheet: --preview renders
 each icon at 72 px AND at the size it will really be used.
 
-Output: powerbi/icons/{house,person-one,person-two}.{png,svg}
+⚠️ THE QUOTE MARK IS FILLED, and that breaks the 1.6 outline the other
+sixteen share. It is not a preference: the same mark drawn as an outline reads
+as the digits '66' at 24 px -- looked at, on 2026-09-12, before choosing. A
+quotation mark is a typographic sign, not a pictogram, and it is set solid
+wherever a pull quote is set.
+
+Output: powerbi/icons/{house,person-one,person-two,quote-mark}.{png,svg}
 """
 import io
 import math
@@ -57,6 +63,37 @@ def bust(cx, base_y, half_w, rise, drop=1.6, steps=22):
     return pts
 
 
+COMMA = [(-3.4, 0.9, -5.7, 3.6, -5.7, 6.9),
+         (0.0, 2.4, 1.6, 4.1, 3.8, 4.1),
+         (2.0, 0.0, 3.5, -1.5, 3.5, -3.5),
+         (0.0, -1.9, -1.4, -3.3, -3.2, -3.3),
+         (-0.3, 0.0, -0.6, 0.0, -0.9, 0.1),
+         (0.5, -1.4, 1.7, -2.5, 3.3, -3.1)]
+
+
+def comma(shift):
+    """One comma of the quotation mark: a disc with a rising horn, as relative
+    cubic segments. The SVG writes these curves and the PNG samples them, so the
+    file on disk and the DAX measure of report-design.md 14.8 cannot drift."""
+    return ((10.2 + shift, 6.4), COMMA)
+
+
+def flatten(start, segs, steps=26):
+    """Walk a relative cubic path into a dense polygon, for the raster side."""
+    pts, (cx, cy) = [start], start
+    for d1x, d1y, d2x, d2y, dx, dy in segs:
+        p0, p1 = (cx, cy), (cx + d1x, cy + d1y)
+        p2, p3 = (cx + d2x, cy + d2y), (cx + dx, cy + dy)
+        for i in range(1, steps + 1):
+            t = i / steps
+            u = 1 - t
+            pts.append(
+                (u*u*u*p0[0] + 3*u*u*t*p1[0] + 3*u*t*t*p2[0] + t*t*t*p3[0],
+                 u*u*u*p0[1] + 3*u*u*t*p1[1] + 3*u*t*t*p2[1] + t*t*t*p3[1]))
+        cx, cy = p3
+    return pts
+
+
 ICONS = {
     "house": {
         "label": "Property type",
@@ -81,6 +118,10 @@ ICONS = {
             ("circ", (17.3, 8.6, 3.0)),
             ("poly", bust(17.3, 20.0, 4.1, 4.2, drop=1.2)),
         ],
+    },
+    "quote-mark": {
+        "label": "Opening quotation mark",
+        "parts": [("fill", comma(0.0)), ("fill", comma(9.5))],
     },
 }
 
@@ -114,6 +155,11 @@ def to_svg(parts):
             body.append("<circle cx='%s' cy='%s' r='%s'/>" % (_n(cx), _n(cy), _n(r)))
         elif kind == "arc":
             body.append("<path d='%s'/>" % arc_path(*spec))
+        elif kind == "fill":
+            (sx, sy), segs = spec
+            d = "M%s %sc" % (_n(sx), _n(sy)) + " ".join(
+                " ".join(_n(v) for v in seg) for seg in segs) + "z"
+            body.append("<path d='%s' fill='%s' stroke='none'/>" % (d, COLOUR))
     return ("<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' "
             "viewBox='0 0 24 24' fill='none' stroke='%s' stroke-width='%s' "
             "stroke-linecap='round' stroke-linejoin='round'>%s</svg>"
@@ -151,6 +197,10 @@ def to_png(parts, path):
             for a in (a0, a1):
                 t = math.radians(a)
                 cap(cx + r * math.cos(t), cy - r * math.sin(t))
+        elif kind == "fill":
+            start, segs = spec
+            d.polygon([(x * SS, y * SS) for x, y in flatten(start, segs)],
+                      fill=rgb)
 
     img = img.resize((OUT_PX, OUT_PX), Image.LANCZOS)
     img.save(path)
@@ -159,7 +209,7 @@ def to_png(parts, path):
 
 def main():
     import argparse
-    ap = argparse.ArgumentParser(description="Draw the three slicer icons.")
+    ap = argparse.ArgumentParser(description="Draw the icons that are files.")
     ap.add_argument("--preview", metavar="HTML",
                     help="also write a contact sheet there, to judge the "
                          "drawings at the size they will really be used")
@@ -195,11 +245,12 @@ def main():
  figcaption{margin-top:8px;font-size:11.5px;color:#C2D0DE;line-height:1.4}
  .t{font-size:10px;letter-spacing:.05em;color:#8FA3B5}
 </style>
-<h1>Trois icones de segment</h1>
+<h1>Les icones qui sont des fichiers</h1>
 <p class="n">Ligne du haut : le <b>SVG</b> a 72&nbsp;px puis a 24&nbsp;px.
 Sous le trait : le <b>PNG</b> a 40 et 28&nbsp;px, c'est-a-dire ce que Power BI affichera
 reellement. Meme grille 24&times;24 et meme trait 1,6 que les treize icones de carte,
-en <b>#B4C8DA</b>.</p>
+en <b>#B4C8DA</b>. Le guillemet est la seule forme <b>pleine</b> : au trait,
+il se lit &laquo;&nbsp;66&nbsp;&raquo;.</p>
 <div class="grid">%s</div>
 """ % "".join(cells)
     if args.preview:
