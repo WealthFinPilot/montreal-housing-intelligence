@@ -217,6 +217,39 @@ anything on it.
 
 ---
 
+## Automation
+
+Ingestion and transformation run on a schedule, driven by n8n on that same
+server. **[`n8n/README.md`](n8n/README.md) is the full account**; the short
+version is that a scheduler which can see neither the code nor the database
+needed somewhere to run the pipeline and one door to run it through.
+
+```bash
+bash scripts/deploy-vps.sh          # ship the current commit, build the runner
+bash scripts/vps-run.sh status      # read-only
+bash scripts/vps-run.sh refresh     # three live sources, then one dbt build
+```
+
+Three things are worth knowing before reading further:
+
+* **The runner is a container**, pinning Python to the exact version this
+  project is developed on and installing from the lock file. The code is
+  bind-mounted **read-only**, so `git log` on the server answers which commit is
+  executing and the pipeline cannot rewrite its own source.
+* **What gets deployed is `git archive HEAD`.** `.env` is untracked, so it
+  cannot be shipped; a dirty tree is refused, so what runs is always a commit
+  you can name.
+* **The key n8n holds can do exactly one thing.** A forced command in
+  `authorized_keys` makes sshd ignore whatever is asked and run one script,
+  which matches the request against a six-word whitelist and never evaluates it.
+
+Measured on the server, first run: a full `refresh` takes **192 s** including
+the initial download of 183 MB of APCIQ PDFs, a `dbt build` alone takes **34 s**
+for `PASS=353 ERROR=0`, and replaying all three sources inserts and updates
+**zero rows**.
+
+---
+
 ## What the database holds today
 
 | Series | Label as published by the source | Frequency | Rows |
@@ -323,6 +356,8 @@ sql/bootstrap/  Schemas and tables, run once at database creation
 scripts/        Tunnel, environment, secret scan, quality-gate proof
 sample_data/    Small real extracts, so the matrix can be checked offline
 powerbi/        Report file and connection guide
+n8n/            Scheduling: the workflow, and how it reaches the pipeline
+Dockerfile      The runner image: interpreter and dependencies, no code
 ```
 
 ---

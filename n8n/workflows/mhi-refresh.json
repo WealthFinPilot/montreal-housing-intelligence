@@ -1,0 +1,73 @@
+{
+  "name": "MHI -- weekly refresh",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true
+  },
+  "pinData": {},
+  "nodes": [
+    {
+      "id": "mhi-schedule",
+      "name": "Every Monday 06:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-220, 0],
+      "notes": "Weekly, not daily. The three sources publish weekly (Bank of Canada), monthly (StatCan CPI) and quarterly (APCIQ), and the analytical grain of the whole project is the quarter. A daily schedule would spend a dbt build every morning to insert nothing.",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [1],
+              "triggerAtHour": 6,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mhi-ssh",
+      "name": "Run the pipeline on the host",
+      "type": "n8n-nodes-base.ssh",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "notes": "Host 172.18.0.1 is the gateway of this container's Docker network -- how n8n reaches the machine it runs on. Verified on 2026-09-13: the SSH banner answers there. The key is restricted by a forced command, so the server ignores what is typed below and runs /opt/mhi/bin/vps-pipeline.sh, passing this string in SSH_ORIGINAL_COMMAND to be matched against a whitelist.",
+      "parameters": {
+        "resource": "command",
+        "operation": "execute",
+        "command": "refresh",
+        "cwd": ""
+      },
+      "credentials": {
+        "sshPrivateKey": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "MHI pipeline key"
+        }
+      }
+    },
+    {
+      "id": "mhi-verdict",
+      "name": "Fail loudly if the pipeline failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0],
+      "notes": "This node is the whole reason the workflow is not two nodes long. Without it a failed pipeline produces a GREEN execution.",
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// The SSH node does NOT fail on a non-zero exit code.\n//\n// Read in the n8n and node-ssh sources on 2026-09-13: the node returns the\n// result of ssh.execCommand() as-is, and that resolves to\n// { stdout, stderr, code, signal } -- it never throws on a non-zero exit.\n// So without this node, a pipeline that failed every step would still leave a\n// green execution in the history. On a weekly schedule nobody watches, that is\n// the worst available outcome: silence that looks like success.\n//\n// Throwing here fails the execution, which shows red in the history AND fires\n// the workflow's Error Workflow -- where the notification lives, so this\n// workflow never has to know which channel is in use.\n\nconst r = $input.first().json;\nconst exitCode = r.code;\nconst log = (r.stdout || '').trim();\nconst err = (r.stderr || '').trim();\n\n// Exit codes are defined in scripts/vps-pipeline.sh:\n//   0 everything succeeded | 64 task not on the whitelist\n//  69 another run holds the lock | 70 an ingestion or dbt step failed\nconst meaning = {\n  64: 'the task name was refused by the whitelist',\n  69: 'another pipeline run was already in progress',\n  70: 'an ingestion step or the dbt build failed',\n};\n\nif (exitCode !== 0) {\n  const why = meaning[exitCode] || 'unexpected exit code';\n  throw new Error(\n    'MHI pipeline failed -- exit ' + exitCode + ' (' + why + ')\\n\\n' +\n    '--- output ---\\n' + log + '\\n\\n--- errors ---\\n' + err\n  );\n}\n\n// Succeeded: hand the log on so a green execution still shows what was done.\nreturn [{ json: { ok: true, exitCode, log } }];"
+      }
+    }
+  ],
+  "connections": {
+    "Every Monday 06:00": {
+      "main": [[{ "node": "Run the pipeline on the host", "type": "main", "index": 0 }]]
+    },
+    "Run the pipeline on the host": {
+      "main": [[{ "node": "Fail loudly if the pipeline failed", "type": "main", "index": 0 }]]
+    }
+  }
+}

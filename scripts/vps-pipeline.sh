@@ -46,6 +46,30 @@ export MHI_ARTIFACTS_DIR="$MHI_ROOT/var/dbt"
 # command intercepts n8n's request.
 TASK="${1:-${SSH_ORIGINAL_COMMAND:-}}"
 
+# n8n's SSH node has a mandatory "Working Directory" field, default "/", and
+# the library underneath it (node-ssh) implements that field by rewriting the
+# command:
+#
+#     if (options.cwd) { command = `cd ${shellEscape([options.cwd])} ; ${command}` }
+#
+# So a node asking for "refresh" actually sends "cd / ; refresh", and the
+# whitelist below would refuse it -- with a message pointing at the task name
+# rather than at the field that mangled it. Read in the node-ssh source on
+# 2026-09-13 rather than discovered in production.
+#
+# The prefix is RECOGNISED AND DISCARDED, never executed: no cd happens, this
+# is a pattern match on a string. What remains still has to be on the
+# whitelist, so nothing is loosened -- "cd / ; rm -rf /" still fails on the
+# whitelist exactly as before.
+if [[ "$TASK" =~ ^cd[[:space:]]+(\'[^\']*\'|\"[^\"]*\"|[^\;[:space:]]+)[[:space:]]*\;[[:space:]]*(.*)$ ]]; then
+  TASK="${BASH_REMATCH[2]}"
+fi
+
+# Trim surrounding whitespace, so a trailing newline from a text field does not
+# turn "refresh" into something that matches nothing.
+TASK="${TASK#"${TASK%%[![:space:]]*}"}"
+TASK="${TASK%"${TASK##*[![:space:]]}"}"
+
 # The whitelist. Anything not matching exactly is refused, unexecuted and
 # unexpanded. This `case` is the entire security boundary of the SSH key: with
 # it, a compromised or merely mistaken n8n workflow can ask for one of six
