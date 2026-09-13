@@ -1,0 +1,52 @@
+# ---------------------------------------------------------------------------
+# What never enters the Docker build context.
+#
+# The build context is the whole directory tree, sent to the Docker daemon
+# BEFORE the first instruction runs. Everything listed here would otherwise
+# travel across that boundary even though the Dockerfile only ever copies one
+# file (requirements.lock.txt).
+#
+# The first block is the reason this file exists at all: a build context is
+# not a secret-free zone, and .env has no business being in one.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# ---------------------------------------------------------------------------
+# Large and useless here. The code is bind-mounted at run time, not copied in,
+# so none of this would end up in the image anyway -- but it would all be
+# uploaded to the daemon on every single build, on a 2-vCPU server.
+# ---------------------------------------------------------------------------
+.git/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# The APCIQ PDF archive: ~200 MB, and a licence that forbids redistribution.
+data/
+var/
+
+# dbt artefacts, regenerated on every run.
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+
+# Power BI files. The .pbix carries its data compressed inside the file.
+*.pbix
+**/.pbi/cache.abf
+**/.pbi/localSettings.json
+
+# Documentation and design notes: not needed to install dependencies.
+docs/
+powerbi/
+notebooks/
+sample_data/
+*.md

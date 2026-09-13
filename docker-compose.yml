@@ -9,6 +9,18 @@
 # working database. That is acceptance criterion 1 of milestone J2.
 # ---------------------------------------------------------------------------
 
+# The project name, declared rather than inferred.
+#
+# Compose otherwise names the project after the directory it is invoked from.
+# The database has been running since J2 under the project "mhi" -- network
+# mhi_default, volume mhi_pgdata -- because it was started from /opt/mhi.
+# Once the repository is deployed to /opt/mhi/repo (J4.3), invoking this same
+# file from there would create a project called "repo": a second network, and
+# a second, EMPTY database next to the real one. Declaring the name makes the
+# project independent of the directory, which is the only thing standing
+# between a deploy and a silently duplicated stack.
+name: mhi
+
 services:
   postgres:
     # PostGIS ships PostgreSQL with the spatial extension already compiled in.
@@ -75,6 +87,86 @@ services:
       resources:
         limits:
           memory: 1g
+
+  # -------------------------------------------------------------------------
+  # runner -- where ingestion and dbt actually execute (milestone J4.3)
+  #
+  # This service is never "up". It is invoked one command at a time:
+  #
+  #     docker compose run --rm runner python -m ingestion.bank_of_canada.run
+  #     docker compose run --rm runner dbt build
+  #
+  # and it exits when that command exits. The `tools` profile is what keeps it
+  # out of `docker compose up -d`: starting the database must not start
+  # anything else.
+  #
+  # It exists because n8n cannot run this code itself. Measured on 2026-09-13:
+  # the n8n container has no Docker socket mounted, and sits on a different
+  # Docker network (root_default) from the database (mhi_default), which
+  # publishes on the server loopback only. An Execute Command node would run
+  # inside the n8n container, which has neither this project nor its
+  # dependencies.
+  # -------------------------------------------------------------------------
+  runner:
+    profiles: ["tools"]
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: mhi-runner:local
+    container_name: mhi-runner
+
+    depends_on:
+      postgres:
+        # Not just "started": the container accepts connections seconds after
+        # it starts. Waiting for healthy is what stops a pipeline from failing
+        # on a database that was about to be ready.
+        condition: service_healthy
+
+    environment:
+      # Same three credentials as the database service, from the same .env.
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is missing from .env}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is missing from .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is missing from .env}
+
+      # The two variables that make the SAME code work here and on the laptop.
+      # On the laptop they default to 127.0.0.1:15432, the local end of the SSH
+      # tunnel. In here there is no tunnel and no loopback to speak of: the
+      # database is a container on this network, reachable by service name.
+      MHI_DB_HOST: postgres
+      MHI_DB_PORT: "5432"
+
+    volumes:
+      # The code, READ-ONLY. The pipeline can read its own source and cannot
+      # rewrite it. Deployed by scripts/deploy-vps.sh, inspected with git log.
+      - .:/app:ro
+
+      # Two writable holes punched through that read-only mount:
+      #
+      #   /app/data   the APCIQ PDF cache (~200 MB). ingestion/apciq/run.py
+      #               resolves it as REPO_ROOT / "data/apciq", so it has to
+      #               appear at that path inside the container -- it cannot be
+      #               moved without touching the code.
+      #   /artifacts  dbt's target/ and logs/, redirected there by the two
+      #               DBT_*_PATH variables set in the Dockerfile.
+      #
+      # Both live OUTSIDE the repository on the server, which is the whole
+      # point of making them variables: scripts/deploy-vps.sh empties and
+      # rewrites the code directory on every deploy, and 200 MB of cached PDFs
+      # must not be collateral damage. The defaults are what a reader who
+      # clones this repository and runs it locally gets, with no .env entry to
+      # add; the server overrides them in scripts/pipeline.sh.
+      - ${MHI_DATA_DIR:-./var/data}:/app/data
+      - ${MHI_ARTIFACTS_DIR:-./var/dbt}:/artifacts
+
+    # 2 vCPU and 7.8 GB shared with the production n8n stack, of which the
+    # database already claims 1 GB. This ceiling is what keeps a runaway dbt
+    # build from starving root-n8n-1.
+    deploy:
+      resources:
+        limits:
+          memory: 2g
 
 volumes:
   pgdata:
