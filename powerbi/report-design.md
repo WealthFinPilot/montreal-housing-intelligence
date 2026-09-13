@@ -814,8 +814,49 @@ coverage.
 | **Map** | `Shape map`, `Sector[geography_code]` on **Location**, colour by `Sector bar colour` through *Colors > Location > `fx` > Field value*, tooltips `Verdict for this income`, `Income required, lower bound (mean)`, `Tracts priced` |
 | Table | `Sector[name]`, `Income required, lower bound (mean)`, `Verdict for this income`, `Tracts priced` — sorted the same way as the bar |
 | Card | `Down payment assumption` |
-| Card | `Slice warning` |
-| Card | `Grain warning` |
+| ~~Card~~ | ~~`Slice warning`~~ — **removed 2026-09-12, see below** |
+| ~~Card~~ | ~~`Grain warning`~~ — **removed 2026-09-12, see below** |
+
+> ### ⚠️ BOTH GUARD CARDS WERE REMOVED FROM THIS PAGE ON 2026-09-12
+>
+> **Removed because they read as two blocks that never say anything**, and
+> that reading was right about what was on screen: these were **the only two cards in the
+> whole report with no visual-level formatting at all**, so they took the
+> theme's card background and drew an empty tile even while blank.
+>
+> **`Grain warning` was genuinely dead here, and that is measured.** It prints
+> only when `Census_Tract` is filtering, and **no visual on page 3 touches
+> `Census_Tract`** — checked field by field. Nothing short of adding a
+> tract-grained visual could have woken it. It stays on page 2, where clicking a
+> shape of the map does filter `Census_Tract` and the warning is the point.
+>
+> ⚠️ **`Slice warning` was not dead, and removing it has a cost that is written
+> here because nothing on screen carries it any more.** It was silent only
+> because both slicers are `strictSingleSelect` — *a slicer setting is one click
+> from being changed*, which is a sentence this project has had to learn twice.
+> What happens then is measured, and it is in the paragraphs below: releasing
+> the property-type filter raises the mean required income by **49 %** and takes
+> the sectors within reach from **7 to 2**; releasing the quarter filter takes
+> them from **7 to 14**. `Sectors priced` climbs from 17 to 18. **Every one of
+> those pages looks right.** No blank, no error, no empty visual — an average
+> answers, and the answer is a mixture.
+>
+> **Where the cost is paid:** `docs/limitations.md`, J4.4 — one entry saying
+> that every figure on this page assumes a single property type and a single
+> quarter, and that nothing in the report enforces it beyond a slicer setting.
+> **That entry is load bearing**, like the freshness one the Rates page left
+> behind on the same day.
+>
+> **The measure `Slice warning` is now used by no visual.** Keep it or delete
+> it — but if it is deleted, the reasoning below is the only place the 49 %
+> lives, so it must reach `limitations.md` first. `Grain warning` stays in use
+> on page 2 and is not affected.
+>
+> **A third route was offered and declined**, and it is recorded because it
+> costs nothing to take later: turning the card's background off makes a
+> conditional text card **invisible while empty** and visible the day it has
+> something to say — which is exactly how the three notes of page 2 already
+> behave.
 
 **No household-profile slicer, unlike page 2 — and that is a measured omission,
 not a forgotten one.** The required income depends on the price, not on who is
@@ -1423,11 +1464,11 @@ step with it.
 
 | Group | Measure | Home table | Reads from | Format | Page |
 |---|---|---|---|---|---|
-| Guards | `Grain warning` | `_Measures` | filter state of `Census_Tract` | Text | 2, 3 |
+| Guards | `Grain warning` | `_Measures` | filter state of `Census_Tract` | Text | **2** — removed from page 3 on 2026-09-12, it could never fire there |
 | Guards | `Income vintage warning` | `_Measures` | `fact_affordability` | Text | 2 |
 | Guards | `Income basis note` | `_Measures` | `fact_affordability` | Text | 2 |
 | Guards | `Area is narrowed` | `_Measures` | `Sector` | Whole number (0/1) | 1, 3 |
-| Guards | `Slice warning` | `_Measures` | `property_type`, `fact_affordability` | Text | 2, 3 |
+| Guards | `Slice warning` | `_Measures` | `property_type`, `fact_affordability` | Text | ⚠️ **on no page since 2026-09-12** — the measure exists, no visual reads it |
 | Market | `Sales (island, as published)` | `_Measures` | `fact_market` | Whole number, thousands sep. | 1 |
 | Market | `Sales (selected area)` | `_Measures` | `fact_market`, `Area is narrowed` | Whole number, thousands sep. | 1 |
 | Market | `Active listings (selected area)` | `_Measures` | `fact_market`, `Area is narrowed` | Whole number, thousands sep. | 1 |
@@ -1635,6 +1676,13 @@ different gaps. Same mechanism as the page 1 cards — the quarter slicer is wha
 makes the card speak.
 
 ```dax
+/*  ⚠️ NO VISUAL READS THIS MEASURE SINCE 2026-09-12.
+    Its card was removed from page 3 by decision; the measure itself is left
+    in place. It was silent only because both slicers are strictSingleSelect,
+    and the figures in the paragraphs below say what it was guarding against.
+    KEEP THE PARAGRAPHS even if the measure is deleted: the 49 % and the
+    7 -> 2 are the only record of a page that is wrong while looking right,
+    and they are owed to docs/limitations.md in J4.4.  */
 Slice warning =
 VAR Types = COUNTROWS ( VALUES ( property_type[name_en] ) )
 VAR Quarters = COUNTROWS ( VALUES ( fact_affordability[edition_label] ) )
