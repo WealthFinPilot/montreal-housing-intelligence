@@ -133,7 +133,12 @@ ingest_apciq()          { step "apciq barometer" python -m ingestion.apciq.run; 
 # shared with a production n8n, and the models are cross-dependent -- the CPI
 # restates APCIQ prices, so assert_every_priced_quarter_can_be_indexed can fail
 # transiently if a new APCIQ quarter is built before the CPI that indexes it.
-build_dbt() { step "dbt build" dbt build; }
+#
+# --project-dir because the container's working directory is /app, the root of
+# the repository, while the dbt project lives one level down in /app/dbt.
+# --no-use-colors because this output ends up in an n8n execution log, where
+# ANSI escapes are printed literally rather than rendered.
+build_dbt() { step "dbt build" dbt --no-use-colors build --project-dir /app/dbt; }
 
 case "$TASK" in
   refresh)
