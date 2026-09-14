@@ -99,3 +99,14 @@ desktop.ini
 # committed knowingly: it holds Bank of Canada rates, which are public.
 *.pbix
 !powerbi/mhi_interest_rates.pbix
+
+# ---------------------------------------------------------------------------
+# Video editing projects (kdenlive project, renders, thumbnails).
+#
+# A render of the report is published elsewhere and linked, never committed:
+# a map coloured on a continuous scale is still a quantised figure derived from
+# APCIQ prices, and a video, like a .pbix, is a file no scanner here can read.
+# ---------------------------------------------------------------------------
+Video/
+*.mp4
+*.kdenlive

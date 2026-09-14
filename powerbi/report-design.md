@@ -502,7 +502,7 @@ profile **Couple, two persons**, quarter **2026 Q2**:
 |---|---|
 | `Tracts evaluated` | 512 |
 | `Tracts affordable` | 179 |
-| `Share of tracts affordable` | 34.9 % |
+| `Share of tracts affordable` | 35.0 % — 179 / 512, in 2020 dollars. Since 2026-08-31 the measure reads the restated income: **400 / 512 = 78.1 %** |
 | `Income required, lower bound (mean)` | the figure `report_oracle.py` prints -- not reproduced here |
 | `Price to income (median)` | the figure `report_oracle.py` prints -- not reproduced here |
 | Sectors with at least one evaluable tract | 17 of 18 |
@@ -603,14 +603,19 @@ could not see what dominated the period:
 | Condo · couple | Qualifying rate | Median ratio | Share within reach |
 |---|---|---|---|
 | 2021 Q4 | 5.25 % | *(baseline)* | **82.8 %** |
-| 2022 Q4 | 7.04 % | −4.6 % | 66.5 % |
-| **2023 Q4** | **7.59 %** | **−4.4 %** | **56.1 %** |
+| 2022 Q4 | 7.04 % | −4.8 % | 66.4 % |
+| **2023 Q4** | **7.59 %** | **−4.5 %** | **56.3 %** |
 
 *(The ratio is shown as a change, never as a level: a level multiplied by the
 published StatCan income gives back the APCIQ median price.)*
 
-**From 2021 Q4 to 2023 Q4 the median ratio FELL 4.4 % while the share within
-reach lost 26.7 points.** A reader watching only the ratio would conclude
+*(Remeasured 2026-09-14. The share column read 66.5 % and 56.1 % until then:
+fact rows, not distinct tracts, which is not what `Share of tracts affordable`
+counts. 2023 Q4 is 288 / 512 = 56.25 % exactly, on the rounding boundary —
+take the oracle's figure at acceptance.)*
+
+**From 2021 Q4 to 2023 Q4 the median ratio FELL 4.5 % while the share within
+reach lost 26.5 points.** A reader watching only the ratio would conclude
 housing had become slightly more affordable. The median couple cushion went from
 lost **78 % of its margin** in eight quarters. The shortfall passes through
 `income_required_lower_bound`, which depends on the qualifying rate, the

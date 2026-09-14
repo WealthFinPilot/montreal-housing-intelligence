@@ -357,8 +357,9 @@ that fires.
 
 **A price-to-income ratio contains no interest rate**, and that is why the map
 colours the shortfall instead. Between 2021 Q4 and 2023 Q4 the qualifying rate
-went from 5.25 % to 7.59 %: the **median ratio fell 4.4 %** while the share of
-affordable tracts fell **26.7 points**. A reader watching only the ratio would
+went from 5.25 % to 7.59 %: the **median ratio on the restated income fell
+4.5 %** while the share of affordable tracts fell **26.5 points**, from 82.8 % to
+56.3 %. A reader watching only the ratio would
 conclude housing had improved.
 
 **Two independent columns agree exactly**: `meets_income_requirement_indexed`

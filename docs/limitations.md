@@ -142,9 +142,12 @@ copy of a document makes it fire.
 - `sample_data/` carries StatCan and city extracts only. **The proof for the
   market layer is the test suite, not a sample file.**
 
-⚠️ **One debt is open.** Price-to-income ratios in level have been sitting in
-`powerbi/report-design.md` since 2026-08-30. They are inside the second column
-above. They must be removed before the repository goes public.
+**The one debt this rule exposed is paid.** Price-to-income ratios in level had
+been sitting in `powerbi/report-design.md` since 2026-08-30. They were removed on
+2026-09-13 and the acceptance cases now point to `scripts/report_oracle.py`,
+which computes them against the database instead of freezing them in a file.
+The control was re-run on 2026-09-14: no APCIQ figure in any of the 184 tracked
+text files it searches.
 
 **Detail:** [`apciq.md`](apciq.md) section 1, [`market.md`](market.md)
 section 7.4.
@@ -182,13 +185,18 @@ moves the whole island, so a tract that gentrified since 2020 is invisible to
 it — 4.2 % on the median tract.
 
 **What it changes, and it is most of the headline** (condominium × couple, share
-of evaluable tracts, measured 2026-09-13): the share of affordable tracts falls
-from 93.2 % to **34.9 %** when read in 2020 dollars, but only from 92.5 % to
-**78.2 %** once restated. **Three quarters of the fall is the frozen income, not
-the market.**
+of evaluable tracts counted as **distinct tracts**, the way the report counts
+them, measured 2026-09-14): the share of affordable tracts falls from 93.2 % to
+**35.0 %** when read in 2020 dollars, but only from 92.5 % to **78.1 %** once
+restated. **Three quarters of the fall is the frozen income, not the market.**
 
-**And the 2022 Q2 break survives the restatement** — **−15.8 points** in 2020
-dollars, still **−9.6 points** restated. The break belongs to the market; the
+**And the 2022 Q2 break survives the restatement** — **−15.6 points** in 2020
+dollars, still **−9.6 points** restated.
+
+*(Counting fact rows instead gives 34.9 %, 78.2 % and −15.8: the one genuinely
+shared tract, `4620511.02`, holds two rows. Both counts are arithmetic; only the
+distinct-tract count is what the report displays, so a document quoting the row
+count would disagree with the screen.)* The break belongs to the market; the
 slope belongs to the vintage.
 
 ---
@@ -422,8 +430,8 @@ period when rates rose", or "the two are associated".
 
 **A concrete reason to be careful here:** a price-to-income ratio **contains no
 interest rate at all**. Between 2021 Q4 and 2023 Q4 the qualifying rate went
-from 5.25 % to 7.59 %, the **median ratio fell 4.4 %**, and the share of
-affordable tracts fell **26.7 points**. A reader watching only the ratio would
+from 5.25 % to 7.59 %, the **median ratio on the restated income fell 4.5 %**,
+and the share of affordable tracts fell **26.5 points**, from 82.8 % to 56.3 %. A reader watching only the ratio would
 conclude that housing had improved.
 
 ---
@@ -548,8 +556,9 @@ Written down so they are not rediscovered as surprises:
 
 ## What guarantees the rest
 
-Everything not listed above is guarded by something that fails loudly: **353
-dbt tests** and **140 pytest tests**, of which a set run against the real
+Everything not listed above is guarded by something that fails loudly: **321
+dbt tests** — the `PASS=353` of a build also counts its 25 models and 7 seeds —
+and **140 pytest tests**, of which a set run against the real
 database inside a transaction that is always rolled back.
 
 Positive controls are run on the guards themselves rather than assumed — and

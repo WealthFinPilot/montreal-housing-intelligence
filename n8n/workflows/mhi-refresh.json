@@ -11,18 +11,18 @@
   "nodes": [
     {
       "id": "mhi-schedule",
-      "name": "Every Monday 06:00",
+      "name": "Every Monday 10:00",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [-220, 0],
-      "notes": "Weekly, not daily. The three sources publish weekly (Bank of Canada), monthly (StatCan CPI) and quarterly (APCIQ), and the analytical grain of the whole project is the quarter. A daily schedule would spend a dbt build every morning to insert nothing.",
+      "notes": "Weekly, not daily. The three sources publish weekly (Bank of Canada), monthly (StatCan CPI) and quarterly (APCIQ), and the analytical grain of the whole project is the quarter. A daily schedule would spend a dbt build every morning to insert nothing. 10:00 in the workflow time zone (America/Toronto), never earlier: Statistics Canada locks its tables from midnight to 8:30 Eastern while it loads new data, and its Web Data Service answers HTTP 409 during that window. The first scheduled run, at 06:00 on 2026-09-14, failed on exactly that. 10:00 clears the window whether 8:30 is read as standard or daylight time.",
       "parameters": {
         "rule": {
           "interval": [
             {
               "field": "weeks",
               "triggerAtDay": [1],
-              "triggerAtHour": 6,
+              "triggerAtHour": 10,
               "triggerAtMinute": 0
             }
           ]
@@ -63,7 +63,7 @@
     }
   ],
   "connections": {
-    "Every Monday 06:00": {
+    "Every Monday 10:00": {
       "main": [[{ "node": "Run the pipeline on the host", "type": "main", "index": 0 }]]
     },
     "Run the pipeline on the host": {

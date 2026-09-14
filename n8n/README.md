@@ -33,7 +33,7 @@ code.
 ```
    n8n container (production, untouched)
    ┌──────────────────────────────────────┐
-   │  Schedule Trigger   Monday 06:00     │
+   │  Schedule Trigger   Monday 10:00     │
    │           ↓                          │
    │  SSH node → 172.18.0.1:22            │   the Docker gateway: how a
    │           ↓                          │   container reaches its host
@@ -223,6 +223,7 @@ manual step done by a human.
 | `REFUSED: ... is not an allowed task` | the SSH node sent something other than a bare task name — usually a non-empty *Working Directory*, or a typo |
 | exit `69` | a previous run is still going. The lock is deliberate: two dbt builds racing on one schema is not a thing to discover in production |
 | exit `70` | read the output. The script names which step failed and leaves the others' results visible |
+| exit `70`, with `HTTPError: 409` on `getCubeMetadata` in the StatCan step | the run started inside Statistics Canada's daily lock: **from midnight to 8:30 Eastern** its tables are being updated and the Web Data Service answers 409 by design (WDS user guide, read 2026-09-14). It happened on the **first scheduled run, 06:00 on 2026-09-14**, while the Bank of Canada and APCIQ steps of the same run succeeded. The schedule has been 10:00 since. Nothing to repair: the loader is idempotent and the next run picks up what was missed |
 | green execution but nothing happened | the Code node was removed or bypassed. See the note in section 6 |
 | the pipeline failed but no Telegram message arrived | one of the two traps below |
 
