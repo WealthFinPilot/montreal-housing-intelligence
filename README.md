@@ -17,6 +17,23 @@ changed?"**
 
 ---
 
+## At a glance
+
+| | |
+|---|---|
+| Public sources | **4 publishers, 9 datasets** — Bank of Canada, APCIQ, Statistics Canada, Ville de Montréal |
+| History | **29 quarters**, 2019 Q2 to 2026 Q2 |
+| Geography | **541 census tracts** and **18 market sectors** covering the whole island |
+| PDF reports read without human intervention | **29** |
+| Largest table | **141 462 rows** |
+| Tables | **31** in the database, **17** in the Power BI model |
+| Relationships in the Power BI model | **17** one-to-many, **1** of them bidirectional |
+| Automated tests | **461** — 321 dbt, 140 pytest |
+| Refresh | **weekly and unattended**, about 3 minutes |
+| Report | **4 pages**, **3 maps** |
+
+---
+
 ## What it found
 
 Every figure below is a **share, a count, a rate or a change**. None is a price.
@@ -115,27 +132,40 @@ limitation says so rather than guessing why.
 
 ## How it works
 
-```
- Bank of Canada   APCIQ        Statistics Canada     Ville de Montréal
- Valet API        29 PDFs      census 2021 · CPI     boundaries
-      │              │                 │                    │
-      └──────────────┴────────┬────────┴────────────────────┘
-                              │  ingestion/   one Python package per source
-                              ▼               idempotent, logged
-                     raw        values exactly as published
-                              │
-                              │  dbt          types, symbols, tests
-                              ▼
-                     staging → intermediate → marts
-                              │               star schema, 5 facts, 3 bridges
-                              │  SSH tunnel, Import mode
-                              ▼
-                          Power BI            4 pages
+```mermaid
+flowchart LR
+  SRC["4 public publishers<br/>REST APIs · 29 PDFs<br/>ZIP files · GeoJSON"]
+  N8N(["n8n · same server<br/>Monday 10:00"])
+
+  subgraph SRV["Server · Docker"]
+    PY["Python<br/>ingestion"] --> RAW[("PostgreSQL<br/>raw")] --> DBT["dbt build<br/>321 tests"] --> MART[("PostgreSQL<br/>marts")]
+  end
+
+  subgraph PBI["Power BI Desktop"]
+    PQ["Power<br/>Query"] --> SM["Semantic<br/>model"] --> DAX["DAX<br/>measures"] --> REP["Report<br/>4 pages"]
+  end
+
+  SRC --> PY
+  N8N -. triggers .-> PY
+  MART == "SSH tunnel<br/>Import" ==> PQ
 ```
 
-PostgreSQL and the pipeline run in Docker on a small server; n8n triggers the
-refresh every week. The database listens on the server loopback only and is
-never exposed to the internet.
+Data only flows one way: sources are read, never written to. **n8n is not part
+of the data path** — it triggers the runner container, which reads the sources
+with Python and then runs dbt, and dbt transforms the data *inside* PostgreSQL.
+The database listens on the server loopback only and is never exposed to the
+internet; Power BI reaches it through an SSH tunnel.
+
+![The Power BI semantic model](docs/img/powerbi-model.png)
+
+*The Power BI semantic model: five fact tables in the centre, seven dimensions
+around them, 17 one-to-many relationships, only one of them bidirectional
+(`Place_map` ↔ `Sector`, so a map shape can filter the market facts). The
+database's single geography table is split at import into `Sector` and
+`Census_Tract`, because the market facts are keyed on a sector and the
+affordability fact on a tract. The five tables along the top carry no
+relationship on purpose: the DAX measures, the two what-if parameters, and the
+two published lending-rule tables the down-payment measures look up.*
 
 **[`docs/architecture.md`](docs/architecture.md)** is the full account: where
 each piece runs, the contract at each hand-off, the marts, the five quality

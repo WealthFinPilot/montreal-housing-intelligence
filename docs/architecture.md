@@ -258,9 +258,16 @@ transaction.** PostgreSQL refuses a foreign key whose target is not unique, so a
 clean replay proves the keys are coherent — something no diagramming tool
 checks. That replay caught a wrong key twice.
 
-[`erd/mhi-marts-erd.png`](erd/mhi-marts-erd.png) is drawn from the second file
-in drawDB, by hand. When the picture and the `.sql` disagree, the `.sql` is
-right.
+![The marts, keys and relationships a test asserts](erd/mhi-marts-erd.png)
+
+*The 14 tables of the star and the 21 relationships a dbt test asserts at every
+build. Column lists are cut for legibility — `fact_affordability` alone has 47
+columns — and every column is in [`erd/mhi-marts.sql`](erd/mhi-marts.sql).
+`fact_mortgage_scenario` → `fact_market` is one-to-one: a mortgage scenario
+extends a market row, it is not an independent fact.*
+
+The picture is drawn from the second file in drawDB, by hand. When the picture
+and the `.sql` disagree, the `.sql` is right.
 
 ---
 
