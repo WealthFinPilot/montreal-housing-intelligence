@@ -129,11 +129,25 @@ def tracked_text_files() -> tuple[list[Path], list[str]]:
     return searched, skipped
 
 
+# Why the check could not run, when it could not. An import error and a closed
+# tunnel are not the same failure, and telling a reader to open the tunnel when
+# psycopg is simply missing sends them to the wrong place -- which is what
+# happened on 2026-09-15, with the tunnel already open.
+SKIP_REASON = ""
+
+
 def load_apciq_figures() -> set[str] | None:
     """The figures actually in the database. None when it cannot be reached."""
+    global SKIP_REASON
     try:
         from src.db import connect
-    except Exception:
+    except Exception as exc:
+        SKIP_REASON = (
+            f"{type(exc).__name__}: {exc}\n"
+            "        This is the interpreter, not the tunnel. Run the check with "
+            "the project venv:\n"
+            "        .venv/Scripts/python.exe scripts/check_apciq_figures.py"
+        )
         return None
     try:
         with connect() as conn:
@@ -152,7 +166,8 @@ def load_apciq_figures() -> set[str] | None:
                         figures.add(token)
             conn.rollback()
         return figures
-    except Exception:
+    except Exception as exc:
+        SKIP_REASON = f"{type(exc).__name__}: {exc}"
         return None
 
 
@@ -180,7 +195,9 @@ def _looks_like_a_level_ratio(line: str) -> bool:
 def main() -> int:
     figures = load_apciq_figures()
     if figures is None:
-        print("  SKIP  APCIQ figure check did NOT run: the database is unreachable.")
+        print("  SKIP  APCIQ figure check did NOT run.")
+        if SKIP_REASON:
+            print(f"        {SKIP_REASON}")
         print("        Open the tunnel (bash scripts/tunnel-start.sh) and run again")
         print("        BEFORE making this repository public. A clean verdict from")
         print("        the other sections says nothing about APCIQ figures.")

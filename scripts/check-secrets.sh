@@ -141,10 +141,16 @@ echo "== 6. APCIQ figures, directly or indirectly =="
 # It needs the tunnel open. When it cannot reach the database it says so and
 # does NOT pass silently: a clean verdict from sections 1 to 5 says nothing
 # about APCIQ figures.
-if command -v python >/dev/null 2>&1; then
-  PY=python
-elif [ -x .venv/Scripts/python.exe ]; then
+# The PROJECT venv first, never a python that merely exists on PATH. On
+# 2026-09-15 the global interpreter was picked, had no psycopg, and the check
+# reported "database unreachable" with the tunnel wide open -- a guard that
+# never ran and blamed the wrong thing. Same order as scripts/dbt.sh.
+if [ -x .venv/Scripts/python.exe ]; then
   PY=.venv/Scripts/python.exe
+elif [ -x .venv/bin/python ]; then
+  PY=.venv/bin/python
+elif command -v python >/dev/null 2>&1; then
+  PY=python
 else
   PY=python3
 fi

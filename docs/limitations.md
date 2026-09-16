@@ -23,7 +23,7 @@ Three severities, and they mean different things:
 | # | Limitation | Severity |
 |---|---|---|
 | 1 | The price is a sector's; the income is a tract's | **Blocking** |
-| 2 | "X % of sectors" is not "X % of Montrealers" | **Blocking** |
+| 2 | "X % of tracts" is not "X % of Montrealers" | **Blocking** |
 | 3 | `income_required_lower_bound` is a floor, not a requirement | **Blocking** |
 | 4 | APCIQ figures may not be published, even indirectly | **Blocking** |
 | 5 | The income is from 2020 and cannot be observed later | **Material** |
@@ -70,7 +70,7 @@ on a typical tract is off by **10.6 %**, 37.6 % at the 90th percentile, and
 
 ---
 
-## 2. "X % of sectors" is not "X % of Montrealers" — **Blocking**
+## 2. "X % of tracts" is not "X % of Montrealers" — **Blocking**
 
 `Share of tracts affordable` counts **census tracts**, not people. A tract
 counts as affordable when **its median household** clears the bar for **the

@@ -132,29 +132,18 @@ limitation says so rather than guessing why.
 
 ## How it works
 
-```mermaid
-flowchart LR
-  SRC["4 public publishers<br/>REST APIs · 29 PDFs<br/>ZIP files · GeoJSON"]
-  N8N(["n8n · same server<br/>Monday 10:00"])
-
-  subgraph SRV["Server · Docker"]
-    PY["Python<br/>ingestion"] --> RAW[("PostgreSQL<br/>raw")] --> DBT["dbt build<br/>321 tests"] --> MART[("PostgreSQL<br/>marts")]
-  end
-
-  subgraph PBI["Power BI Desktop"]
-    PQ["Power<br/>Query"] --> SM["Semantic<br/>model"] --> DAX["DAX<br/>measures"] --> REP["Report<br/>4 pages"]
-  end
-
-  SRC --> PY
-  N8N -. triggers .-> PY
-  MART == "SSH tunnel<br/>Import" ==> PQ
-```
+![The pipeline, end to end](docs/img/pipeline-overview.png)
 
 Data only flows one way: sources are read, never written to. **n8n is not part
 of the data path** — it triggers the runner container, which reads the sources
 with Python and then runs dbt, and dbt transforms the data *inside* PostgreSQL.
 The database listens on the server loopback only and is never exposed to the
 internet; Power BI reaches it through an SSH tunnel.
+
+*Counts on the diagram — 4 publishers, 29 PDFs, 321 tests, 4 report pages — are
+those of 2026-09-15. The test count is the one `dbt build` prints; the layer by
+layer graph in [`docs/architecture.md`](docs/architecture.md) is regenerated
+from the dbt manifest and never goes stale.*
 
 ![The Power BI semantic model](docs/img/powerbi-model.png)
 
@@ -166,6 +155,42 @@ database's single geography table is split at import into `Sector` and
 affordability fact on a tract. The five tables along the top carry no
 relationship on purpose: the DAX measures, the two what-if parameters, and the
 two published lending-rule tables the down-payment measures look up.*
+
+### Five gates, at five different moments
+
+```mermaid
+flowchart LR
+  CHANGE(["I change a parser,<br/>a model or a report"])
+  DATA(["Monday 10:00<br/>new data arrives"])
+
+  G1{{"pytest — 140 tests<br/>parsers on real files, loaders<br/>in a rolled-back transaction"}}
+  G2{{"check-secrets.sh — 8 sections<br/>secrets, public IPs, APCIQ figures,<br/>the git history included"}}
+  G3{{"check_powerbi_project.py<br/>a number shaped like a price<br/>in a report definition"}}
+  G4{{"dbt build — 321 tests<br/>288 generic + 33 singular:<br/>every published cell, every polygon"}}
+  G5{{"report_oracle.py<br/>what every card must display,<br/>computed from the marts"}}
+
+  GH[("GitHub")]
+  MART[("marts")]
+  REPORT(["the report<br/>a human reads"])
+
+  CHANGE --> G1 --> G2 --> GH
+  CHANGE -. "a report definition" .-> G3 --> GH
+  DATA --> G4 --> MART --> G5 --> REPORT
+
+  classDef gate fill:#FFF4CE,stroke:#8A6D00,stroke-width:2px,color:#3B2E00
+  class G1,G2,G3,G4,G5 gate
+```
+
+Nothing reaches GitHub or the report without passing a gate, and the two paths
+are guarded differently because they fail differently: a change can leak a
+secret, new data can be wrong while looking plausible.
+
+**Every one of these gates has been fired on purpose** — a corrupted value, a
+deleted polygon, a planted figure — because a test that has never failed has not
+shown that it can. Twice, that exercise found a hole in the tests rather than in
+the data. `bash scripts/prove-quality-gate.sh` replays the simplest one end to
+end: corrupt a raw value, require `dbt test` to fail *and name the test*, repair
+by re-running the pipeline, require the tests to pass again.
 
 **[`docs/architecture.md`](docs/architecture.md)** is the full account: where
 each piece runs, the contract at each hand-off, the marts, the five quality
@@ -186,6 +211,11 @@ gates and the security model.
 
 ## Method, in brief
 
+![From published data to a verdict on screen](docs/img/method-overview.png)
+
+<sub>Diagram laid out with AI from the text below. The map is illustrative, not a
+measured result.</sub>
+
 Every number is one of three things, and **a column says which** — because prose
 does not reach a Power BI report:
 
@@ -196,6 +226,17 @@ does not reach a Power BI report:
 - **Assumed** — chosen, and a reader may reject it: the sector price applied to
   each of its tracts, the minimum down payment, a 25-year amortization, and one
   sector boundary APCIQ never publishes.
+
+![The five chains behind one affordability verdict](docs/img/dbt-lineage-affordability.png)
+
+*What dbt builds before a single tract can be called affordable: an APCIQ price
+carried through `fact_mortgage_scenario`, a Statistics Canada household income,
+the CPI index that restates that income in the dollars of the quarter, the
+geographic bridge that ties a census tract to an APCIQ sector, and the household
+profile. The figure on each model is how many dbt tests guard it — 20 on the
+fact itself. Read from the dbt lineage panel on 2026-09-15 and checked against
+the manifest; [`docs/architecture.md`](docs/architecture.md) carries the full
+graph of all 22 models, regenerated from that manifest rather than drawn.*
 
 The chain, from a published figure to a verdict on screen:
 

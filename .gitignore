@@ -33,6 +33,9 @@ __pycache__/
 dbt/target/
 dbt/dbt_packages/
 dbt/logs/
+# An anonymous install id the dbt VS Code extension (dbt Fusion) drops in
+# the project folder the first time it parses. Machine-local, never shared.
+dbt/.user.yml
 
 # ---------------------------------------------------------------------------
 # Downloaded and derived data.
