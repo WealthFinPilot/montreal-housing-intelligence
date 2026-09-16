@@ -88,6 +88,10 @@ SOFT_FLOOR = 100
 # hard way on the APCIQ parser, 2026-08-23).
 SEPARATORS = " \u00a0\u202f,'"
 
+HEX_COLOUR = re.compile(
+    r"#(?:[0-9A-Fa-f]{8}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{3})(?![0-9A-Za-z])"
+)
+
 
 def run(*args: str) -> str:
     return subprocess.run(
@@ -104,6 +108,14 @@ def numbers_in(text: str) -> set[int]:
     written either way is the same reproduction of the same fact.
     """
     found: set[int] = set()
+
+    # A hex colour is not a figure. "#192938" reads as 192938, and a theme file
+    # is nothing but colours: on 2026-09-16 the committed dark theme produced 4
+    # failures and 11 warnings, every one of them inside a colour literal. A
+    # guard that fails on its own theme gets overridden, and then it guards
+    # nothing. Only the exact CSS shapes are removed -- #RGB, #RRGGBB,
+    # #RRGGBBAA, bounded -- so a digit run that merely follows a # survives.
+    text = HEX_COLOUR.sub(" ", text)
 
     grouped = re.compile(r"\d{1,3}(?:[" + re.escape(SEPARATORS) + r"]\d{3})+")
     joined = grouped.sub(lambda m: re.sub(f"[{re.escape(SEPARATORS)}]", "", m.group()), text)
@@ -122,11 +134,15 @@ def powerbi_candidates() -> list[Path]:
     Tracked files plus untracked ones that are not ignored -- so a cache.abf
     that slipped past .gitignore would be seen, which is the point.
     """
-    listed = run("git", "ls-files", "--cached", "--others", "--exclude-standard")
+    # -z: without it git quotes any path holding a non-ASCII byte, and the
+    # quoted name ("powerbi/R\303\251sum\303\251.json") opens no file -- it
+    # would be dropped from every section without a word. Same defect as
+    # check-secrets.sh, repaired there on 2026-09-15.
+    listed = run("git", "ls-files", "-z", "--cached", "--others", "--exclude-standard")
     return [
         REPO_ROOT / line
-        for line in listed.splitlines()
-        if any(marker in line for marker in POWERBI_MARKERS)
+        for line in listed.split("\0")
+        if line and any(marker in line for marker in POWERBI_MARKERS)
     ]
 
 
@@ -295,11 +311,19 @@ def main() -> int:
         ok("every candidate file was scanned")
 
     print("\n== 5. Positive control ==")
+    # A reachable database can still hold no figure to plant -- a fresh one,
+    # before the first APCIQ load. max() on that empty set raised ValueError
+    # before any verdict was printed. It is also a real finding, not a crash to
+    # hide: with nothing to compare against, every OK of section 2 is vacuous.
+    plantable = [f for f in figures if f >= HARD_FLOOR]
     if why_not:
         warn("cannot run -- no figure available to plant, so the verdict above has "
              "NOT been shown to work")
+    elif not plantable:
+        fail(f"cannot run -- the database holds no APCIQ figure above {HARD_FLOOR:,}, "
+             "so section 2 compared the files against nothing. Load APCIQ first")
     else:
-        planted = max(f for f in figures if f >= HARD_FLOOR)
+        planted = max(plantable)
         # Three written forms, and the third groups with U+00A0 rather than a
         # normal space. The two are different strings, and a scanner handling
         # only the first passes over the second in silence -- the bug that

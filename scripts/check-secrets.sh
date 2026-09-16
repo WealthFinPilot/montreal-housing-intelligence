@@ -183,9 +183,10 @@ fi
 APCIQ_OUT="$("$PY" scripts/check_apciq_figures.py 2>&1)"
 APCIQ_RC=$?
 echo "$APCIQ_OUT"
+# 3 = WARN lines to read. It used to be 0, and the banner said CLEAN over them.
 case "$APCIQ_RC" in
   0) : ;;
-  2) WARNINGS=1 ;;
+  2|3) WARNINGS=1 ;;
   *) FAILURES=$((FAILURES + 1)) ;;
 esac
 
@@ -234,8 +235,10 @@ if [ "$FAILURES" -eq 0 ] && [ "$WARNINGS" -eq 0 ]; then
   exit 0
 fi
 if [ "$FAILURES" -eq 0 ]; then
-  echo "NO LEAK FOUND in the files that could be searched, but section 7 lists"
-  echo "files this scan cannot see inside. Read it before committing."
+  # Not "section 7" by name: section 6 raises warnings too -- a skipped APCIQ
+  # check, a ratio in level notation -- and pointing at 7 alone hid them.
+  echo "NO LEAK FOUND in the files that could be searched, but WARN or SKIP lines"
+  echo "above (section 6 and/or 7) must be read before committing."
   exit 0
 fi
 echo "$FAILURES PROBLEM(S) FOUND -- do not commit until they are fixed."

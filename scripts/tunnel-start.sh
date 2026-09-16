@@ -53,7 +53,9 @@ if ! tunnel_is_up; then
   exit 1
 fi
 
-# Open port is not the same as working database. Ask PostgreSQL itself.
-python "$REPO_ROOT/scripts/check_tunnel.py"
+# Open port is not the same as working database. Ask PostgreSQL itself -- on
+# the port this tunnel actually bound. Without the arguments the check probed
+# 15432 whatever MHI_DB_PORT said.
+"$(project_python)" "$REPO_ROOT/scripts/check_tunnel.py" 127.0.0.1 "$TUNNEL_PORT"
 
 echo "Tunnel OPEN. Close it with:  bash scripts/tunnel-stop.sh"

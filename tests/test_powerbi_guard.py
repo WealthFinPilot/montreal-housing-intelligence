@@ -116,3 +116,43 @@ def test_generated_and_opaque_suffixes_do_not_overlap() -> None:
     assert not (guard.GENERATED_SUFFIXES & guard.OPAQUE_SUFFIXES)
     assert ".pbix" in guard.OPAQUE_SUFFIXES
     assert ".tmdl" in guard.GENERATED_SUFFIXES
+
+
+def test_a_reachable_database_with_no_figure_fails_instead_of_crashing(monkeypatch) -> None:
+    """A fresh database answers, and holds nothing to plant.
+
+    Found by code review on 2026-09-15: max() over that empty set raised
+    ValueError before any verdict was printed. It is also a finding in its own
+    right -- section 2 compared the files against nothing -- so the run must
+    end on a failure, not on a traceback and not on a pass.
+    """
+    monkeypatch.setattr(guard, "figures_from_database", lambda: (set(), None))
+    monkeypatch.setattr(guard, "powerbi_candidates", lambda: [])
+    assert guard.main() == 1
+
+
+@pytest.mark.parametrize(
+    "colour, shape",
+    [
+        ('"#192938"', "#RRGGBB, all digits -- read whole as a price"),
+        ('"#2B4760"', "#RRGGBB, mixed -- its tail read as a count"),
+        ('"#19293880"', "#RRGGBBAA, with alpha"),
+        ('"#123"', "#RGB shorthand"),
+    ],
+)
+def test_a_hex_colour_is_not_read_as_a_figure(colour: str, shape: str) -> None:
+    """The committed theme failed the guard on its own colours, 2026-09-16.
+
+    Every one of its 15 matches sat inside a colour literal. A guard that
+    fails on a file nobody can fix gets overridden, and then it guards nothing.
+    Each case below yields a number at or above SOFT_FLOOR without the fix.
+    """
+    assert not [n for n in guard.numbers_in(colour) if n >= guard.SOFT_FLOOR], shape
+
+
+def test_a_figure_next_to_a_colour_is_still_found() -> None:
+    """Removing colours must not take a real amount down with them."""
+    text = '{"color": "#192938", "title": "Median 487,531 $", "id": "#487531x"}'
+    found = guard.numbers_in(text)
+    assert AMOUNT in found
+    assert 192938 not in found

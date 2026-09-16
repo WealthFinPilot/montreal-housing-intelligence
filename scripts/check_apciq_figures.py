@@ -24,8 +24,10 @@ a price written in thousands ("578 k$"), a price spelled out in words, a figure
 inside a binary file (section 6 of check-secrets.sh covers those separately),
 and any arithmetic more elaborate than the ratio above.
 
-Exit codes:  0 = clean or skipped,  1 = a figure must be removed,  2 = the
-database was unreachable, so the check did NOT run.
+Exit codes:  0 = clean,  1 = a figure must be removed,  2 = the database was
+unreachable, so the check did NOT run,  3 = no figure found, but WARN lines
+were printed and must be read. Until 2026-09-15 a warning exited 0, which let
+check-secrets.sh print CLEAN over a ratio nobody had looked at.
 
 Usage:  python scripts/check_apciq_figures.py
 """
@@ -112,13 +114,21 @@ def digits_of(token: str) -> str:
 
 def tracked_text_files() -> tuple[list[Path], list[str]]:
     """Everything git would carry, split into what is searched and what is not."""
+    # -z and an explicit UTF-8 decode, both needed. Without -z git quotes any
+    # path holding a non-ASCII byte ("docs/fr/M\303\251thode.md"), that name
+    # opens no file, and `not path.is_file()` below dropped it without a word.
+    # Without the encoding, Windows decodes git's UTF-8 output as cp1252 and
+    # mangles the same names a second way. docs/fr/ exists since 2026-09-15.
     out = subprocess.run(
-        ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
-        cwd=REPO_ROOT, capture_output=True, text=True, check=True,
+        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8",
+        check=True,
     )
     searched: list[Path] = []
     skipped: list[str] = []
-    for line in out.stdout.splitlines():
+    for line in out.stdout.split("\0"):
+        if not line:
+            continue
         path = REPO_ROOT / line
         if path.suffix.lower() not in TEXT_SUFFIXES or not path.is_file():
             continue
@@ -251,6 +261,8 @@ def main() -> int:
         print("  OK    no APCIQ figure of 5+ digits in any tracked text file")
 
     stale = sorted(set(DECLARED_EXCEPTIONS) - seen_exceptions)
+    if (stale or ratio_notes) and status == 0:
+        status = 3
     if stale:
         print("  WARN  declared exception(s) that appear nowhere any more:")
         for token in stale:

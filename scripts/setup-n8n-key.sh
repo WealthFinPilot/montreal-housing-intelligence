@@ -96,13 +96,23 @@ if printf '%s' "$OUT" | grep -q "uid="; then
   echo "  FAIL  the key returned the output of \`id\`. It has a shell." >&2
   exit 1
 fi
+# From this laptop exactly one answer is a pass: refused before authentication.
+# Anything else -- a timeout, a refused connection, an unknown host key -- means
+# the server never judged the key at all, so "no shell" would be the absence of
+# a measurement dressed as a pass. Until 2026-09-15 that case printed OK.
 if printf '%s' "$OUT" | grep -qi "permission denied"; then
   echo "  OK    refused before authentication -- the from= clause bites."
   echo "        (This laptop is outside $N8N_FROM, which is the point: a leaked"
   echo "         key is unusable from the internet.)"
+elif printf '%s' "$OUT" | grep -q "REFUSED: "; then
+  echo "  FAIL  the key AUTHENTICATED from this laptop. command= held (the" >&2
+  echo "        whitelist refused \`id\`), but from= did not: this laptop is not" >&2
+  echo "        in $N8N_FROM, so a leaked key would work from the internet." >&2
+  exit 1
 else
-  echo "  OK    the key did not get a shell. Server said:"
-  printf '        %s\n' "$OUT" | head -3
+  echo "  FAIL  the server never judged the key, so nothing was proven. It said:" >&2
+  printf '        %s\n' "$OUT" | head -3 >&2
+  exit 1
 fi
 
 echo

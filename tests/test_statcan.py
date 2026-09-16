@@ -249,6 +249,22 @@ def test_a_reordered_file_is_refused(income_bytes):
         parse.cma_income_rows(damaged.getvalue())
 
 
+def test_a_measure_in_the_last_column_is_refused_with_a_diagnosis():
+    """The guard must explain itself, not crash while building its message.
+
+    Found by code review on 2026-09-15: the refusal read header[symbol_index]
+    inside its own f-string, so a truncated header raised IndexError instead
+    of the ParseError that says what went wrong.
+    """
+    header = []
+    for _, fragment in parse.MEASURES:
+        header += [fragment, "Symbol"]
+    header.pop()                            # the last measure loses its symbol
+
+    with pytest.raises(parse.ParseError, match="last column"):
+        parse._locate_measure_columns(header)
+
+
 def test_a_renamed_measure_is_refused(income_bytes):
     with zipfile.ZipFile(io.BytesIO(income_bytes)) as archive:
         rows = list(csv.reader(io.StringIO(

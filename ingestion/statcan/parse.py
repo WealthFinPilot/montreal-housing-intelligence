@@ -232,10 +232,17 @@ def _locate_measure_columns(header: list[str]) -> dict[str, tuple[int, int]]:
             )
         value_index = matches[0]
         symbol_index = value_index + 1
-        if symbol_index >= len(header) or header[symbol_index].strip() != "Symbol":
+        # Named before the test, not inside the message: when the measure is
+        # the last column, header[symbol_index] does not exist, and reading it
+        # in the f-string raised IndexError in place of the diagnosis below.
+        found = (
+            header[symbol_index].strip() if symbol_index < len(header)
+            else "nothing (the measure is the last column)"
+        )
+        if found != "Symbol":
             raise ParseError(
                 f"the column after {fragment!r} is "
-                f"{header[symbol_index].strip()!r}, not 'Symbol'. Every measure "
+                f"{found!r}, not 'Symbol'. Every measure "
                 "is supposed to carry its own symbol column, and losing that "
                 "pairing would erase the difference between a suppressed "
                 "value and a published one."

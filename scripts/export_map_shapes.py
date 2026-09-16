@@ -207,7 +207,14 @@ def export(cur, layer: Layer, decimals: int, output: Path) -> int:
     output.write_text(text, encoding="utf-8")
 
     keys = [f["properties"][layer.key_property] for f in collection["features"]]
-    print(f"Wrote {output.relative_to(REPO_ROOT)}")
+    # A relative --output-dir is not "under" REPO_ROOT for pathlib, and
+    # relative_to raised AFTER the file was written -- a crash that is not a
+    # failure. Third occurrence, after generate_erd.py and generate_dbt_dag.py.
+    try:
+        shown = output.resolve().relative_to(REPO_ROOT)
+    except ValueError:
+        shown = output
+    print(f"Wrote {shown}")
     print(f"  layer      {layer.name}")
     print(f"  features   {len(collection['features'])}")
     print(f"  size       {len(text.encode('utf-8')) / 1024:.0f} kB")

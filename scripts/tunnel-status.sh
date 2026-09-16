@@ -12,4 +12,4 @@ if ! tunnel_is_up; then
   exit 1
 fi
 echo "Tunnel: OPEN on 127.0.0.1:$TUNNEL_PORT"
-python "$REPO_ROOT/scripts/check_tunnel.py"
+"$(project_python)" "$REPO_ROOT/scripts/check_tunnel.py" 127.0.0.1 "$TUNNEL_PORT"
