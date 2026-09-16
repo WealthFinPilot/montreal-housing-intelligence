@@ -29,7 +29,15 @@ fail() { echo "  FAIL  $1"; FAILURES=$((FAILURES + 1)); }
 # Everything git would include: tracked files plus untracked ones that are not
 # ignored. Ignored files are excluded on purpose -- that is the whole point of
 # .env being ignored.
-mapfile -t CANDIDATES < <(git ls-files --cached --others --exclude-standard)
+#
+# -z, and NUL-delimited reading, are not a detail. Without it git quotes any
+# path holding a byte outside ASCII -- docs/fr/Methode.md with an accent comes
+# back as "docs/fr/M\303\251thode.md", quotes included -- and that name opens
+# no file. Sections 2 to 5 would skip it silently AND section 7, whose whole
+# job is to name what could not be read, would not see it either: the run
+# would print CLEAN over a file nobody ever opened. This repository is
+# bilingual and docs/fr/ exists, so the case is not hypothetical.
+mapfile -d '' -t CANDIDATES < <(git ls-files -z --cached --others --exclude-standard)
 
 # grep reads the needle from standard input, so a secret never appears in the
 # process list; -l prints file names only, never the matching line.
@@ -107,11 +115,29 @@ echo "== 5. Hard-coded network addresses =="
 # be understood. Failing on those would have made this check noise, and a check
 # that is routinely overridden stops being a check. They are still PRINTED, so
 # a new one has to be looked at.
-ADDR_RE='\b([0-9]{1,3}\.){3}[0-9]{1,3}\b'
-PRIVATE_RE='\b(10\.([0-9]{1,3}\.){2}[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3}|192\.168\.[0-9]{1,3}\.[0-9]{1,3}|169\.254\.[0-9]{1,3}\.[0-9]{1,3})\b'
-ALLOWED_RE='127\.0\.0\.1|0\.0\.0\.0|255\.255'
+# -o, so that every ADDRESS is judged on its own instead of the line holding
+# it. Judging lines was wrong in the one case this check exists for: -v drops
+# the whole matched line, so a public address written next to 127.0.0.1 -- the
+# shape every tunnel script in this repository uses, "127.0.0.1:15432 to the
+# server" -- was thrown away with the loopback and never reported. The same
+# defect sat one storey up: a line carrying a private AND a public address was
+# filed as private and did not fail the run. The positive control of
+# 2026-09-13 passed because its address sat alone on its line.
+#
+# With -o each output line is path:lineno:ADDRESS, so the patterns below anchor
+# on ":ADDRESS$" and classify the address, never its surroundings. It also
+# stops the check from printing the surrounding text, which is a small bonus.
+# PCRE lookarounds, because \b does not stop at a dot: in the StatCan cube
+# coordinate 13.2.0.0.0.0.0.0.0.0 the first four fields look exactly like an
+# address. Those were passing only because the sequence contains 0.0.0.0 and
+# the old line-wide -v threw the whole line away -- one defect was cancelling
+# the other, and fixing the -v alone surfaced six of them. An address is four
+# fields with no digit and no dot on either side.
+ADDR_RE='(?<![\d.])(\d{1,3}\.){3}\d{1,3}(?![\d.])'
+PRIVATE_RE=':(10\.([0-9]{1,3}\.){2}[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3}|192\.168\.[0-9]{1,3}\.[0-9]{1,3}|169\.254\.[0-9]{1,3}\.[0-9]{1,3})$'
+ALLOWED_RE=':(127\.0\.0\.1|0\.0\.0\.0|255\.255\.[0-9]{1,3}\.[0-9]{1,3})$'
 
-FOUND="$(grep -n -E "$ADDR_RE" -- "${CANDIDATES[@]}" 2>/dev/null \
+FOUND="$(grep -H -n -o -P "$ADDR_RE" -- "${CANDIDATES[@]}" 2>/dev/null \
          | grep -v -E "$ALLOWED_RE" || true)"
 PRIVATE_HITS="$(printf '%s' "$FOUND" | grep -E "$PRIVATE_RE" || true)"
 PUBLIC_HITS="$(printf '%s' "$FOUND" | grep -v -E "$PRIVATE_RE" || true)"
