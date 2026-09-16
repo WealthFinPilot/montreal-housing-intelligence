@@ -507,6 +507,10 @@ sample_data/    small real extracts from redistributable sources
 Dockerfile      the runner image: interpreter and dependencies, no code
 ```
 
+Code, column names and documentation are in English. The French passages are
+quotations: source definitions and licence clauses, kept verbatim as their
+publishers wrote them.
+
 ---
 
 ## Licence and attribution
