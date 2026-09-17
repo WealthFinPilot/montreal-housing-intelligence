@@ -42,7 +42,7 @@ Three severities, and they mean different things:
 | 18 | Revisions overwrite: no publication history is kept | Noted |
 | 19 | The shortfall map scale is calibrated on the archive, not on the slice | Noted |
 | 20 | Power BI runs in Import mode, republished by hand | Noted |
-| 21 | Three known debts in the model, none of them silent | Noted |
+| 21 | Four known debts in the model, none of them silent | Noted |
 
 ---
 
@@ -539,7 +539,7 @@ manual republication, not of the database.
 
 ---
 
-## 21. Three known debts in the model, none of them silent — Noted
+## 21. Four known debts in the model, none of them silent — Noted
 
 Written down so they are not rediscovered as surprises:
 
@@ -556,6 +556,17 @@ Written down so they are not rediscovered as surprises:
 3. **The 30-year amortization bands are seeded and nothing exercises them.**
    Every one of the 1 653 rows carries `amortization_years = 25`. They are not
    wrong, they are unused — and an unused seed row is a rule nobody is checking.
+4. ⚠️ **`fact_market.days_on_market_change_pct_yoy` does not hold a percentage.
+   It holds a number of days.** Measured on 2026-09-17, island rows, against a
+   year-over-year change recomputed from our own levels: read as a percentage it
+   agrees **8 times out of 75**, read as days it agrees **51 times out of 75,
+   and 63 within one day**. The name has been wrong since J3.5 and nothing
+   caught it because **nothing reads the column** — the four other
+   `*_change_pct_yoy` columns are percentages and agree well (median price, 64
+   of 75, mean signed gap +0.01 point). Nothing on screen is affected today.
+   What it costs is the next reader: wiring a badge to it would print `▲ 12 %`
+   where the Baromètre prints *+12 jours*. Renaming a mart column is a dbt
+   change and the session that found it changed no model.
 
 ---
 

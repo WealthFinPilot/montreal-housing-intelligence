@@ -336,23 +336,28 @@ def _reproduction_sql() -> str:
 # ----------------------------------------------------------------------------
 
 _BADGE_METRICS = (
-    # column,           card label,        a rise favours the buyer
-    ("sales_count",     "Sales",           False),
-    ("median_price",    "Median price",    False),
-    ("days_on_market",  "Days on market",  True),
-    ("active_listings", "Active listings", True),
+    # metric key,           card label,            a rise favours the buyer
+    ("sales_count",         "Sales",               False),
+    ("median_price",        "Median price",        False),
+    ("days_on_market",      "Days on market",      True),
+    ("months_of_inventory", "Months of inventory", True),
 )
 
 
 def _badge_sql() -> str:
-    """What each page-1 badge must read, on the island row."""
+    """What each page-1 badge must read, on the island row.
+
+    Section 16: the comparison is the SAME QUARTER ONE YEAR EARLIER, joined on
+    the date rather than taken by row offset, so a missing quarter cannot shift
+    the window silently.
+    """
     branches = []
-    for column, label, higher_is_better in _BADGE_METRICS:
+    for metric, label, higher_is_better in _BADGE_METRICS:
         favourable = ">" if higher_is_better else "<"
         branches.append(f"""
             select '{label}'                                    as card,
-                   now_value                                    as this_quarter,
-                   prev_value                                   as previous_quarter,
+                   round(now_value, 2)                          as this_quarter,
+                   round(prev_value, 2)                         as a_year_earlier,
                    case when prev_value is null or now_value is null
                              or prev_value = 0 then null
                         else round(100.0 * (now_value - prev_value)
@@ -368,11 +373,12 @@ def _badge_sql() -> str:
                         when now_value - prev_value {favourable} 0 then '#B8E0C5'
                         else '#FA584C' end                      as colour
             from windowed
-            where metric = '{column}' and quarter_start_date = %s""")
+            where metric = '{metric}' and quarter_start_date = %s""")
     return f"""
         with island as (
             select quarter_start_date, sales_count, median_price,
-                   days_on_market, active_listings
+                   days_on_market, active_listings,
+                   active_listings_corroboration
             from marts.fact_market
             where is_island_aggregate and property_type_code = %s
         ),
@@ -383,91 +389,146 @@ def _badge_sql() -> str:
                    median_price::numeric from island
             union all select quarter_start_date, 'days_on_market',
                    days_on_market::numeric from island
-            union all select quarter_start_date, 'active_listings',
-                   active_listings::numeric from island
+            -- Months of inventory REFUSES on a contradicted quarter: the ratio
+            -- is ours, derived from a numerator the mart calls unreliable, and
+            -- on those quarters it lands inside the trend where nothing shows.
+            union all select quarter_start_date, 'months_of_inventory',
+                   case when active_listings_corroboration = 'corroborated'
+                             and sales_count > 0
+                        then active_listings::numeric / (sales_count::numeric / 3.0)
+                   end
+            from island
         ),
         windowed as (
-            select metric, quarter_start_date, v as now_value,
-                   lag(v) over (partition by metric
-                                order by quarter_start_date) as prev_value
-            from long
+            select l.metric, l.quarter_start_date, l.v as now_value,
+                   y.v                                as prev_value
+            from long l
+            left join long y
+              on y.metric = l.metric
+             and y.quarter_start_date
+                 = l.quarter_start_date - interval '12 months'
         )
         {" union all ".join(branches)}
     """
 
 
 def _badge_absent_sql() -> str:
-    """Where a badge must VANISH. The island never exercises this guard."""
+    """Where a badge must VANISH. The island never exercises this guard.
+
+    Section 16: the predecessor is twelve months back, so the opening FOUR
+    quarters of the archive have none at all -- 2019 Q2 through 2020 Q1.
+    """
     return """
         with s as (
-            select property_type_code, geography_key, quarter_start_date, median_price,
-                   lag(median_price) over (partition by property_type_code, geography_key
-                                           order by quarter_start_date) as prev_price
-            from marts.fact_market
-            where not is_island_aggregate
+            select f.property_type_code, f.geography_key, f.quarter_start_date,
+                   f.median_price,
+                   y.median_price as price_a_year_earlier
+            from marts.fact_market f
+            left join marts.fact_market y
+              on y.geography_key = f.geography_key
+             and y.property_type_code = f.property_type_code
+             and y.quarter_start_date
+                 = f.quarter_start_date - interval '12 months'
+            where not f.is_island_aggregate
         )
-        select property_type_code                                         as property_type,
-               count(*) filter (where quarter_start_date > '2019-04-01')  as sector_quarters,
+        select property_type_code                                    as property_type,
+               count(*) filter (
+                   where quarter_start_date >= '2020-04-01')         as sector_quarters,
                count(*) filter (where median_price is not null
-                                  and prev_price is null
-                                  and quarter_start_date > '2019-04-01')  as badge_must_vanish,
+                                  and price_a_year_earlier is null
+                                  and quarter_start_date >= '2020-04-01')
+                                                                     as badge_must_vanish,
                count(*) filter (where median_price is not null
-                                  and prev_price is not null
-                                  and quarter_start_date > '2019-04-01')  as badge_must_show
+                                  and price_a_year_earlier is not null
+                                  and quarter_start_date >= '2020-04-01')
+                                                                     as badge_must_show,
+               count(*) filter (
+                   where quarter_start_date < '2020-04-01')          as opening_year_no_badge
         from s group by 1 order by 1
     """
 
 
 def _badge_refusal_sql() -> str:
-    """The quarters where Listings change must refuse rather than compute."""
+    """The quarters where the inventory card must be EMPTY, and those where
+    only its badge must refuse.
+
+    Section 16.4 moved the refusal onto the VALUE: months of inventory is ours,
+    not APCIQ's, so a contradicted numerator cannot be shown at all. The badge
+    then refuses by itself, plus on the quarters whose predecessor is defective.
+    """
     return """
         with s as (
             select d.quarter_label, f.quarter_start_date,
                    f.active_listings_corroboration                  as this_quarter_verdict,
-                   lag(f.active_listings_corroboration)
-                       over (order by f.quarter_start_date)         as previous_quarter_verdict
+                   y.active_listings_corroboration                  as verdict_a_year_earlier,
+                   case when f.active_listings_corroboration = 'corroborated'
+                             and f.sales_count > 0
+                        then round((f.active_listings::numeric
+                                    / (f.sales_count::numeric / 3.0)), 1)
+                   end                                              as months_of_inventory
             from marts.fact_market f
             join marts.dim_date d on d.date_key = f.quarter_start_date
+            left join marts.fact_market y
+              on y.geography_key = f.geography_key
+             and y.property_type_code = f.property_type_code
+             and y.quarter_start_date
+                 = f.quarter_start_date - interval '12 months'
             where f.is_island_aggregate and f.property_type_code = %s
         )
-        select quarter_label, this_quarter_verdict, previous_quarter_verdict,
+        select quarter_label, this_quarter_verdict, verdict_a_year_earlier,
+               months_of_inventory,
                case when this_quarter_verdict <> 'corroborated'
-                    then 'REFUSE -- its own inventory figure'
-                    else 'REFUSE -- the quarter it subtracts' end   as why
+                    then 'CARD EMPTY -- its own inventory figure'
+                    else 'badge only -- the quarter it subtracts' end as what_must_happen
         from s
         where this_quarter_verdict <> 'corroborated'
-           or previous_quarter_verdict <> 'corroborated'
+           or verdict_a_year_earlier <> 'corroborated'
         order by quarter_start_date
     """
 
 
 def _badge_page2_sql() -> str:
-    """The three page-2 badges. The share moves in POINTS, never per cent."""
+    """The page-2 cards. The share moves in POINTS, never per cent.
+
+    Section 16.6: `Tracts evaluated` left the KPI row for the detail line, and
+    the median tract's theoretical income took its place -- WITH NO BADGE,
+    because the 2020 census median behind it is a single value across all
+    twenty-nine quarters and a badge on it would report the CPI and nothing else.
+    """
     return """
         with q as (
             select quarter_start_date,
-                   100.0 * count(*) filter (where meets_income_requirement_indexed)
-                         / nullif(count(*) filter (
-                               where meets_income_requirement_indexed is not null), 0)
+                   100.0 * count(distinct ct_uid) filter (
+                       where meets_income_requirement_indexed)
+                     / nullif(count(distinct ct_uid) filter (
+                       where meets_income_requirement_indexed is not null), 0)
                                                                      as share,
-                   count(*) filter (where meets_income_requirement_indexed is not null)
+                   count(distinct ct_uid) filter (
+                       where meets_income_requirement_indexed is not null)
                                                                      as evaluated,
-                   avg(income_required_lower_bound)                  as required
+                   avg(income_required_lower_bound)                  as required,
+                   percentile_cont(0.5) within group (
+                       order by household_income_indexed)            as median_tract_income,
+                   percentile_cont(0.5) within group (
+                       order by household_income)                    as median_tract_income_2020
             from marts.fact_affordability
             where property_type_code = %s and household_profile_code = %s
             group by 1
         ),
         w as (
-            select quarter_start_date, share, evaluated, required,
-                   lag(share)     over o as prev_share,
-                   lag(evaluated) over o as prev_evaluated,
-                   lag(required)  over o as prev_required
-            from q window o as (order by quarter_start_date)
+            select c.*,
+                   y.share     as prev_share,
+                   y.evaluated as prev_evaluated,
+                   y.required  as prev_required
+            from q c
+            left join q y
+              on y.quarter_start_date
+                 = c.quarter_start_date - interval '12 months'
         ),
         here as (select * from w where quarter_start_date = %s)
-        select 'Share of tracts affordable  [POINTS]'            as card,
+        select 'Share of tracts within reach  [POINTS, badge]'   as card,
                round(share::numeric, 1)                          as this_quarter,
-               round(prev_share::numeric, 1)                     as previous_quarter,
+               round(prev_share::numeric, 1)                     as a_year_earlier,
                round((share - prev_share)::numeric, 1)           as movement,
                case when prev_share is null then '(none)'
                     when share > prev_share then '#B8E0C5'
@@ -475,13 +536,7 @@ def _badge_page2_sql() -> str:
                     else '#8FA3B5' end                           as colour
         from here
         union all
-        select 'Tracts evaluated  [count, ALWAYS grey]',
-               evaluated::numeric, prev_evaluated::numeric,
-               (evaluated - prev_evaluated)::numeric,
-               case when prev_evaluated is null then '(none)' else '#8FA3B5' end
-        from here
-        union all
-        select 'Income required, lower bound  [PER CENT]',
+        select 'Income required, lower bound  [PER CENT, badge]',
                round(required::numeric, 0), round(prev_required::numeric, 0),
                round((100.0 * (required - prev_required)
                       / nullif(prev_required, 0))::numeric, 1),
@@ -489,6 +544,19 @@ def _badge_page2_sql() -> str:
                     when required < prev_required then '#B8E0C5'
                     when required > prev_required then '#FA584C'
                     else '#8FA3B5' end
+        from here
+        union all
+        select 'Median tract income  [NO BADGE; col. 2 is the 2020 median, not last year]',
+               round(median_tract_income::numeric, 0),
+               round(median_tract_income_2020::numeric, 0),
+               null,
+               '(none -- a badge here would report the CPI)'
+        from here
+        union all
+        select 'Tracts evaluated  [detail line, not a badge]',
+               evaluated::numeric, prev_evaluated::numeric,
+               (evaluated - prev_evaluated)::numeric,
+               '(none)'
         from here
     """
 
@@ -1144,13 +1212,17 @@ def main() -> int:
 
         table(
             cur,
-            "PAGE 1 -- the four quarter-over-quarter badges (island, condominium)",
-            "Section 14. The badge under each KPI card. Compare the arrow, the\n"
+            "PAGE 1 -- the four year-over-year badges (island, condominium)",
+            "Section 16. The badge under each KPI card, now comparing the SAME\n"
+            "QUARTER ONE YEAR EARLIER. Compare the arrow, the\n"
             "size and the colour -- and read the number UNSIGNED, because the\n"
             "direction is in the arrow.\n"
             "\n"
             "A row printed ABSENT must show NO badge on screen. A card showing\n"
             "'0.0 %' there is the blank/zero trap, ninth appearance.\n"
+            "\n"
+            "Months of inventory = active listings / (sales / 3). The card is\n"
+            "EMPTY, not zero, on the four quarters APCIQ contradicts.\n"
             "\n"
             "Colour is favourable TO A FIRST-TIME BUYER, not 'up': #B8E0C5 on a\n"
             "falling price and on a lengthening time on market, #FA584C on a\n"
@@ -1162,8 +1234,13 @@ def main() -> int:
         table(
             cur,
             "PAGE 1 -- where a price badge must VANISH, by property type",
-            "The island exercises this guard ZERO times over its 84 transitions,\n"
-            "so the report looks finished without it. The sectors do not.\n"
+            "The island exercises this guard ZERO times, so the report looks\n"
+            "finished without it. The sectors do not.\n"
+            "\n"
+            "Section 16: the whole OPENING YEAR of the archive -- 2019 Q2 to\n"
+            "2020 Q1 -- carries no badge on any card, on any geography. Four\n"
+            "blank quarters is the honest cost of the twelve-month window and\n"
+            "must not be repaired by falling back to the previous quarter.\n"
             "\n"
             "Select a sector on plex and step through the quarters: the badge has\n"
             "to disappear on the quarters where APCIQ published no price in the\n"
@@ -1174,29 +1251,42 @@ def main() -> int:
 
         table(
             cur,
-            "PAGE 1 -- the quarters where Listings change must REFUSE",
-            "active_listings_corroboration carries the J3.2 verdicts. A change\n"
-            "derived from two figures, one of which the mart declares unreliable,\n"
-            "is not a change.\n"
+            "PAGE 1 -- where the inventory card must be EMPTY, and where only\n"
+            "its badge refuses",
+            "active_listings_corroboration carries the J3.2 verdicts. Section\n"
+            "16.4 puts the refusal on the VALUE: months of inventory is OUR\n"
+            "figure, not one APCIQ printed, so a contradicted numerator cannot\n"
+            "be shown at all.\n"
             "\n"
-            "Two of these quarters have a perfectly good inventory figure of\n"
-            "their own and refuse because the quarter they SUBTRACT is defective.\n"
-            "A guard written on the current quarter alone would miss them.",
+            "That matters because on those quarters the ratio lands INSIDE the\n"
+            "surrounding trend -- around 3 months, exactly where a sound figure\n"
+            "would sit. A wrong number that looks wrong costs nothing; this one\n"
+            "looks right.\n"
+            "\n"
+            "The rows marked 'badge only' have a sound figure of their own and\n"
+            "refuse because the quarter they SUBTRACT is defective.",
             _badge_refusal_sql(),
             ("condo",),
         )
 
         table(
             cur,
-            "PAGE 2 -- the three badges (condominium, couple)",
+            "PAGE 2 -- the KPI row (condominium, couple)",
             "The share badge is in POINTS. A share going from 40 to 44 has risen\n"
             "four points and ten per cent, and both sentences are true about\n"
             "different things.\n"
             "\n"
-            "Tracts evaluated is the DENOMINATOR, so its badge is always grey:\n"
-            "more tracts evaluated is neither good nor bad news, it means the\n"
-            "base of comparison moved. On single-family it moves by 85 tracts on\n"
-            "average and once by 258.",
+            "Tracts evaluated is the DENOMINATOR and no longer has a card: it\n"
+            "is the detail line under the share. It stays on screen because on\n"
+            "single-family it moves by 85 tracts on average and once by 258, so\n"
+            "a share that moves ten points can be entirely tracts entering or\n"
+            "leaving the base.\n"
+            "\n"
+            "The income card carries NO badge. Its 2020 census median is one\n"
+            "single value across all twenty-nine quarters -- printed here beside\n"
+            "it -- so every dollar of movement is the CPI factor and nothing\n"
+            "else. A badge there would be an inflation gauge in a row of market\n"
+            "indicators.",
             _badge_page2_sql(),
             ("condo", "couple", quarter_start),
         )

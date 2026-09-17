@@ -1533,20 +1533,26 @@ step with it.
 | First-time buyer | `Sector bar colour` | `_Measures` | `Verdict at this down payment` | Text | 3 |
 | First-time buyer | `Down payment assumption` | `_Measures` | `fact_mortgage_scenario`, `Down payment regime code`, `Down payment input` | Text | 3 |
 | First-time buyer | `Verdict for the selected sector` | `_Measures` | `Verdict at this down payment`, `Area is narrowed` | Text | 3 |
-| Change | `Sales change` | `_Measures` | `Sales (selected area)`, `QuarterBadge` | Text | 1 |
-| Change | `Sales change colour` | `_Measures` | `Sales (selected area)`, `QuarterBadgeColour` | Text | 1 |
-| Change | `Price change` | `_Measures` | `Median price (selected area)`, `QuarterBadge` | Text | 1 |
-| Change | `Price change colour` | `_Measures` | `Median price (selected area)`, `QuarterBadgeColour` | Text | 1 |
-| Change | `Time on market change` | `_Measures` | `Days on market (selected area)`, `QuarterBadge` | Text | 1 |
-| Change | `Time on market colour` | `_Measures` | `Days on market (selected area)`, `QuarterBadgeColour` | Text | 1 |
-| Change | `Listings change` | `_Measures` | `Active listings (selected area)`, `fact_market[active_listings_corroboration]` | Text | 1 |
-| Change | `Listings change colour` | `_Measures` | same, plus `QuarterBadgeColour` | Text | 1 |
-| Change | `Share change` | `_Measures` | `Share of tracts affordable`, `QuarterBadge` | Text | 2 |
-| Change | `Share change colour` | `_Measures` | `Share of tracts affordable`, `QuarterBadgeColour` | Text | 2 |
-| Change | `Tracts evaluated change` | `_Measures` | `Tracts evaluated`, `QuarterBadge` | Text | 2 |
-| Change | `Tracts evaluated colour` | `_Measures` | **nothing — a constant** | Text | 2 |
-| Change | `Required income change` | `_Measures` | `Income required, lower bound (mean)`, `QuarterBadge` | Text | 2 |
-| Change | `Required income change colour` | `_Measures` | same, plus `QuarterBadgeColour` | Text | 2 |
+| Change | `Sales change` | `_Measures` | `Sales (selected area)`, `YoYBadge` | Text | 1 |
+| Change | `Sales change colour` | `_Measures` | `Sales (selected area)`, `YoYBadgeColour` | Text | 1 |
+| Change | `Price change` | `_Measures` | `Median price (selected area)`, `YoYBadge` | Text | 1 |
+| Change | `Price change colour` | `_Measures` | `Median price (selected area)`, `YoYBadgeColour` | Text | 1 |
+| Change | `Time on market change` | `_Measures` | `Days on market (selected area)`, `YoYBadge` | Text | 1 |
+| Change | `Time on market colour` | `_Measures` | `Days on market (selected area)`, `YoYBadgeColour` | Text | 1 |
+| Change | `Months of inventory change` | `_Measures` | `Months of inventory (selected area)`, `YoYBadge` | Text | 1 |
+| Change | `Months of inventory change colour` | `_Measures` | same, plus `YoYBadgeColour` | Text | 1 |
+| Change | ~~`Listings change`~~ | `_Measures` | **SUPERSEDED by 16.4** — kept as the worked example of a corroboration guard | Text | — |
+| Change | ~~`Listings change colour`~~ | `_Measures` | **SUPERSEDED by 16.4** | Text | — |
+| Change | `Share change` | `_Measures` | `Share of tracts affordable`, `YoYBadge` | Text | 2 |
+| Change | `Share change colour` | `_Measures` | `Share of tracts affordable`, `YoYBadgeColour` | Text | 2 |
+| Change | ~~`Tracts evaluated change`~~ | `_Measures` | **SUPERSEDED by 16.6** — the count moved into `Tracts detail` | Text | — |
+| Change | ~~`Tracts evaluated colour`~~ | `_Measures` | **SUPERSEDED by 16.6** | Text | — |
+| Change | `Required income change` | `_Measures` | `Income required, lower bound (mean)`, `YoYBadge` | Text | 2 |
+| Change | `Required income change colour` | `_Measures` | same, plus `YoYBadgeColour` | Text | 2 |
+| Market | `Months of inventory (selected area)` | `_Measures` | `Active listings (selected area)`, `Sales (selected area)`, `fact_market[active_listings_corroboration]` | `0.0" months"` — **never a currency** | 1 |
+| Market | `Inventory detail` | `_Measures` | `Active listings (selected area)`, `fact_market[active_listings_corroboration]` | Text | 1 |
+| Affordability | `Household income (median tract)` | `_Measures` | `Household income (theoretical)`, `Census_Tract[geography_code]` | Currency, 0 dp. **Takes no reference label — see 16.6** | 2 |
+| Affordability | `Tracts detail` | `_Measures` | `Tracts evaluated` | Text | 2 |
 | Change | `Quarter comparison note` | `_Measures` | **nothing — a constant** | Text | 1, 2 |
 | Change | `Colour convention note` | `_Measures` | **nothing — a constant** | Text | 1 |
 | Icons | `Sales icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 1 |
@@ -4868,6 +4874,19 @@ section announced it and stopped. Written above, in full.
 
 # 14. J4.2¾ · 4 — The quarter-over-quarter badges
 
+> ⚠️ **THE COMPARISON WINDOW OF THIS SECTION IS SUPERSEDED BY SECTION 16
+> (2026-09-17): the badges compare the same quarter ONE YEAR EARLIER.** What
+> 14.1 records as decided was reversed after the badges were read on screen, and
+> 16.1 carries the measurement that settles it. **Three functions are renamed**
+> — `ValueOneQuarterEarlier` → `ValueOneYearEarlier`, `QuarterBadge` →
+> `YoYBadge`, `QuarterBadgeColour` → `YoYBadgeColour` — so every `-3` and every
+> `QuarterBadge` below is the historical version. **Take the DAX from 16.3.**
+>
+> Everything else here stands and is not repeated in 16: the mechanism (14.2),
+> the query that tests the functions before saving (14.2 bis), the colour
+> convention (14.4), the measured palette (14.5), the ways a badge must be
+> absent (14.6), the icons (14.8, 14.8 bis) and the build notes (14.10).
+
 > **Specified 2026-09-10. Nothing in dbt moves** — every figure below already
 > exists in `fact_market` and `fact_affordability`. This section is DAX,
 > formatting, and one page of refusals. The build stays at PASS=353 and 140
@@ -5384,6 +5403,13 @@ it. **Select a sector on plex and step through the quarters** — that is where 
 badge has to disappear, 24 times.
 
 ## 14.7 The listings badge refuses a contradicted quarter
+
+> ⚠️ **SUPERSEDED for the measure, still true for the mechanism.**
+> `Listings change` is no longer on any card — 16.4 replaced the active-listings
+> card with months of inventory, and moved the refusal onto the **value** rather
+> than the badge. This section is kept because it is the report's only worked
+> example of a corroboration guard, and because 16.4 explains itself by
+> contrast with it.
 
 `fact_market` carries `active_listings_corroboration`, three states, from J3.2:
 1 425 rows `corroborated`, 168 `contradicted_on_its_page`, 60
@@ -6102,3 +6128,474 @@ hover and the selected fill — it is not free, and it is not part of this secti
 section: 56 visuals were repositioned by a script, and the only way to know it
 repositioned rather than rebound them is to read a number that has nothing to do
 with geometry.
+
+# 16. J4.2¾ · 6 — The badges become year-over-year, and two cards change what they hold
+
+Three changes, asked for on 2026-09-17 after reading the built report:
+
+1. the seven change badges compare **the same quarter one year earlier** instead
+   of the previous quarter — pages 1 and 2 both;
+2. page 1 replaces `Active listings` with **months of inventory**;
+3. page 2 replaces `Tracts evaluated` with the **median tract's theoretical
+   income**.
+
+**Nothing in dbt moves.** Every figure below already exists in `fact_market` and
+`fact_affordability`; months of inventory is a ratio of two columns that sit on
+the same row. The work is in Desktop, and `powerbi/apply-changes.md` carries it
+as **BLOCK G** — F is the page menu.
+
+⚠️ **This reverses what 14.1 records as settled on 2026-09-10.** That section
+carries the warning that the previous quarter would mostly measure the season,
+and records that the previous quarter was kept regardless. It was reopened on
+2026-09-17 after the badges had been read on a built page: quarter-to-quarter
+movement is small enough that the cards mostly showed noise. **The measurement
+in 16.1 confirms the reversal, though not by the route that prompted it** — what
+condemns the quarterly window is not the size of the movement but its season.
+**The reversal is deliberate and is not to be reopened.**
+
+## 16.1 The measurement that decides it is seasonality, not size
+
+Measured on the 87 island rows, three property types, **median** absolute
+change:
+
+| Metric | vs previous quarter | vs one year earlier | |
+|---|---|---|---|
+| Median price | 2.29 % | **6.10 %** | ×2.7 |
+| Active listings | 7.85 % | **14.48 %** | ×1.8 |
+| Days on market | 12.25 % | 13.43 % | ×1.1 |
+| **Sales** | 18.56 % | 18.03 % | **×0.97** |
+
+**Sales contradict the premise**: their quarter-over-quarter swing is *larger*
+than their annual one. That is what settles the question rather than weakening
+it, because of where the swing comes from — the same 21 transitions, by calendar
+quarter:
+
+| Transition into → | Sales | Active listings | Days on market | Median price |
+|---|---|---|---|---|
+| Q2 | **18/21 up, +21.5 %** | **19/21 up, +12.2 %** | **2/21 up, −18.2 %** | 19/21, +2.7 % |
+| Q3 | **3/21 up, −16.2 %** | 6/21, +1.1 % | 16/21, +7.2 % | 13/21, +0.5 % |
+| Q1 | 13/21, +1.9 % | 7/21, −4.2 % | 13/21, +8.1 % | 19/21, +2.1 % |
+| Q4 | 13/21, +5.1 % | 8/21, −2.4 % | 13/21, +4.5 % | 15/21, +1.1 % |
+
+**Three of the four page-1 badges measure a season.** A badge reading ▲ 21 %
+every spring and ▼ 16 % every summer tells the reader the calendar, not the
+market. Median price is the only one that is not seasonal — and it is also the
+one the quarterly comparison flattens most. Both readings point the same way.
+
+Page 2, condo × couple, 28 transitions:
+
+| | vs previous quarter | vs one year earlier | |
+|---|---|---|---|
+| Share of tracts affordable | 3.1 pts | **7.0 pts** | ×2.3 |
+| Income required, lower bound | 2.79 % | **8.70 %** | ×3.1 |
+
+Required income gains the most, which follows: it tracks the qualifying rate,
+which moves by central-bank decision and not by season.
+
+**The cost, counted**: the island goes from **84 to 75** badge-bearing slices,
+and page 2 from **28 to 25** transitions. The four opening quarters of the
+archive — 2019 Q2 through 2020 Q1 — have no predecessor twelve months back.
+**Nine more silent slices on page 1, three on page 2, all at the start.**
+
+**And it rejoins the publisher's own convention.** Page 65 of the Baromètre
+defines its change rates as *« calculés par rapport au même trimestre de l'année
+précédente »*. The badge stopped disagreeing with the source it sits on.
+
+## 16.2 ⚠️ The published YoY columns are NOT what gets read, and one of them is mislabelled
+
+`fact_market` has carried five `*_change_pct_yoy` columns since J3.5 — APCIQ's
+own printed change rates — which no measure reads. The obvious move is to read
+them now that the badge asks the same question. **It was measured first, and it
+is refused.** Our computed YoY against the published one, island rows, after
+rounding to the integer APCIQ prints:
+
+| | Exact matches / 75 | Mean signed gap |
+|---|---|---|
+| Median price | 64 | +0.01 pt |
+| Sales | 31 | −0.69 pt |
+| Active listings | 9 | −1.59 pt |
+| **Days on market** | **8** | worst gap **74 points** |
+
+The first three are the J3.5 vintage seen from the other end: APCIQ divides by a
+figure it has since revised down, we hold the first publication. **Days on
+market is something else.** Read as a **number of days** rather than a percent:
+**51 of 75 exact, 63 within one day**.
+
+⚠️ **`days_on_market_change_pct_yoy` does not hold a percentage. It holds
+days.** The column name has been wrong since J3.5 and nothing caught it, because
+nothing reads the column. Wiring a badge to it would print `▲ 12 %` where APCIQ
+prints *+12 jours*. **Debt recorded, not paid** — renaming a mart column is a
+dbt change, and this session changes no model. It is written in
+`docs/limitations.md` and here.
+
+Three reasons the badge computes its own, and they compound:
+
+1. **Page 2 cannot read APCIQ at all.** `Share of tracts affordable` and
+   `Income required` are our derivations; no publisher prints a change rate for
+   them. Sourcing page 1 from the publisher and page 2 from a formula would put
+   two definitions of one badge in one report — the defect of 2026-08-30, which
+   disagreed on 44 slices out of 87.
+2. **The counts drift** — the vintage, above.
+3. **One of the columns is not what its name says.**
+
+## 16.3 The three functions, renamed and re-pointed
+
+The mechanism does not change: one place decides what "earlier" means, and
+fourteen one-line measures sit on top. **`EDATE ( .., -3 )` becomes
+`EDATE ( .., -12 )`, and the three functions are renamed** so the names stop
+lying. Everything else in 14.2 stands — the `REMOVEFILTERS ( 'date' )` before
+re-filtering, the re-filter on `date_key`, the deliberately unscaled `Movement`,
+the `* 100` at display time.
+
+⚠️ **Retype them under the new names in the DAX query tab and run 14.2 bis
+BEFORE saving**, exactly as on 2026-09-10. Forwarding a lazy parameter from one
+UDF into another is still undocumented, and this project is at five collisions
+with reserved DAX names — `trailing`, `Current`, `Name`, `RANK`,
+`PreviousQuarter`. `YoYBadge`, `YoYBadgeColour` and `ValueOneYearEarlier`
+collide with nothing known, **which is not the same as verified**.
+
+```tmdl
+	/// The value of a measure in the same quarter one year earlier.
+	/// @param {AnyRef} m - the measure to evaluate in the earlier quarter
+	/// @returns the earlier value, or BLANK when no single quarter is in context
+	function ValueOneYearEarlier = (m : ANYREF) =>
+		VAR ThisQuarterStart = SELECTEDVALUE ( 'date'[quarter_start_date] )
+		VAR EarlierQuarterStart = EDATE ( ThisQuarterStart, -12 )
+		RETURN
+			IF (
+				NOT ISBLANK ( ThisQuarterStart ),
+				CALCULATE (
+					m,
+					REMOVEFILTERS ( 'date' ),
+					'date'[date_key] = EarlierQuarterStart
+				)
+			)
+
+	/// The badge text: arrow, size of the change, and the quarter compared to.
+	/// BLANK whenever the comparison cannot be made.
+	/// @param {AnyRef} m - the measure to compare
+	/// @param {String} unitMode - "percent", "points" or "count"
+	/// @returns e.g. "▲ 4.2 % vs 2025 Q2", or BLANK
+	function YoYBadge = (m : ANYREF, unitMode : STRING) =>
+		VAR Latest = m
+		VAR PriorValue = ValueOneYearEarlier ( m )
+		VAR EarlierLabel =
+			CALCULATE (
+				SELECTEDVALUE ( 'date'[quarter_label] ),
+				REMOVEFILTERS ( 'date' ),
+				'date'[date_key] = EDATE ( SELECTEDVALUE ( 'date'[quarter_start_date] ), -12 )
+			)
+		VAR Movement =
+			SWITCH (
+				unitMode,
+				"percent", DIVIDE ( Latest - PriorValue, PriorValue ),
+				Latest - PriorValue
+			)
+		VAR Marker = SWITCH ( TRUE (), Movement > 0, "▲ ", Movement < 0, "▼ ", "— " )
+		VAR Magnitude =
+			SWITCH (
+				unitMode,
+				"percent", FORMAT ( ABS ( Movement ) * 100, "0.0" ) & " %",
+				"points",  FORMAT ( ABS ( Movement ) * 100, "0.0" ) & " pts",
+				FORMAT ( ABS ( Movement ), "#,0" )
+			)
+		RETURN
+			IF (
+				NOT ISBLANK ( Latest ) && NOT ISBLANK ( PriorValue )
+					&& NOT ( unitMode = "percent" && PriorValue = 0 ),
+				Marker & Magnitude & " vs " & EarlierLabel
+			)
+
+	/// The badge colour. higherIsBetter says which direction is good FOR A
+	/// FIRST-TIME BUYER, which is not the same as "up".
+	/// @param {AnyRef} m - the measure the badge is about
+	/// @param {Boolean} higherIsBetter - TRUE when a rise favours the buyer
+	/// @returns a #RRGGBB string, or BLANK when there is no badge to colour
+	function YoYBadgeColour = (m : ANYREF, higherIsBetter : BOOLEAN) =>
+		VAR Latest = m
+		VAR PriorValue = ValueOneYearEarlier ( m )
+		VAR Movement = Latest - PriorValue
+		VAR Favourable = IF ( higherIsBetter, Movement > 0, Movement < 0 )
+		RETURN
+			IF (
+				NOT ISBLANK ( Latest ) && NOT ISBLANK ( PriorValue ),
+				SWITCH (
+					TRUE (),
+					Movement = 0,  "#8FA3B5",
+					Favourable,    "#B8E0C5",
+					"#FA584C"
+				)
+			)
+```
+
+⚠️ **The `* 100` is still there, twice.** It is the defect that shipped six of
+seven badges wrong on 2026-09-10 and was found by reading the screen a day
+later. Copying this block wholesale is how it stays fixed; retyping from memory
+is how it comes back.
+
+**The fourteen measures of 14.3 change by one word each** — `QuarterBadge` →
+`YoYBadge`, `QuarterBadgeColour` → `YoYBadgeColour`. Their names, their unit
+modes and their `higherIsBetter` flags are unchanged. Two of them are replaced
+outright by 16.4 and 16.6, which is the only structural change in the set.
+
+## 16.4 Page 1: months of inventory replaces active listings
+
+`Active listings` is APCIQ's *inscriptions en vigueur*, defined on page 65 as
+*« la moyenne des données mensuelles pour la période visée »* — an average
+**stock**, not a flow. On its own it is not interpretable: N properties offered
+is a lot or a little depending on how fast they leave.
+
+```
+months of inventory = active listings ÷ (sales ÷ 3)
+```
+
+Dimensionally sound by construction — an average month's stock over a month's
+sales. Both columns are already on the same `fact_market` row, so this adds no
+model, no seed and no ingestion.
+
+**Coverage: 29/29 island slices on all three types, 1 534 of 1 566 sector
+slices** (98 %). Island medians: condominium 6.0 · plex 5.5 · single-family 5.0;
+the full range across island slices is 2.2 to 10.6.
+
+Condo, island, the whole archive:
+
+```
+2019 Q2  3.7    2020 Q2  5.3    2021 Q2  3.2    2022 Q2  3.2    2023 Q2  5.5
+2019 Q3  4.2    2020 Q3  4.2    2021 Q3  4.3    2022 Q3  7.4    2023 Q3  7.6
+2019 Q4  3.7    2020 Q4  4.6    2021 Q4  3.5    2022 Q4  8.3    2023 Q4  8.7
+2020 Q1  3.0    2021 Q1  3.7    2022 Q1  3.0    2023 Q1  7.2    2024 Q1  7.2
+2024 Q2  6.1    2025 Q2  6.0    2026 Q1  8.1    2026 Q2  7.8
+```
+
+**The regime change at 2022 Q3 is visible without a calculation** — 3.0–4.6
+months for three years, then 7.4 and never below 5.5 again. And it is the *same
+quarter* at which page 2 dates its affordability break. Two pages dating one
+turn by independent routes is the strongest thing either of them says. This is
+also section 29 of the brief, *Market Regime*, which had never been built.
+
+```dax
+Months of inventory (selected area) =
+VAR Listings = [Active listings (selected area)]
+VAR SalesCount = [Sales (selected area)]
+VAR Corroboration = SELECTEDVALUE ( fact_market[active_listings_corroboration] )
+RETURN
+    IF (
+        Corroboration = "corroborated",
+        DIVIDE ( Listings, DIVIDE ( SalesCount, 3 ) )
+    )
+```
+
+**Format `0.0" months"`.** Not a currency, not a percent.
+
+⚠️ **THE REFUSAL IS ON THE VALUE, NOT ONLY ON THE BADGE, AND THAT IS THE ONE
+THING THIS MEASURE DOES DIFFERENTLY.** 14.7 lets the card print `Active
+listings` on a contradicted quarter and refuses only the change, which is right:
+the count is what APCIQ published, and we show what it published. Months of
+inventory is **ours** — a figure APCIQ never printed, derived from a numerator
+the mart declares unreliable. Showing it would be asserting something we cannot
+support.
+
+And the reason it matters here and not there is measured: on the three
+contradicted quarters the ratio comes out at **3.5, 3.0 and 3.2** — sitting
+perfectly inside the surrounding trend, indistinguishable from a sound figure.
+**A wrong number that looks wrong costs nothing; this one looks right.**
+
+```dax
+Months of inventory change        = YoYBadge ( [Months of inventory (selected area)], "percent" )
+Months of inventory change colour = YoYBadgeColour ( [Months of inventory (selected area)], TRUE )
+```
+
+`higherIsBetter = TRUE`: more months of inventory means more choice and less
+competition for a first-time buyer. Same convention as `Listings change`, same
+convention as `Days on market`, and `Colour convention note` covers it — a
+rising number painted green is the report's rule, not a bug.
+
+No extra guard is needed on the badge: `YoYBadge` receives BLANK from the value
+measure on a contradicted quarter and returns BLANK by its own `ISBLANK` test.
+**The refusal is written once, in the value.**
+
+**`Listings change` and `Listings change colour` become unused.** They are not
+deleted — `Active listings (selected area)` still feeds the detail label below,
+and 14.7 is the only worked example of a corroboration guard in the report.
+Comment them as superseded in 14.7 rather than removing them, the same treatment
+as the two stale definitions neutralised on 2026-09-12.
+
+## 16.5 The raw stock does not disappear, it moves down a level
+
+The card visual carries a second level under the reference label — `Detail` —
+which is what makes this a replacement and not a loss. One card, three lines:
+
+```
+7.8 months
+▼ 12.4 % vs 2025 Q2
+3 421 active listings
+```
+
+```dax
+Inventory detail =
+VAR Listings = [Active listings (selected area)]
+VAR Corroboration = SELECTEDVALUE ( fact_market[active_listings_corroboration] )
+RETURN
+    SWITCH (
+        TRUE (),
+        Corroboration <> "corroborated",
+            "inventory contradicted by the publisher this quarter",
+        NOT ISBLANK ( Listings ),
+            FORMAT ( Listings, "#,0" ) & " active listings",
+        "no inventory published"
+    )
+```
+
+**The detail is where the refusal explains itself.** A blank card with no
+sentence under it reads as a broken visual; a blank card that says *inventory
+contradicted by the publisher this quarter* reads as a report that knows what it
+does not know. This is the same device as `Price status`, and it costs no
+visual.
+
+## 16.6 Page 2: the median tract's income replaces `Tracts evaluated`
+
+### Why not price-to-income
+
+Condo × couple, restated basis — the one on screen:
+
+| Quarter | Median ratio | Share within reach |
+|---|---|---|
+| 2021 Q4 | 4.52 | 82.8 % |
+| 2023 Q4 | **4.32** | **56.3 %** |
+| 2026 Q2 | **4.31** | **78.1 %** |
+
+**Two quarters whose ratio agrees to 0.01, twenty-two points of affordability
+apart.** A card reading `4.31 ▼ 0.2 %` beside a card reading `78.1 % ▲ 22 pts`
+contradicts its neighbour on screen. This is the 2026-09-02 result — the one
+that took the ratio out of the map tooltip — remeasured on 2026-09-17 and
+unchanged: **a price-to-income ratio contains no interest rate**, and the rate
+is what made the round trip.
+
+### The measure, and why the existing one cannot be used
+
+⚠️ **`Household income (theoretical)` returns BLANK above a single census
+tract, by design** — it is verrou n° 1 of J4, and 8.4 spells it out. Dropped on
+a KPI card that aggregates 512 tracts it would be permanently empty. What the
+card can honestly show is the **median of the tract medians**, a statement about
+the distribution, which is not the same object as a median income of the island
+— that one does not exist in this model and cannot be computed from it.
+
+```dax
+Household income (median tract) =
+MEDIANX (
+    VALUES ( Census_Tract[geography_code] ),
+    [Household income (theoretical)]
+)
+```
+
+Each iteration holds one tract, so the guard inside `Household income
+(theoretical)` is satisfied and the model's single hardest rule is respected
+rather than worked around.
+
+**Label the card *Median tract income (theoretical)*.** The parenthesis carries
+what was done to the number, in the one place a reader is looking.
+
+### ⚠️ It takes no badge, and the reason is measured
+
+`household_income` — the 2020 census figure every restated value derives from —
+has **exactly one distinct median across all 29 quarters: $88,000**. The
+restated median moves from $87,128 in 2019 Q2 to $111,022 in 2026 Q2, and
+**every dollar of that movement is the CPI factor**. A badge on this card would
+be an inflation gauge wearing the livery of a market indicator, sitting in a row
+where the other three badges report the market.
+
+So: **no reference label on this card.** Not a grey one — a grey badge in a row
+of green and red ones still invites the reading it must not get.
+
+What the card earns instead is its position. Placed beside `Income required,
+lower bound`, the two numbers are both in dollars and **the gap between them is
+exactly what the map below colours**. The reader reads the shortfall instead of
+computing it.
+
+### `Tracts evaluated` moves into the detail
+
+```dax
+Tracts detail =
+VAR Evaluated = [Tracts evaluated]
+RETURN
+    IF (
+        NOT ISBLANK ( Evaluated ),
+        "of " & FORMAT ( Evaluated, "#,0" ) & " tracts evaluated"
+    )
+```
+
+It goes under `Share of tracts within reach`, whose denominator it is.
+
+⚠️ **Keeping it on screen is not politeness, it is the 2026-09-10 finding.**
+Across 28 transitions the evaluated count moves by ±8.4 tracts on condo, **±40.6
+on plex and ±85.0 on single-family, worst case −258**. A share that moves ten
+points can be entirely tracts entering or leaving the base. Dropping the number
+off the page without putting it anywhere would leave a percentage whose
+denominator nobody can see.
+
+`Tracts evaluated change` becomes unused, and is commented as superseded rather
+than deleted.
+
+## 16.7 What does not change, and it is worth stating
+
+- **No dbt model, seed or test moves.** `git status` on `dbt/` is the proof, and
+  the build is not re-run because there is nothing to rebuild.
+- **Pages 3 and 4 keep no badges**, for the reasons in 14.1: page 3's
+  denominator runs from 7 to 18 sectors, and page 4 slices by **year**, multi-
+  select, where "the previous period" has no meaning. Acceptance case 9 still
+  requires page 3 to come back untouched.
+- **The palette is unchanged.** `#B8E0C5` / `#FA584C` / `#8FA3B5`, measured
+  against the dark theme on 2026-09-11, worst pair 24.0. Nothing about the
+  comparison window touches colour.
+- **The seven callout icons are unchanged**, except that the listings icon now
+  sits on a card about inventory duration rather than inventory size. It is a
+  stack of layers; it still reads.
+
+## 16.8 Acceptance
+
+Run `python scripts/report_oracle.py` with the tunnel open and compare on
+screen. **Cases 2, 5 and 7 are the ones that bite.**
+
+| # | Set this | Expect |
+|---|---|---|
+| 1 | Page 1, condo, any quarter from 2020 Q2 on | four badges, each ending **`vs <same quarter, previous year>`** |
+| 2 | Page 1, condo, 2026 Q2 | **the four badges match the oracle to one decimal.** This is the case that was skipped on 2026-09-10 and let six wrong badges ship |
+| 3 | Page 1, condo, **2019 Q2 → 2020 Q1** | **no badge at all**, on any of the four cards. Four quarters, not one |
+| 4 | Page 1, plex, a sector with a gap | the badge is absent where the oracle says absent — the island never exercises this guard |
+| 5 | Page 1, condo, **2021 Q4 / 2022 Q1 / 2022 Q2 / 2023 Q4** | the inventory card is **empty**, and the detail reads *inventory contradicted by the publisher this quarter*. ⚠️ A number in the 3–4 range here means the guard did not land |
+| 6 | Page 1, condo, 2022 Q2 then 2022 Q3 | 3.2 months then 7.4 — **the regime change is legible on the card** |
+| 7 | Page 2, condo × couple, 2026 Q2 | income card reads **$111,022** and **carries no badge**. A badge here is the defect of 16.6 |
+| 8 | Page 2, the share card | detail reads *of 512 tracts evaluated*, and the share still matches the oracle |
+| 9 | Page 3 and page 4 | **unchanged.** No badge, no new card, no moved visual |
+| 10 | Any page, two quarters selected in the slicer | every badge **disappears**. `SELECTEDVALUE` returns BLANK on two quarters and that is the intended behaviour |
+
+⚠️ **Case 3 is the one that will look like a defect and is not.** Four blank
+quarters at the start of the archive is the honest cost of the twelve-month
+window, it is written in 16.1, and it must not be "fixed" by falling back to the
+previous quarter — that would put two comparison windows in one badge with
+nothing on screen saying which is in force. The oracle counts them: **72 sector
+slices per property type** carry no badge, which is 18 sectors × 4 quarters.
+
+⚠️ **AND CASE 2 CARRIES A TRAP THAT LOOKS EXACTLY LIKE THE 2026-09-10 DEFECT.**
+On the recipe slice — 2026 Q2, condo, island — the median price badge reads
+**▲ 0.1 %**, because the condo median really is flat against 2025 Q2. A badge
+reading a tenth of a percent is precisely what the missing `* 100` produced, and
+the instinct will be to "fix" a figure that is right.
+
+**What separates the two is how many cards say it.** The defect put a tenth of a
+percent on *four unrelated cards at once*; here the other three read −10.3 %,
++12.5 % and +29.5 % on the same slice. **One small number is a market; four are
+a bug.** Check the neighbours before touching the formula.
+
+⚠️ **A movement may disagree with the oracle by 0.1 and both be right.** The
+oracle rounds the two shares and prints their difference; `YoYBadge` subtracts
+the full-precision values and rounds once. On the page-2 share this is visibly
+78.1 − 76.2 printed as **2.0**. Same class of false disagreement as `rank()`
+against `RANKX ( .., DENSE )` and 56.25 % rounded two ways — **read the oracle's
+own movement column, not the subtraction of its two neighbours.**
+
+**Where a price badge must vanish, after the window change** (sector slices from
+2020 Q2 on): condo **5**, plex **16**, single-family **33**. Fewer than under
+the quarterly window — a price missing twelve months back is rarer than one
+missing three months back, on series that fill in over time. **Case 4 is still
+run on plex**, which has three times the gaps of condo.
