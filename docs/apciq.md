@@ -128,6 +128,50 @@ figures are shown:
 > donc interpréter ces statistiques avec prudence, en particulier lorsque le
 > nombre de transactions est faible. »
 
+### Months of inventory — defined on the site, not in the PDF
+
+Not one of the five figures the parser reads, and **not printed in the
+Baromètre**: it is derived here, from two columns that are. Its definition and
+its thresholds come from the publisher's own glossary —
+<https://apciq.ca/en/definitions-and-explanatory-notes>, read 2026-09-17:
+
+> « The number of months needed to sell the entire inventory of properties for
+> sale, calculated according to the pace of sales of the past 12 months. It is
+> obtained by dividing the inventory **by the average number of sales in the
+> past 12 months**. »
+
+| Months of inventory | Market condition, as the publisher words it |
+|---|---|
+| **< 8** | « favours sellers (seller's market) » |
+| **8 to 10** | « balanced, meaning that it does not favour buyers or sellers » |
+| **> 10** | « favours buyers (buyer's market) » |
+
+⚠️ **THE DENOMINATOR IS A TWELVE-MONTH AVERAGE, NOT THE QUARTER.** This was got
+wrong first, on 2026-09-17, by dividing the quarter's listings by the quarter's
+sales ÷ 3. Sales are strongly seasonal — measured on the island, 18 of 21
+transitions into Q2 are rises averaging +21.5 %, 18 of 21 into Q3 are falls
+averaging −16.2 % — so a quarterly denominator makes the ratio swing with the
+calendar. Measured against the correct formula: **mean gap 0.17 to 0.34 months,
+worst gap 3.48 on condominium and 5.14 on plex**, and **11 of 75 island slices
+land in a different market condition**. The wrong version put plex above 10 and
+would have shown a buyer's market that never happened.
+
+**So it is computed from `marts.fact_market_trailing_12m`**, whose figures are
+APCIQ's own twelve-month publications — which matters twice over, because
+section 7 of `docs/market.md` records that summing four published quarters
+exceeds the published twelve-month figure by about 0.5 %.
+
+⚠️ **The thresholds are the publisher's, the arithmetic is ours.** APCIQ does
+not print months of inventory per sector in the Baromètre, so no control total
+covers it: it inherits whatever the inventory column is worth, including the
+four editions section 7 declares defective. It is not shown on those quarters.
+
+**What it shows on the island, over the whole archive** (29 quarters, three
+types, APCIQ's formula and thresholds): **87 slices, zero in a buyer's market.**
+Condominium is a seller's market on 28 of 29 quarters and balanced on exactly
+one — **2026 Q2, the last of the archive**. Plex is balanced on two, single-
+family on none.
+
 ### Three ways a cell can be empty, and they are not the same
 
 | Printed | Means | Kept as |

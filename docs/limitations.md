@@ -42,7 +42,7 @@ Three severities, and they mean different things:
 | 18 | Revisions overwrite: no publication history is kept | Noted |
 | 19 | The shortfall map scale is calibrated on the archive, not on the slice | Noted |
 | 20 | Power BI runs in Import mode, republished by hand | Noted |
-| 21 | Four known debts in the model, none of them silent | Noted |
+| 21 | Five known debts in the model, none of them silent | Noted |
 
 ---
 
@@ -539,7 +539,7 @@ manual republication, not of the database.
 
 ---
 
-## 21. Four known debts in the model, none of them silent — Noted
+## 21. Five known debts in the model, none of them silent — Noted
 
 Written down so they are not rediscovered as surprises:
 
@@ -567,6 +567,19 @@ Written down so they are not rediscovered as surprises:
    What it costs is the next reader: wiring a badge to it would print `▲ 12 %`
    where the Baromètre prints *+12 jours*. Renaming a mart column is a dbt
    change and the session that found it changed no model.
+5. ⚠️ **The three market-condition thresholds live in DAX, not in a seed.**
+   APCIQ words them on its own glossary page — under 8 months favours sellers,
+   8 to 10 is balanced, above 10 favours buyers
+   (<https://apciq.ca/en/definitions-and-explanatory-notes>, read 2026-09-17) —
+   and `docs/apciq.md` section 4 quotes them with that URL. They are published
+   constants, so by the rule of J4.1 they belong in a seed carrying
+   `source_url` and `retrieved_on` per row, as the three mortgage schedules do.
+   **This is the second place that rule is knowingly bent**, after the 80 %
+   loan-to-value threshold above, and it was decided rather than overlooked: a
+   seed would have turned an otherwise Desktop-only change into a dbt change.
+   The cost is that a threshold moved by the publisher changes nothing here
+   until someone reads the measure. The control is `scripts/report_oracle.py`,
+   which classifies the same three bands from SQL.
 
 ---
 

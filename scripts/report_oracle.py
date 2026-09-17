@@ -376,11 +376,21 @@ def _badge_sql() -> str:
             where metric = '{metric}' and quarter_start_date = %s""")
     return f"""
         with island as (
-            select quarter_start_date, sales_count, median_price,
-                   days_on_market, active_listings,
-                   active_listings_corroboration
-            from marts.fact_market
-            where is_island_aggregate and property_type_code = %s
+            select f.quarter_start_date, f.sales_count, f.median_price,
+                   f.days_on_market,
+                   -- Months of inventory is APCIQ's own definition: the
+                   -- inventory over the average monthly sales of the PAST
+                   -- TWELVE MONTHS, not of the quarter. Sales are seasonal,
+                   -- so a quarterly denominator swings with the calendar.
+                   t.active_listings::numeric              as listings_12m,
+                   t.sales_count::numeric                  as sales_12m,
+                   t.active_listings_corroboration         as corroboration_12m
+            from marts.fact_market f
+            left join marts.fact_market_trailing_12m t
+              on t.geography_key = f.geography_key
+             and t.property_type_code = f.property_type_code
+             and t.edition_quarter_start_date = f.quarter_start_date
+            where f.is_island_aggregate and f.property_type_code = %s
         ),
         long as (
             select quarter_start_date, 'sales_count' as metric,
@@ -393,9 +403,9 @@ def _badge_sql() -> str:
             -- is ours, derived from a numerator the mart calls unreliable, and
             -- on those quarters it lands inside the trend where nothing shows.
             union all select quarter_start_date, 'months_of_inventory',
-                   case when active_listings_corroboration = 'corroborated'
-                             and sales_count > 0
-                        then active_listings::numeric / (sales_count::numeric / 3.0)
+                   case when corroboration_12m = 'corroborated'
+                             and sales_12m > 0
+                        then listings_12m / (sales_12m / 12.0)
                    end
             from island
         ),
@@ -457,23 +467,32 @@ def _badge_refusal_sql() -> str:
     then refuses by itself, plus on the quarters whose predecessor is defective.
     """
     return """
-        with s as (
+        with t12 as (
+            select t.edition_quarter_start_date        as quarter_start_date,
+                   t.property_type_code,
+                   t.active_listings::numeric          as listings_12m,
+                   t.sales_count::numeric              as sales_12m,
+                   t.active_listings_corroboration,
+                   t.sales_count
+            from marts.fact_market_trailing_12m t
+            join marts.dim_geography g on g.geography_key = t.geography_key
+            where g.geography_type = 'island'
+        ),
+        s as (
             select d.quarter_label, f.quarter_start_date,
                    f.active_listings_corroboration                  as this_quarter_verdict,
                    y.active_listings_corroboration                  as verdict_a_year_earlier,
                    case when f.active_listings_corroboration = 'corroborated'
                              and f.sales_count > 0
-                        then round((f.active_listings::numeric
-                                    / (f.sales_count::numeric / 3.0)), 1)
+                        then round((f.listings_12m / (f.sales_12m / 12.0)), 1)
                    end                                              as months_of_inventory
-            from marts.fact_market f
+            from t12 f
             join marts.dim_date d on d.date_key = f.quarter_start_date
-            left join marts.fact_market y
-              on y.geography_key = f.geography_key
-             and y.property_type_code = f.property_type_code
+            left join t12 y
+              on y.property_type_code = f.property_type_code
              and y.quarter_start_date
                  = f.quarter_start_date - interval '12 months'
-            where f.is_island_aggregate and f.property_type_code = %s
+            where f.property_type_code = %s
         )
         select quarter_label, this_quarter_verdict, verdict_a_year_earlier,
                months_of_inventory,
@@ -484,6 +503,40 @@ def _badge_refusal_sql() -> str:
         where this_quarter_verdict <> 'corroborated'
            or verdict_a_year_earlier <> 'corroborated'
         order by quarter_start_date
+    """
+
+
+def _inventory_regime_sql() -> str:
+    """Months of inventory over the whole archive, with APCIQ's own thresholds.
+
+    Formula and bands are the publisher's, quoted in docs/apciq.md section 4:
+    under 8 months favours sellers, 8 to 10 is balanced, above 10 favours
+    buyers. The arithmetic is ours -- APCIQ does not print this per sector, so
+    no control total covers it and it inherits the inventory column's verdicts.
+    """
+    return """
+        select d.quarter_label,
+               p.name_en                                            as property_type,
+               case when t.active_listings_corroboration = 'corroborated'
+                         and t.sales_count > 0
+                    then round((t.active_listings::numeric
+                                / (t.sales_count::numeric / 12.0))::numeric, 1)
+               end                                                  as months_of_inventory,
+               case when t.active_listings_corroboration <> 'corroborated'
+                    then 'CARD EMPTY -- publisher contradicts the inventory'
+                    when t.active_listings::numeric
+                         / nullif(t.sales_count::numeric / 12.0, 0) < 8
+                         then 'Seller''s market'
+                    when t.active_listings::numeric
+                         / nullif(t.sales_count::numeric / 12.0, 0) <= 10
+                         then 'Balanced market'
+                    else 'Buyer''s market' end                      as market_condition
+        from marts.fact_market_trailing_12m t
+        join marts.dim_geography g on g.geography_key = t.geography_key
+        join marts.dim_property_type p on p.property_type_code = t.property_type_code
+        join marts.dim_date d on d.date_key = t.edition_quarter_start_date
+        where g.geography_type = 'island' and t.property_type_code = %s
+        order by t.edition_quarter_start_date
     """
 
 
@@ -1266,6 +1319,26 @@ def main() -> int:
             "The rows marked 'badge only' have a sound figure of their own and\n"
             "refuse because the quarter they SUBTRACT is defective.",
             _badge_refusal_sql(),
+            ("condo",),
+        )
+
+        table(
+            cur,
+            "PAGE 1 -- months of inventory over the archive, and its regime",
+            "APCIQ's formula, from its own glossary: the inventory over the\n"
+            "average monthly sales of the PAST TWELVE MONTHS -- not of the\n"
+            "quarter. Dividing by the quarter's sales was tried first and is\n"
+            "wrong: sales are seasonal, and the two disagree by up to 3.5\n"
+            "months on condo and 5.1 on plex, moving 11 of 75 island slices\n"
+            "into a different market condition.\n"
+            "\n"
+            "The bands are the publisher's too: under 8 favours sellers, 8 to\n"
+            "10 is balanced, above 10 favours buyers.\n"
+            "\n"
+            "Read the column top to bottom: it is a monotonic climb from the\n"
+            "2022 trough to the end of the archive, with no seasonal swing.\n"
+            "The quarterly version had one.",
+            _inventory_regime_sql(),
             ("condo",),
         )
 

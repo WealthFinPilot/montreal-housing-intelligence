@@ -1549,8 +1549,9 @@ step with it.
 | Change | ~~`Tracts evaluated colour`~~ | `_Measures` | **SUPERSEDED by 16.6** | Text | — |
 | Change | `Required income change` | `_Measures` | `Income required, lower bound (mean)`, `YoYBadge` | Text | 2 |
 | Change | `Required income change colour` | `_Measures` | same, plus `YoYBadgeColour` | Text | 2 |
-| Market | `Months of inventory (selected area)` | `_Measures` | `Active listings (selected area)`, `Sales (selected area)`, `fact_market[active_listings_corroboration]` | `0.0" months"` — **never a currency** | 1 |
-| Market | `Inventory detail` | `_Measures` | `Active listings (selected area)`, `fact_market[active_listings_corroboration]` | Text | 1 |
+| Market | `Months of inventory (selected area)` | `_Measures` | **`fact_market_trailing_12m`** — `active_listings`, `sales_count` — plus `Area is narrowed` and `Inventory corroboration (selected area)`. ⚠️ twelve-month denominator, see 16.4 | `0.0" months"` — **never a currency** | 1 |
+| Market | `Inventory corroboration (selected area)` | `_Measures` | `Area is narrowed`, `fact_market_trailing_12m[active_listings_corroboration]` | Text | 1 |
+| Market | `Inventory detail` | `_Measures` | `Months of inventory (selected area)`, `Inventory corroboration (selected area)`. **Holds APCIQ 8/10 bands** | Text | 1 |
 | Affordability | `Household income (median tract)` | `_Measures` | `Household income (theoretical)`, `Census_Tract[geography_code]` | Currency, 0 dp. **Takes no reference label — see 16.6** | 2 |
 | Affordability | `Tracts detail` | `_Measures` | `Tracts evaluated` | Text | 2 |
 | Change | `Quarter comparison note` | `_Measures` | **nothing — a constant** | Text | 1, 2 |
@@ -6345,60 +6346,168 @@ outright by 16.4 and 16.6, which is the only structural change in the set.
 **stock**, not a flow. On its own it is not interpretable: N properties offered
 is a lot or a little depending on how fast they leave.
 
-```
-months of inventory = active listings ÷ (sales ÷ 3)
-```
+**The publisher answers that question itself**, on its glossary page rather than
+in the PDF — <https://apciq.ca/en/definitions-and-explanatory-notes>, read
+2026-09-17, quoted in full in `docs/apciq.md` section 4:
 
-Dimensionally sound by construction — an average month's stock over a month's
-sales. Both columns are already on the same `fact_market` row, so this adds no
-model, no seed and no ingestion.
-
-**Coverage: 29/29 island slices on all three types, 1 534 of 1 566 sector
-slices** (98 %). Island medians: condominium 6.0 · plex 5.5 · single-family 5.0;
-the full range across island slices is 2.2 to 10.6.
-
-Condo, island, the whole archive:
+> « The number of months needed to sell the entire inventory of properties for
+> sale, calculated according to the pace of sales of the past 12 months. It is
+> obtained by dividing the inventory **by the average number of sales in the
+> past 12 months**. »
 
 ```
-2019 Q2  3.7    2020 Q2  5.3    2021 Q2  3.2    2022 Q2  3.2    2023 Q2  5.5
-2019 Q3  4.2    2020 Q3  4.2    2021 Q3  4.3    2022 Q3  7.4    2023 Q3  7.6
-2019 Q4  3.7    2020 Q4  4.6    2021 Q4  3.5    2022 Q4  8.3    2023 Q4  8.7
-2020 Q1  3.0    2021 Q1  3.7    2022 Q1  3.0    2023 Q1  7.2    2024 Q1  7.2
-2024 Q2  6.1    2025 Q2  6.0    2026 Q1  8.1    2026 Q2  7.8
+months of inventory = twelve-month inventory ÷ (twelve-month sales ÷ 12)
 ```
 
-**The regime change at 2022 Q3 is visible without a calculation** — 3.0–4.6
-months for three years, then 7.4 and never below 5.5 again. And it is the *same
-quarter* at which page 2 dates its affordability break. Two pages dating one
-turn by independent routes is the strongest thing either of them says. This is
-also section 29 of the brief, *Market Regime*, which had never been built.
+Both columns are on `marts.fact_market_trailing_12m`, built in J3.5 and until
+now read by nothing. No model, no seed, no ingestion.
+
+### ⚠️ THE DENOMINATOR IS TWELVE MONTHS, AND THE FIRST VERSION OF THIS SECTION GOT IT WRONG
+
+Written on 2026-09-17 as the quarter's listings over the quarter's sales ÷ 3,
+and corrected the same day when the publisher's glossary was read. **The error
+was not arithmetic, it was the one this very session exists to remove**: sales
+are strongly seasonal — 18 of 21 transitions into Q2 are rises averaging
++21.5 %, 18 of 21 into Q3 are falls averaging −16.2 % (16.1) — so a quarterly
+denominator builds the calendar into the value, in the session that takes the
+calendar out of the badge.
+
+Measured, island rows, the wrong formula against the right one:
+
+| | Mean gap | Worst gap |
+|---|---|---|
+| Condominium | 0.34 months | **3.48** |
+| Plex | 0.23 | **5.14** |
+| Single-family | 0.17 | **3.32** |
+
+And **11 of 75 island slices fall in a different market condition**. The
+quarterly version put plex above 10 months and would have shown a buyer's
+market that has never happened.
+
+⚠️ **The two also tell different stories, and only one of them is the market.**
+Condo, island, the correct formula: a monotonic climb from **3.4** at the 2022
+trough to **8.3** in 2026 Q2, without a single reversal. The quarterly version
+ran 3.2 → 7.4 → 8.3 → 7.2 → 5.5 → 7.6 over the same span. **The oscillation was
+the season, not the market.**
+
+This is also section 29 of the brief, *Market Regime*, which had never been
+built.
+
+### The bands are the publisher's, the arithmetic is ours
+
+| Months of inventory | As APCIQ words it |
+|---|---|
+| **< 8** | « favours sellers (seller's market) » |
+| **8 to 10** | « balanced, meaning that it does not favour buyers or sellers » |
+| **> 10** | « favours buyers (buyer's market) » |
+
+⚠️ **They live in the DAX below rather than in a seed, and that was decided
+rather than overlooked.** By the rule of J4.1 a published constant belongs in a
+seed carrying `source_url` and `retrieved_on` per row, as the three mortgage
+schedules do. A seed would have turned a Desktop-only change into a dbt change.
+**This is the second place that rule is knowingly bent**, after the 80 %
+loan-to-value threshold, and it is written down as such in
+`docs/limitations.md` limitation 21. The control is `scripts/report_oracle.py`,
+which classifies the same three bands from SQL.
+
+⚠️ **Do not reach for these thresholds from memory.** They are 8 and 10, not the
+4-to-6 of the North American convention, and guessing would have put the island
+in a buyer's market for years.
+
+**What they say about the island**, 29 quarters × 3 types, APCIQ's formula and
+bands: **87 slices, zero in a buyer's market, ever.** Condominium is a seller's
+market on 28 of 29 quarters; its single balanced quarter is **2026 Q2, the last
+of the archive**. Plex is balanced on two, single-family on none.
+
+### The measures
+
+**The `(selected area)` wrapper is read from the live model, not from 9.5.**
+That section describes it as two `ISFILTERED` tests on `Place`; the model has
+since factored the test into a measure, `[Area is narrowed]`, and
+`Active listings (selected area)` reads
+`VAR PlaceChosen = [Area is narrowed] = 1`. **Everything below mirrors that
+exactly** — a wrapper that tests something else returns the island aggregate
+under a selected sector, which is a plausible number and not an error.
+
+⚠️ **Confirmed in Desktop on 2026-09-17: `fact_market_trailing_12m` IS in the
+model, and its relationship to `'date'` runs from `edition_quarter_start_date`.**
+The nine-month trap below did not happen. It is written down because the table
+had never been read by a visual, and because the same check was skipped on
+2026-09-09 and cost a session.
 
 ```dax
-Months of inventory (selected area) =
-VAR Listings = [Active listings (selected area)]
-VAR SalesCount = [Sales (selected area)]
-VAR Corroboration = SELECTEDVALUE ( fact_market[active_listings_corroboration] )
+Inventory corroboration (selected area) =
+VAR PlaceChosen = [Area is narrowed] = 1
 RETURN
     IF (
-        Corroboration = "corroborated",
-        DIVIDE ( Listings, DIVIDE ( SalesCount, 3 ) )
+        PlaceChosen,
+        CALCULATE (
+            SELECTEDVALUE ( fact_market_trailing_12m[active_listings_corroboration] ),
+            fact_market_trailing_12m[is_island_aggregate] = FALSE ()
+        ),
+        CALCULATE (
+            SELECTEDVALUE ( fact_market_trailing_12m[active_listings_corroboration] ),
+            fact_market_trailing_12m[is_island_aggregate] = TRUE ()
+        )
     )
 ```
 
+⚠️ **THIS MEASURE EXISTS BECAUSE THE VERDICT MUST BE READ IN THE SAME PERIMETER
+AS THE SUMS.** A bare `SELECTEDVALUE ( fact_market_trailing_12m[…] )` sees
+**nineteen rows** when no sector is selected — the island *and* its eighteen
+sectors — and returns BLANK the moment any two of them disagree. Today they
+never do: on the four defective editions every geography carries
+`not_reconciled_across_pages`, so the bare version would work by luck. Wrapping
+it makes it read the one row the card is about.
+
+It is also the only place the verdict is fetched, so the value measure and the
+detail line cannot drift apart.
+
+```dax
+Months of inventory (selected area) =
+VAR PlaceChosen = [Area is narrowed] = 1
+VAR Inventory =
+    IF (
+        PlaceChosen,
+        CALCULATE (
+            SUM ( fact_market_trailing_12m[active_listings] ),
+            fact_market_trailing_12m[is_island_aggregate] = FALSE ()
+        ),
+        CALCULATE (
+            SUM ( fact_market_trailing_12m[active_listings] ),
+            fact_market_trailing_12m[is_island_aggregate] = TRUE ()
+        )
+    )
+VAR SalesTrailing =
+    IF (
+        PlaceChosen,
+        CALCULATE (
+            SUM ( fact_market_trailing_12m[sales_count] ),
+            fact_market_trailing_12m[is_island_aggregate] = FALSE ()
+        ),
+        CALCULATE (
+            SUM ( fact_market_trailing_12m[sales_count] ),
+            fact_market_trailing_12m[is_island_aggregate] = TRUE ()
+        )
+    )
+RETURN
+    IF (
+        [Inventory corroboration (selected area)] = "corroborated",
+        DIVIDE ( Inventory, DIVIDE ( SalesTrailing, 12 ) )
+    )
+```
+
+⚠️ **The island / sectors switch is exclusive by construction here too**, for
+the reason measured on 2026-08-31: without a geography filter the nineteen rows
+add up and sales come to exactly ×2.0000 the island row. A card that silently
+doubled its denominator would show half the months of inventory, and 4.2 is as
+plausible as 8.3.
+
 **Format `0.0" months"`.** Not a currency, not a percent.
 
-⚠️ **THE REFUSAL IS ON THE VALUE, NOT ONLY ON THE BADGE, AND THAT IS THE ONE
-THING THIS MEASURE DOES DIFFERENTLY.** 14.7 lets the card print `Active
-listings` on a contradicted quarter and refuses only the change, which is right:
-the count is what APCIQ published, and we show what it published. Months of
-inventory is **ours** — a figure APCIQ never printed, derived from a numerator
-the mart declares unreliable. Showing it would be asserting something we cannot
-support.
-
-And the reason it matters here and not there is measured: on the three
-contradicted quarters the ratio comes out at **3.5, 3.0 and 3.2** — sitting
-perfectly inside the surrounding trend, indistinguishable from a sound figure.
-**A wrong number that looks wrong costs nothing; this one looks right.**
+**Numerator and denominator are each summed before the division**, which is what
+makes the measure correct on a selection of several sectors. A ratio of sums is
+not a sum of ratios, and the card must not average eighteen sector ratios.
 
 ```dax
 Months of inventory change        = YoYBadge ( [Months of inventory (selected area)], "percent" )
@@ -6406,19 +6515,47 @@ Months of inventory change colour = YoYBadgeColour ( [Months of inventory (selec
 ```
 
 `higherIsBetter = TRUE`: more months of inventory means more choice and less
-competition for a first-time buyer. Same convention as `Listings change`, same
-convention as `Days on market`, and `Colour convention note` covers it — a
-rising number painted green is the report's rule, not a bug.
+competition for a first-time buyer. Same convention as `Days on market`, and
+`Colour convention note` covers it.
+
+### ⚠️ THE REFUSAL IS ON THE VALUE, NOT ONLY ON THE BADGE
+
+14.7 lets the card print `Active listings` on a contradicted quarter and refuses
+only the change, which is right: the count is what APCIQ published, and we show
+what it published. **Months of inventory is ours** — a figure APCIQ never
+printed for a sector, derived from a numerator the mart declares unreliable.
+Showing it would assert something we cannot support, and **no control total
+covers it**: it inherits whatever the inventory column is worth.
+
+The quarters are the same four as ever — 2021 Q4, 2022 Q1, 2022 Q2, 2023 Q4,
+twelve island slices — carried on `fact_market_trailing_12m` as
+`not_reconciled_across_pages`.
+
+And the reason it matters here rather than there is measured: on those quarters
+the twelve-month ratio comes out at **3.5, 3.4, 3.4 and 7.0**, each sitting
+inside its own trend. **A wrong number that looks wrong costs nothing; this one
+looks right.**
 
 No extra guard is needed on the badge: `YoYBadge` receives BLANK from the value
-measure on a contradicted quarter and returns BLANK by its own `ISBLANK` test.
-**The refusal is written once, in the value.**
+measure and returns BLANK by its own `ISBLANK` test. **The refusal is written
+once, in the value.**
 
-**`Listings change` and `Listings change colour` become unused.** They are not
-deleted — `Active listings (selected area)` still feeds the detail label below,
-and 14.7 is the only worked example of a corroboration guard in the report.
-Comment them as superseded in 14.7 rather than removing them, the same treatment
-as the two stale definitions neutralised on 2026-09-12.
+### ⚠️ `fact_market_trailing_12m` MAY NOT BE WIRED IN THE MODEL
+
+It has been in the database since J3.5 and **no visual has ever read it**. This
+is exactly the position `fact_mortgage_scenario` was in on 2026-09-09: in the
+model since J4.1, its relationship to `'date'` missing, and the first measure to
+touch it returned a perfectly plausible number in which the property type
+filtered and the quarter did not.
+
+Before building anything: check the table is in the model, and that it has a
+relationship to `'date'` and to `Sector`.
+
+⚠️ **The relationship runs from `edition_quarter_start_date`, never from
+`period_start_date`.** The second is the first day of the twelve-month window,
+nine months earlier — the quarter slicer would silently select the wrong row.
+`period_start_date` and `period_end_date` are there to say what the window
+covers, not to join on.
 
 ## 16.5 The raw stock does not disappear, it moves down a level
 
@@ -6426,25 +6563,44 @@ The card visual carries a second level under the reference label — `Detail` �
 which is what makes this a replacement and not a loss. One card, three lines:
 
 ```
-7.8 months
-▼ 12.4 % vs 2025 Q2
-3 421 active listings
+8.3 months
+▲ 23.9 % vs 2025 Q2
+Balanced market
 ```
+
+⚠️ **The detail carries the MARKET CONDITION, not the raw stock** — decided
+2026-09-17, once the publisher's thresholds were in hand. A reader who sees
+`8.3 months` still has to know what 8.3 means; a reader who sees
+`Balanced market` does not. The stock leaves the page, and that is the trade:
+it is the numerator, it is in the oracle, and nothing on the page derived
+from it is now hidden.
 
 ```dax
 Inventory detail =
-VAR Listings = [Active listings (selected area)]
-VAR Corroboration = SELECTEDVALUE ( fact_market[active_listings_corroboration] )
+VAR Months = [Months of inventory (selected area)]
 RETURN
     SWITCH (
         TRUE (),
-        Corroboration <> "corroborated",
+        [Inventory corroboration (selected area)] <> "corroborated",
             "inventory contradicted by the publisher this quarter",
-        NOT ISBLANK ( Listings ),
-            FORMAT ( Listings, "#,0" ) & " active listings",
-        "no inventory published"
+        ISBLANK ( Months ),
+            "no inventory published",
+        Months < 8,   "Seller's market",
+        Months <= 10, "Balanced market",
+        "Buyer's market"
     )
 ```
+
+⚠️ **8 and 10 are APCIQ's, and this is the one place they are written.** The
+value measure does not classify and the detail does not compute — so there is
+exactly one definition of each band on the page, which is the lesson of
+2026-08-30, when two definitions of one threshold disagreed on 44 slices out
+of 87.
+
+⚠️ **The order of the branches is the guard.** Corroboration first, blank
+second, bands last. Tested the other way round, `BLANK () < 8` is TRUE in DAX
+and a quarter with no figure would read *Seller's market* — the blank/zero
+trap, eleventh appearance on this project.
 
 **The detail is where the refusal explains itself.** A blank card with no
 sentence under it reads as a broken visual; a blank card that says *inventory
@@ -6563,7 +6719,7 @@ screen. **Cases 2, 5 and 7 are the ones that bite.**
 | 3 | Page 1, condo, **2019 Q2 → 2020 Q1** | **no badge at all**, on any of the four cards. Four quarters, not one |
 | 4 | Page 1, plex, a sector with a gap | the badge is absent where the oracle says absent — the island never exercises this guard |
 | 5 | Page 1, condo, **2021 Q4 / 2022 Q1 / 2022 Q2 / 2023 Q4** | the inventory card is **empty**, and the detail reads *inventory contradicted by the publisher this quarter*. ⚠️ A number in the 3–4 range here means the guard did not land |
-| 6 | Page 1, condo, 2022 Q2 then 2022 Q3 | 3.2 months then 7.4 — **the regime change is legible on the card** |
+| 6 | Page 1, condo, step 2023 Q1 → 2026 Q2 | **5.9 → 8.3, climbing every step but one.** The quarterly formula oscillated here; this one must not |
 | 7 | Page 2, condo × couple, 2026 Q2 | income card reads **$111,022** and **carries no badge**. A badge here is the defect of 16.6 |
 | 8 | Page 2, the share card | detail reads *of 512 tracts evaluated*, and the share still matches the oracle |
 | 9 | Page 3 and page 4 | **unchanged.** No badge, no new card, no moved visual |
