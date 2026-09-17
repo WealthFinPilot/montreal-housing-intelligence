@@ -21,7 +21,7 @@ Two checks, in decreasing confidence:
 
 What this script cannot see, written down so nobody mistakes silence for proof:
 a price written in thousands ("578 k$"), a price spelled out in words, a figure
-inside a binary file (section 6 of check-secrets.sh covers those separately),
+inside a binary file (section 7 of check-secrets.sh names those separately),
 and any arithmetic more elaborate than the ratio above.
 
 Exit codes:  0 = clean,  1 = a figure must be removed,  2 = the database was
@@ -66,9 +66,6 @@ DECLARED_EXCEPTIONS = {
     "360000": "highest CT median INCOME of sector 9 -- StatCan, redistributable",
     "487500": "worked example in check_powerbi_project.py, chosen for NOT being "
               "a layout value",
-    "529000": "fictional listing price in the original brief, section 13",
-    "509000": "fictional listing price in the original brief, section 13",
-    "499000": "fictional listing price in the original brief, section 13",
 }
 
 # A thousands separator is a space, or a comma followed by exactly three digits.
@@ -95,7 +92,7 @@ TEXT_SUFFIXES = {
     ".cfg", ".ini", ".toml", ".dax", ".csv",
 }
 
-# Not searched, and saying so IS the point -- the same discipline as section 6
+# Not searched, and saying so IS the point -- the same discipline as section 7
 # of check-secrets.sh. These hold extracts of sources whose licence explicitly
 # allows redistribution (Statistics Canada; Ville de Montreal / MAMH). Their
 # figures collide with the APCIQ archive by coincidence of magnitude, not by
@@ -115,10 +112,10 @@ def digits_of(token: str) -> str:
 def tracked_text_files() -> tuple[list[Path], list[str]]:
     """Everything git would carry, split into what is searched and what is not."""
     # -z and an explicit UTF-8 decode, both needed. Without -z git quotes any
-    # path holding a non-ASCII byte ("docs/fr/M\303\251thode.md"), that name
+    # path holding a non-ASCII byte ("docs/M\303\251thode.md"), that name
     # opens no file, and `not path.is_file()` below dropped it without a word.
     # Without the encoding, Windows decodes git's UTF-8 output as cp1252 and
-    # mangles the same names a second way. docs/fr/ exists since 2026-09-15.
+    # mangles the same names a second way.
     out = subprocess.run(
         ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
         cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8",

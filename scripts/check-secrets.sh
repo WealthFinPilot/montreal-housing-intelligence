@@ -9,7 +9,7 @@
 # never written anywhere: they are piped into grep on standard input, and only
 # the NAME of an offending file is ever shown.
 #
-# Section 8 is a positive control. A checker that always answers OK proves
+# Section 9 is a positive control. A checker that always answers OK proves
 # nothing, so the script ends by looking for two strings it KNOWS are present.
 # If it fails to find them, the clean result above is worthless and the script
 # says so.
@@ -31,12 +31,12 @@ fail() { echo "  FAIL  $1"; FAILURES=$((FAILURES + 1)); }
 # .env being ignored.
 #
 # -z, and NUL-delimited reading, are not a detail. Without it git quotes any
-# path holding a byte outside ASCII -- docs/fr/Methode.md with an accent comes
-# back as "docs/fr/M\303\251thode.md", quotes included -- and that name opens
+# path holding a byte outside ASCII -- docs/Methode.md with an accent comes
+# back as "docs/M\303\251thode.md", quotes included -- and that name opens
 # no file. Sections 2 to 5 would skip it silently AND section 7, whose whole
 # job is to name what could not be read, would not see it either: the run
-# would print CLEAN over a file nobody ever opened. This repository is
-# bilingual and docs/fr/ exists, so the case is not hypothetical.
+# would print CLEAN over a file nobody ever opened. No tracked path is
+# accented today; one file named after a Montreal place would be enough.
 mapfile -d '' -t CANDIDATES < <(git ls-files -z --cached --others --exclude-standard)
 
 # grep reads the needle from standard input, so a secret never appears in the
@@ -131,9 +131,15 @@ echo "== 5. Hard-coded network addresses =="
 # coordinate 13.2.0.0.0.0.0.0.0.0 the first four fields look exactly like an
 # address. Those were passing only because the sequence contains 0.0.0.0 and
 # the old line-wide -v threw the whole line away -- one defect was cancelling
-# the other, and fixing the -v alone surfaced six of them. An address is four
-# fields with no digit and no dot on either side.
-ADDR_RE='(?<![\d.])(\d{1,3}\.){3}\d{1,3}(?![\d.])'
+# the other, and fixing the -v alone surfaced six of them.
+#
+# An address is four fields not touching a fifth one: no digit and no
+# "digit-dot" before it, no digit and no "dot-digit" after it. The first
+# version refused ANY dot on either side, and so missed the most ordinary case
+# of all, an address ending a sentence with its full stop -- found by the
+# security review of 2026-09-16. A full stop is not a fifth field. (No example
+# address is written here: this check fails on its own comments, as it should.)
+ADDR_RE='(?<!\d)(?<!\d\.)(\d{1,3}\.){3}\d{1,3}(?!\d)(?!\.\d)'
 PRIVATE_RE=':(10\.([0-9]{1,3}\.){2}[0-9]{1,3}|172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3}|192\.168\.[0-9]{1,3}\.[0-9]{1,3}|169\.254\.[0-9]{1,3}\.[0-9]{1,3})$'
 ALLOWED_RE=':(127\.0\.0\.1|0\.0\.0\.0|255\.255\.[0-9]{1,3}\.[0-9]{1,3})$'
 
@@ -217,7 +223,24 @@ else
 fi
 
 echo
-echo "== 8. Positive control: the checker must be able to find something =="
+echo "== 8. Private context: terms that belong to no published file =="
+# This repository documents a data project and nothing else. The terms that
+# must never reach it are read from a list kept in .git/info/, never tracked:
+# publishing the list would publish what it protects. This section checks the
+# files git would carry; before any history is published, run the same script
+# with --history on it, because a term removed today is still in the commit
+# that added it.
+TERMS_OUT="$("$PY" scripts/check_publication_terms.py 2>&1)"
+TERMS_RC=$?
+echo "$TERMS_OUT"
+case "$TERMS_RC" in
+  0) : ;;
+  2) WARNINGS=1 ;;
+  *) FAILURES=$((FAILURES + 1)) ;;
+esac
+
+echo
+echo "== 9. Positive control: the checker must be able to find something =="
 if [ -n "$(in_files mhi_pgdata)" ]; then
   pass "file scan detects a known-present string (mhi_pgdata)"
 else
@@ -235,10 +258,10 @@ if [ "$FAILURES" -eq 0 ] && [ "$WARNINGS" -eq 0 ]; then
   exit 0
 fi
 if [ "$FAILURES" -eq 0 ]; then
-  # Not "section 7" by name: section 6 raises warnings too -- a skipped APCIQ
+  # Not "section 7" by name: sections 6 and 8 raise warnings too -- a skipped
   # check, a ratio in level notation -- and pointing at 7 alone hid them.
   echo "NO LEAK FOUND in the files that could be searched, but WARN or SKIP lines"
-  echo "above (section 6 and/or 7) must be read before committing."
+  echo "above (sections 6, 7 or 8) must be read before committing."
   exit 0
 fi
 echo "$FAILURES PROBLEM(S) FOUND -- do not commit until they are fixed."
