@@ -37,10 +37,11 @@ changed?"**
 ## What it found
 
 Every figure below is a **share, a count, a rate or a change**. None is a price.
-That is not modesty: the market figures come from APCIQ, whose licence forbids
-reproducing them "directly or indirectly", and a price-to-income ratio multiplied
-by a published census income gives the price back. The rule and the check that
-enforces it are in [`docs/limitations.md`](docs/limitations.md) section 4.
+That is a rule, not modesty: the market figures come from APCIQ, the repository's
+text never distributes them, and a price-to-income ratio multiplied by a published
+census income would give the price back. The rule and the check that enforces it
+are in [`docs/limitations.md`](docs/limitations.md) section 4; what the dashboard
+shows, and under which terms, is in [`docs/apciq.md`](docs/apciq.md) section 1.
 
 All figures were measured against the live database on 2026-09-14.
 
@@ -491,7 +492,7 @@ Enforced in the code and the models, not merely stated:
 ## Repository layout
 
 ```
-docs/           architecture, methodology, limitations, source matrix,
+docs/           brief, architecture, methodology, limitations, source matrix,
                 and one document per domain: geography, APCIQ, market,
                 affordability; data-model diagram in docs/erd/
 ingestion/      one package per source; mamh_roll/ is extracted, not loaded
@@ -525,5 +526,7 @@ source keeps its own licence, quoted with its URL in
 * Source: Statistics Canada. Reproduced and distributed on an as-is basis with
   the permission of Statistics Canada.
 * Ville de Montréal open data is used under CC BY 4.0.
-* APCIQ figures are used for non-commercial analysis and are **not**
-  redistributed here, in any form.
+* Source : APCIQ par le système Centris. APCIQ figures are used for a
+  non-commercial project: shown in the dashboard screenshots and the report
+  published to the web, and **never** redistributed as data — no figure in any
+  text file of this repository. See [`docs/apciq.md`](docs/apciq.md) section 1.

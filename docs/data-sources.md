@@ -50,7 +50,7 @@ the portal can reissue resource ids.
 
 ### 2.1 APCIQ — verdict: obtainable, but not over the requested history
 
-The original brief (section 8.4) asks for 2015 to present. **That is not
+The original [brief](brief.md) (section 8.4) asks for 2015 to present. **That is not
 available.** The quarterly *Baromètre* archive starts at **2019 Q2**. Every quarter from
 2019 Q2 through 2026 Q2 was requested individually: 29 responses of HTTP 200, zero gaps.
 
@@ -86,8 +86,8 @@ bands, one per metric, each holding the same sequence:
 y=<top>  <metric label>  <quarter value>  <change>  <trailing value>  <change>  [<5-year change>]
 ```
 
-No figure is transcribed here, or anywhere else in this repository: the licence in §2.2
-forbids reproducing the content in part, and this file is versioned.
+No figure is transcribed here, or anywhere else in this repository's text: the repository
+does not distribute the source's figures — [`apciq.md`](apciq.md) section 1.
 
 > **Superseded on 2026-08-23 — see `docs/apciq.md`.** Two claims that stood in this section
 > after the J1 survey turned out to be wrong once all 29 editions were read:
@@ -125,21 +125,17 @@ Read on page 65 of every edition, verbatim:
 
 That is not the same permission as the website's terms quoted above. The site allows
 non-commercial use with attribution; the document forbids reproduction of its content,
-in part and indirectly, without written consent. Where two statements from one publisher
-disagree, the project follows the stricter one.
+in part and indirectly, without written consent.
 
 **What this changes.** Nothing about ingesting, storing or analysing the figures in a
-private database — that is use, not reproduction. It changes what may leave it:
+private database — that is use, not reproduction. It changes what may leave it.
 
-- no APCIQ figure in a versioned file, an exported dataset or a sample;
-- **no APCIQ figure in a Power BI report published to the web.** "Publish to web"
-  exposes the entire semantic model, hidden columns included (already recorded as a
-  governance risk for listings in section 11 of the brief — it applies here too);
-- a public dashboard built on this source needs either written consent, or figures
-  aggregated far enough that the source table cannot be reconstructed from them.
-
-**Open for decision** — which of those two routes the J5 dashboard takes. Raised
-2026-08-23, not settled.
+**Settled on 2026-09-16** — the question raised here on 2026-08-23 of what a public
+dashboard may show. The project shows the figures under the website terms, credited, in
+screenshots and in a report published to the web, and never distributes them as data:
+no APCIQ figure in a versioned text file, an exported dataset or a sample. The policy,
+what *Publish to web* exposes, and the tension with page 65 stated plainly, are in
+[`apciq.md`](apciq.md) section 1.
 
 ### 2.3 The `fact_market` dependency is single-sourced
 

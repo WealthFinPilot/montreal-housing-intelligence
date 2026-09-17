@@ -10,23 +10,48 @@ the **Centris** system. One PDF per quarter, 65 pages, 2019 Q2 to the present.
 
 ## 1. Licence — read this before publishing anything
 
-The licence printed inside the PDF is stricter than the one on the website.
-Page 65, verbatim:
+The same publisher says two different things, and this section is where the
+project states which one it follows for what.
+
+**The website terms** ([apciq.ca/conditions-dutilisation](https://apciq.ca/conditions-dutilisation/),
+quoted in full in [`data-sources.md`](data-sources.md) section 2.2) forbid
+commercial use without written consent, and require APCIQ to be credited.
+
+**The PDF itself is stricter.** Page 65, verbatim:
 
 > « Toute reproduction de l'information qui s'y retrouve, en tout ou en
 > partie, directement ou indirectement, est strictement interdite sans
 > l'autorisation préalable écrite du titulaire du droit d'auteur. »
 
-Consequences, all of them binding:
+### The policy, decided 2026-09-16
 
-- **No APCIQ figure may enter a Power BI report published to the web.** A
-  published report exposes its whole semantic model, hidden columns included.
-  The same rule the project already applies to listings.
-- No APCIQ figure belongs in a versioned file, an exported dataset, or a
-  screenshot in a README.
-- The archived PDFs in `data/apciq/` are not versioned and never will be.
+This is a non-commercial portfolio project. It **shows** the figures under the
+website terms, and it **does not distribute** them:
 
-**No APCIQ figure is in the repository.** The values transcribed by eye that
+| | |
+|---|---|
+| **Shown, credited** | Screenshots of the dashboard in the README, and the Power BI report published with *Publish to web*. Every page carries « Source : APCIQ par le système Centris ». Nothing built on these figures is sold or monetised. |
+| **Not distributed** | No APCIQ figure in a tracked text file, an exported dataset or a sample. The 29 archived PDFs and the report's `.pbix` stay out of git. The repository ships the code that reads the source, never the source. |
+
+The second row is enforced, not promised: section 6 of
+`scripts/check-secrets.sh` compares every tracked text file with the figures
+actually loaded, and a price-to-income ratio in level counts as a price because
+multiplying it by a published census income gives the price back
+([`limitations.md`](limitations.md) section 4).
+
+**What *Publish to web* really publishes.** A report published that way exposes
+its whole semantic model, hidden columns included: every APCIQ figure the
+report loaded becomes readable, not only the ones a visual displays. That is
+known and accepted, not overlooked.
+
+**The tension is stated, not hidden.** Page 65 asks for written permission for
+any reproduction, and a published report is one. Written permission was
+requested before the report was built; no answer had been received on
+2026-09-16. If APCIQ objects, the published report is withdrawn and the
+screenshots are replaced with versions in which every APCIQ figure is masked.
+Nothing in the pipeline or the model depends on either.
+
+**No APCIQ figure is in the repository's text.** The values transcribed by eye that
 `tests/test_apciq_parse.py` checks the parser against live in
 `data/apciq/oracle-read-by-eye.json`, beside the PDFs and outside git. Absent,
 that test skips, exactly as the PDF tests already do on a fresh clone. What
@@ -35,9 +60,9 @@ in a tracked file.
 
 **Nor is one in the history.** Those figures had been committed before
 2026-08-23, and removing them from the working tree would not have removed
-them from `git log -p`. The history was rewritten the same day, the way the
-author e-mail was: 22 commits, their messages and their order unchanged, with
-only the figures inside them replaced by a marker naming the licence. Verified
+them from `git log -p`. The history was rewritten the same day: commits,
+messages and order unchanged, with only the figures inside them replaced by a
+marker naming the licence. Verified
 by sweeping every blob of every commit, not by inspecting the tip.
 
 ---

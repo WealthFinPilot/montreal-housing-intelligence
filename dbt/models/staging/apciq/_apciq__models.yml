@@ -11,9 +11,10 @@ sources:
     schema: raw
     description: >
       APCIQ Baromètre résidentiel (Montréal edition), read positionally from
-      the quarterly PDF. Source : APCIQ par le système Centris. Reproduction
-      of these figures is forbidden without written consent, so nothing built
-      on this source may be published.
+      the quarterly PDF. Source : APCIQ par le système Centris. Page 65 forbids
+      reproduction without written consent; the repository never distributes
+      these figures, and what the dashboard shows is set out in
+      docs/apciq.md section 1.
     tables:
       - name: apciq_barometer_statistic
         description: >

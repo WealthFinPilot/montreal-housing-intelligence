@@ -25,7 +25,7 @@ made to say.
 
 ## 1. The three labels, and why they are not decoration
 
-Principle 2 of the brief: *always distinguish observed data, derived data and
+Principle 2 of the [brief](brief.md): *always distinguish observed data, derived data and
 assumption*. In this project that distinction is carried in **columns**, not in
 prose, because prose does not reach a Power BI report.
 

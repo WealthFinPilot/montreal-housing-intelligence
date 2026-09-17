@@ -442,9 +442,11 @@ the reader chooses) and **Macro** (the rate series). Its design and every DAX me
 [`../powerbi/report-design.md`](../powerbi/report-design.md).
 
 **The report file is not in the repository.** It holds APCIQ figures in a
-compressed model no scanner can inspect, and the APCIQ licence forbids
-reproducing them. The only committed report file is the milestone J2 one, which
-holds Bank of Canada rates only.
+compressed model no scanner can inspect, and the repository does not distribute
+the source's figures. The report is shown instead — screenshots in the README
+and a version published to the web, under the policy in
+[`apciq.md`](apciq.md) section 1. The only committed report file is the
+milestone J2 one, which holds Bank of Canada rates only.
 
 ---
 
@@ -467,7 +469,7 @@ seriously rather than fixing something else first.
 
 ## 11. What is deliberately absent
 
-The brief excludes Kafka, Spark, Kubernetes, Airflow, Snowflake, MongoDB,
+The [brief](brief.md) excludes Kafka, Spark, Kubernetes, Airflow, Snowflake, MongoDB,
 Elasticsearch and MLflow unless a need is written down. None was.
 
 The largest table has **141 462 rows**. A full `dbt build` takes **34 seconds**

@@ -213,9 +213,9 @@ defect removed from the seed: three tests fail, including the J3.2 one.
    is an assumption on display, not an observation.
 3. **Do not sum `active_listings` over time**, and do not sum the island row
    with the sectors. Both are §2 above.
-4. **Do not publish a figure from either table.** The licence printed on page
-   65 of every edition forbids reproduction « en tout ou en partie, directement
-   ou indirectement ». That covers a Power BI report published to the web,
-   which exposes its whole semantic model. Nothing derived from these tables
-   belongs in a versioned file either — which is why this session shipped no
-   `sample_data/` extract, unlike J3.3 and J3.4.
+4. **Do not write a figure from either table into a versioned file.** The
+   licence printed on page 65 of every edition forbids reproduction « en tout
+   ou en partie, directement ou indirectement », and the repository does not
+   distribute the source's figures — which is why this milestone shipped no
+   `sample_data/` extract, unlike J3.3 and J3.4. What the dashboard may show,
+   decided later, on 2026-09-16, is in [`apciq.md`](apciq.md) section 1.

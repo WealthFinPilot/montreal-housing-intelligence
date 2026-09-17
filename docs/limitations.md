@@ -25,7 +25,7 @@ Three severities, and they mean different things:
 | 1 | The price is a sector's; the income is a tract's | **Blocking** |
 | 2 | "X % of tracts" is not "X % of Montrealers" | **Blocking** |
 | 3 | `income_required_lower_bound` is a floor, not a requirement | **Blocking** |
-| 4 | APCIQ figures may not be published, even indirectly | **Blocking** |
+| 4 | APCIQ figures are shown, never written into the repository | **Blocking** |
 | 5 | The income is from 2020 and cannot be observed later | **Material** |
 | 6 | One boundary is assumed, and it places 170 583 people | **Material** |
 | 7 | Quarterly figures are a vintage: 12 months ≠ four quarters | **Material** |
@@ -108,18 +108,23 @@ Publishing it would require inventing two of its three terms.
 
 ---
 
-## 4. APCIQ figures may not be published, even indirectly — **Blocking**
+## 4. APCIQ figures are shown, never written into the repository — **Blocking**
 
 Page 65 of every edition: « Toute reproduction de l'information qui s'y
 retrouve, en tout ou en partie, directement ou **indirectement**, est strictement
 interdite sans l'autorisation préalable écrite du titulaire du droit d'auteur. »
 
-A written request was sent before 2026-08-25. **No answer as of 2026-09-13.**
+A written request was sent before 2026-08-25. **No answer as of 2026-09-16.**
+The dashboard is shown anyway — screenshots in the README and a report published
+to the web, credited, non-commercial — under the website terms. The policy, and
+the tension with page 65, are stated in [`apciq.md`](apciq.md) section 1. What
+follows here governs the repository's **text**, which is where the source's
+figures are never distributed.
 
 **The operative rule, decided 2026-09-13: a figure may appear in a tracked file
 only if it cannot be inverted into an APCIQ price.**
 
-| Publishable | Not publishable |
+| Allowed in a tracked file | Not allowed in a tracked file |
 |---|---|
 | a share of tracts, a count, a percentage change | a median or average price |
 | a rate, a rate gap, a CPI factor | a price-to-income ratio **in level** |
@@ -395,7 +400,7 @@ central. Sector names must never be read as geography.
 ## 13. No listings: no area, no price per square foot, no condo fees — **Material**
 
 Listings are phase 2 and the MVP works without them by design. What their
-absence removes, all of it named in the original brief:
+absence removes, all of it named in the original [brief](brief.md):
 
 - **No living area**, therefore **no price per square foot** — so the brief's
   question "are dwellings getting smaller, or only dearer?" cannot be answered.

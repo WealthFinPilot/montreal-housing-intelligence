@@ -345,26 +345,25 @@ cannot, it declares its own clean verdict worthless.
 
 ## 8. Governance
 
-**No APCIQ figure may leave this repository.** The licence printed on page 65 of
-every edition forbids reproduction of its information « en tout ou en partie,
-directement ou indirectement ». That covers a figure in a committed file, a
-figure in a screenshot in a README, and a report published with *Publish to
-web*, which exposes the whole semantic model including columns no visual shows.
+**The report is shown; its data is not distributed.** Decided on 2026-09-16:
+screenshots of the four pages appear in the README, and the report is published
+with *Publish to web*, credited « Source : APCIQ par le système Centris », as a
+non-commercial portfolio project. The full policy — including what *Publish to
+web* exposes, and the tension with the stricter clause on page 65 of every
+edition — is in [`../docs/apciq.md`](../docs/apciq.md) section 1.
 
 What follows from it, and is not negotiable:
 
 * **The `.pbix` of this report is never committed.** `.gitignore` blocks every
   `.pbix` by default, with one named exception: `mhi_interest_rates.pbix`, the
-  J2 report, which holds Bank of Canada rates and nothing else.
+  J2 report, which holds Bank of Canada rates and nothing else. Publishing the
+  report is not the same as shipping its data file.
 * **`cache.abf` is never committed.** It is the data.
+* **No APCIQ figure in a committed text file** — a report definition, a DAX
+  comment, a design note. `check_powerbi_project.py` and section 6 of
+  `check-secrets.sh` enforce it.
 * **Statistics Canada figures are a different matter.** Their licence expressly
-  allows redistribution, including sale. The asymmetry is deliberate and
-  usable: a public report can show relative affordability without showing the
-  prices underneath it.
-
-What is published, and by which route, is decided at J4.5. Nothing in the
-report construction depends on that decision, which is why it is not being
-taken now.
+  allows redistribution, including sale.
 
 ### About the J2 .pbix still in this folder
 
