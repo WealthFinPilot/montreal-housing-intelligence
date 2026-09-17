@@ -226,18 +226,25 @@ echo
 echo "== 8. Private context: terms that belong to no published file =="
 # This repository documents a data project and nothing else. The terms that
 # must never reach it are read from a list kept in .git/info/, never tracked:
-# publishing the list would publish what it protects. This section checks the
-# files git would carry; before any history is published, run the same script
-# with --history on it, because a term removed today is still in the commit
-# that added it.
-TERMS_OUT="$("$PY" scripts/check_publication_terms.py 2>&1)"
-TERMS_RC=$?
-echo "$TERMS_OUT"
-case "$TERMS_RC" in
-  0) : ;;
-  2) WARNINGS=1 ;;
-  *) FAILURES=$((FAILURES + 1)) ;;
-esac
+# publishing the list would publish what it protects. It checks the files git
+# would carry, then every commit reachable from any ref: a term removed today
+# is still in the commit that added it, and a push publishes that commit too.
+# The history half became permanent on 2026-09-16, once the history it reads
+# was the clean one -- before that it could only ever have failed.
+for MODE in files history; do
+  if [ "$MODE" = history ]; then
+    TERMS_OUT="$("$PY" scripts/check_publication_terms.py --history 2>&1)"
+  else
+    TERMS_OUT="$("$PY" scripts/check_publication_terms.py 2>&1)"
+  fi
+  TERMS_RC=$?
+  echo "$TERMS_OUT"
+  case "$TERMS_RC" in
+    0) : ;;
+    2) WARNINGS=1 ;;
+    *) FAILURES=$((FAILURES + 1)) ;;
+  esac
+done
 
 echo
 echo "== 9. Positive control: the checker must be able to find something =="
