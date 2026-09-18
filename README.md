@@ -574,6 +574,7 @@ source keeps its own licence, quoted with its URL in
   the permission of Statistics Canada.
 * Ville de Montréal open data is used under CC BY 4.0.
 * Source : APCIQ par le système Centris. APCIQ figures are used for a
-  non-commercial project: shown in the dashboard screenshots and the report
-  published to the web, and **never** redistributed as data — no figure in any
-  text file of this repository. See [`docs/apciq.md`](docs/apciq.md) section 1.
+  non-commercial project: shown in the dashboard screenshots above and in the
+  published report, each credited by the page that shows it, and **never**
+  redistributed as data — no figure in any text file of this repository. See
+  [`docs/apciq.md`](docs/apciq.md) section 1.

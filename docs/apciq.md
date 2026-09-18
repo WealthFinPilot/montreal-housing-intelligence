@@ -30,7 +30,7 @@ website terms, and it **does not distribute** them:
 
 | | |
 |---|---|
-| **Shown, credited** | Screenshots of the dashboard in the README, and the Power BI report published with *Publish to web*. Every page carries « Source : APCIQ par le système Centris ». Nothing built on these figures is sold or monetised. |
+| **Shown, credited** | Screenshots of the dashboard in the README, and the Power BI report published with *Publish to web* and embedded in a hosting page. The credit « Source : APCIQ par le système Centris » is carried by whatever shows the figures — this README section, and the hosting page beside the embedded report. Nothing built on these figures is sold or monetised. |
 | **Not distributed** | No APCIQ figure in a tracked text file, an exported dataset or a sample. The 29 archived PDFs and the report's `.pbix` stay out of git. The repository ships the code that reads the source, never the source. |
 
 The four screenshots are `docs/img/report-1-market.png` through
@@ -49,6 +49,15 @@ multiplying it by a published census income gives the price back
 its whole semantic model, hidden columns included: every APCIQ figure the
 report loaded becomes readable, not only the ones a visual displays. That is
 known and accepted, not overlooked.
+
+**Where the credit lives, and the one case it does not cover.** Decided on
+2026-09-18: the credit is carried by the page that shows the report, not by the
+report canvas itself. A *Publish to web* URL is standalone — it can be opened,
+copied and indexed away from the hosting page, and a reader arriving that way
+sees the figures with no credit beside them. The link is therefore generated
+**last**, once the hosting page is live, and it is published from that page
+only. This is a stated residual case, not an oversight: closing it entirely
+would take a credit line on the report canvas itself.
 
 **The tension is stated, not hidden.** Page 65 asks for written permission for
 any reproduction, and a published report is one. Written permission was

@@ -347,10 +347,14 @@ cannot, it declares its own clean verdict worthless.
 
 **The report is shown; its data is not distributed.** Decided on 2026-09-16:
 screenshots of the four pages appear in the README, and the report is published
-with *Publish to web*, credited « Source : APCIQ par le système Centris », as a
-non-commercial portfolio project. The full policy — including what *Publish to
-web* exposes, and the tension with the stricter clause on page 65 of every
-edition — is in [`../docs/apciq.md`](../docs/apciq.md) section 1.
+with *Publish to web*, as a non-commercial portfolio project. The credit
+« Source : APCIQ par le système Centris » sits on the page that shows the
+report — the README section for the screenshots, the hosting page for the
+embedded report — and **not on the report canvas**, so a bare *Publish to web*
+link carries no credit and is generated last, after the hosting page is live.
+The full policy — including what *Publish to web* exposes, and the tension with
+the stricter clause on page 65 of every edition — is in
+[`../docs/apciq.md`](../docs/apciq.md) section 1.
 
 What follows from it, and is not negotiable:
 
