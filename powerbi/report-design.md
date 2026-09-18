@@ -6785,7 +6785,7 @@ screen. **Cases 2, 5 and 7 are the ones that bite.**
 | 3 | Page 1, condo, **2019 Q2 → 2020 Q1** | **no badge at all**, on any of the four cards. Four quarters, not one |
 | 4 | Page 1, plex, a sector with a gap | the badge is absent where the oracle says absent — the island never exercises this guard |
 | 5 | Page 1, condo, **2021 Q4 / 2022 Q1 / 2022 Q2 / 2023 Q4** | the inventory card is **empty**, and the detail reads *inventory contradicted by the publisher this quarter*. ⚠️ A number in the 3–4 range here means the guard did not land |
-| 6 | Page 1, condo, step 2023 Q1 → 2026 Q2 | **5.9 → 8.3, climbing every step but one.** The quarterly formula oscillated here; this one must not |
+| 6 | Page 1, condo, step 2023 Q1 → 2026 Q2 | **5.9 → 8.3, and no step down larger than 0.4 months** — there is a plateau through 2024-2025, not a climb at every step. The quarterly formula fell 1.1 then 1.7 over the same span. **Saw teeth mean the measure is reading `fact_market`** |
 | 7 | Page 2, condo × couple, 2026 Q2 | income card reads **$111,022** and **carries no badge**. A badge here is the defect of 16.6 |
 | 8 | Page 2, the share card | detail reads *of 512 tracts evaluated*, and the share still matches the oracle |
 | 9 | Page 3 and page 4 | **unchanged.** No badge, no new card, no moved visual |
