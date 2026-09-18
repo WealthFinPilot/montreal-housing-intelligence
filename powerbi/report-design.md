@@ -1559,9 +1559,11 @@ step with it.
 | Icons | `Sales icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 1 |
 | Icons | `Median price icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 1 |
 | Icons | `Days on market icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 1 |
-| Icons | `Active listings icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 1 |
+| Icons | `Months of inventory icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 1 |
+| Icons | `Household income icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
+| Icons | ~~`Active listings icon`~~ | `_Measures` | **SUPERSEDED by 16.4** — kept in 14.8, deleted from the model | Text | — |
 | Icons | `Share affordable icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
-| Icons | `Tracts evaluated icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
+| Icons | ~~`Tracts evaluated icon`~~ | `_Measures` | **SUPERSEDED by 16.6** — kept in 14.8, deleted from the model | Text | — |
 | Icons | `Income required icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
 | Icons | `Change since peak icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 2 |
 | Icons | `Within reach icon` | `_Measures` | **nothing — a constant** | Text, **data category Image URL** | 3 |
@@ -5460,9 +5462,15 @@ measure returns a data URI and its **data category is set to Image URL**. So the
 icons are DAX, versioned in this file, with no file to lose and nothing to
 attribute.
 
-The fifteen are drawn here rather than lifted from Lucide or Feather — 24 × 24,
-1.6 px, round caps, **stroke only with one stated exception: the quote mark is
-filled**, for the reason measured below.
+**Seventeen are drawn here since 2026-09-17, of which fifteen are in use** —
+rather than lifted from Lucide or Feather. 24 × 24, 1.6 px, round caps,
+**stroke only with one stated exception: the quote mark is filled**, for the
+reason measured below.
+
+⚠️ **`Active listings icon` and `Tracts evaluated icon` are orphaned by section
+16** — the cards they sat on now hold months of inventory and the median tract
+income. They are kept here and deleted from the model, for the reason in 16.6:
+the document keeps the memory, the model stays clean.
 
 > ### The colour changed on 2026-09-12: `#8FA3B5` → **`#B4C8DA`**
 >
@@ -5510,11 +5518,27 @@ Median price icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg
 
 Days on market icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 6.8V12l3.6 2.2'/%3E%3C/svg%3E"
 
+Months of inventory icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6.5 3.2h11M6.5 20.8h11'/%3E%3Cpath d='M8 3.2v3.1c0 2.3 4 3.9 4 5.7 0 1.8-4 3.4-4 5.7v3.1'/%3E%3Cpath d='M16 3.2v3.1c0 2.3-4 3.9-4 5.7 0 1.8 4 3.4 4 5.7v3.1'/%3E%3C/svg%3E"
+
+// ⚠️ An hourglass, not a clock. The measure IS a drain time — how long the
+// stock lasts at the current pace — and it sits beside Days on market, which
+// is a clock. The two speak of time on purpose; a circle and a double triangle
+// share no silhouette at 24 px, which is what settles it.
+
 Active listings icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6.5h10M4 12h10M4 17.5h10'/%3E%3Ccircle cx='19' cy='6.5' r='1.3'/%3E%3Ccircle cx='19' cy='12' r='1.3'/%3E%3Ccircle cx='19' cy='17.5' r='1.3'/%3E%3C/svg%3E"
 
 // ---- page 2, the four KPI cards
 
 Share affordable icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8' cy='15.5' r='4.2'/%3E%3Cpath d='M11 12.5 20 3.5M17 6.5l2.4 2.4M14.6 8.9l2.4 2.4'/%3E%3C/svg%3E"
+
+Household income icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2.5' y='6.5' width='19' height='11' rx='1.8'/%3E%3Cpath d='M12 8.6v6.8M13.7 10.2a1.8 1.8 0 0 0-1.7-1h-.3a1.4 1.4 0 0 0 0 2.8h.6a1.4 1.4 0 0 1 0 2.8H12a1.8 1.8 0 0 1-1.7-1'/%3E%3C/svg%3E"
+
+// ⚠️ A bill, and deliberately FLATTER than the wallet that stays on
+// Income required, its neighbour in the same row: 19 × 11 against 17 × 14,
+// ratio 1.73 against 1.21. Drawn at the wallet's proportions the two
+// silhouettes collapsed into one and the whole distinction rested on a dollar
+// sign against a small pocket. It is also flatter than Sectors priced icon on
+// page 3, which is the same glyph carrying a different meaning.
 
 Tracts evaluated icon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23B4C8DA' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 3.5h7v7h-7zM13.5 3.5h7v7h-7zM3.5 13.5h7v7h-7zM13.5 13.5h7v7h-7z'/%3E%3C/svg%3E"
 
@@ -6638,15 +6662,44 @@ the distribution, which is not the same object as a median income of the island
 
 ```dax
 Household income (median tract) =
-MEDIANX (
-    VALUES ( Census_Tract[geography_code] ),
-    [Household income (theoretical)]
-)
+VAR TractsWithIncome =
+    FILTER (
+        VALUES ( Census_Tract[geography_code] ),
+        NOT ISBLANK ( [Household income (theoretical)] )
+    )
+RETURN
+    MEDIANX ( TractsWithIncome, [Household income (theoretical)] )
 ```
 
 Each iteration holds one tract, so the guard inside `Household income
 (theoretical)` is satisfied and the model's single hardest rule is respected
 rather than worked around.
+
+### ⚠️ THE `FILTER` IS NOT DECORATION — WITHOUT IT THE CARD READ 109,760 RATHER THAN 111,022
+
+Written without it on 2026-09-17, built, and caught on screen. **The wrong
+figure is exactly the median of all 541 tracts with the 11 that publish no
+income counted as zero** — verified in SQL: rank 264 is 109,760, rank 265 is
+111,022, and `coalesce ( income, 0 )` over 541 rows returns 109,760 to the
+dollar.
+
+Eleven census tracts StatCan suppresses were pulling the median down. That is
+**section 41.1 of the brief broken in the place it is hardest to see**: not an
+invented figure, a missing one silently valued at zero — and on the one card
+whose whole purpose is to say what a household earns.
+
+⚠️ **The lesson is about the guard, not about MEDIANX.** `Household income
+(theoretical)` returns BLANK above one tract *and* on a tract with no income.
+The guard is written, it fires, and it was trusted because an iterator was
+assumed to skip blanks. **A guard that returns BLANK is only a guard if
+whatever consumes it honours the BLANK.** Twelfth appearance of the blank/zero
+trap here, and the first one written into a specification by someone who had
+just finished listing the other eleven.
+
+**The control is the oracle**, which medians over tracts that have a value and
+whose figure the card must match to the dollar. It was made to count distinct
+tracts earlier the same day, for a different reason — which is why the two
+figures could be compared at all.
 
 **Label the card *Median tract income (theoretical)*.** The parenthesis carries
 what was done to the number, in the one place a reader is looking.
