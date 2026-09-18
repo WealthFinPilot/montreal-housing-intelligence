@@ -33,6 +33,12 @@ website terms, and it **does not distribute** them:
 | **Shown, credited** | Screenshots of the dashboard in the README, and the Power BI report published with *Publish to web*. Every page carries « Source : APCIQ par le système Centris ». Nothing built on these figures is sold or monetised. |
 | **Not distributed** | No APCIQ figure in a tracked text file, an exported dataset or a sample. The 29 archived PDFs and the report's `.pbix` stay out of git. The repository ships the code that reads the source, never the source. |
 
+The four screenshots are `docs/img/report-1-market.png` through
+`report-4-rates.png`, taken on 2026-09-17. Section 7 of
+`scripts/check-secrets.sh` lists them among the files it cannot look inside:
+they carry APCIQ figures on purpose, and this paragraph is the decision that
+warning asks for.
+
 The second row is enforced, not promised: section 6 of
 `scripts/check-secrets.sh` compares every tracked text file with the figures
 actually loaded, and a price-to-income ratio in level counts as a price because

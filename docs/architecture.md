@@ -140,7 +140,7 @@ others:
 | `load.py` | the database | the network |
 | `run.py` | the order of the above, and the run log | — |
 
-That split is what lets **140 pytest tests** run the parsers against real,
+That split is what lets **174 pytest tests** run the parsers against real,
 reduced source files in `tests/fixtures/` with no network at all.
 
 ### Three rules every loader obeys
@@ -376,14 +376,38 @@ and the `.sql` disagree, the `.sql` is right.
 
 | Gate | Runs | Catches |
 |---|---|---|
-| `pytest` — 140 tests | before a commit | parsers on real reduced source files; loaders on the **real tables inside a transaction that is always rolled back**; migrations that are not replayable |
+| `pytest` — 174 tests | before a commit | parsers on real reduced source files; loaders on the **real tables inside a transaction that is always rolled back**; migrations that are not replayable |
 | `dbt build` — 321 tests | every build, including the scheduled one | 288 generic tests plus **33 singular tests**, the ones that matter: every published cell reaches `fact_market` with its value and its status; the tracts carry every resident of the island; the sector polygons tile the island exactly |
 | `scripts/report_oracle.py` | at report acceptance | computes from the marts what every card must display, so a visual with the right shape and the wrong number does not pass |
 | `scripts/check-secrets.sh` — 8 sections | before every commit | `.env` values in any tracked file **and in the git history**, keys, public IP addresses, **APCIQ figures written directly or indirectly**, and files it cannot read — which it lists rather than skips |
 | `scripts/check_powerbi_project.py` | before committing report definitions | a number shaped like a price inside a Power BI project file |
 
-The same five gates are drawn in [the README](../README.md#five-gates-at-five-different-moments),
-on the two paths they guard.
+The same five gates, on the two paths they guard — the board in
+[the README](../README.md#five-gates-at-five-different-moments) is drawn from
+this source:
+
+```mermaid
+flowchart LR
+  CHANGE(["I change a parser,<br/>a model or a report"])
+  DATA(["Monday 10:00<br/>new data arrives"])
+
+  G1{{"pytest — 174 tests<br/>parsers on real files, loaders<br/>in a rolled-back transaction"}}
+  G2{{"check-secrets.sh — 8 sections<br/>secrets, public IPs, APCIQ figures,<br/>the git history included"}}
+  G3{{"check_powerbi_project.py<br/>a number shaped like a price<br/>in a report definition"}}
+  G4{{"dbt build — 321 tests<br/>288 generic + 33 singular:<br/>every published cell, every polygon"}}
+  G5{{"report_oracle.py<br/>what every card must display,<br/>computed from the marts"}}
+
+  GH[("GitHub")]
+  MART[("marts")]
+  REPORT(["the report<br/>a human reads"])
+
+  CHANGE --> G1 --> G2 --> GH
+  CHANGE -. "a report definition" .-> G3 --> GH
+  DATA --> G4 --> MART --> G5 --> REPORT
+
+  classDef gate fill:#FFF4CE,stroke:#8A6D00,stroke-width:2px,color:#3B2E00
+  class G1,G2,G3,G4,G5 gate
+```
 
 **Every gate has been fired on purpose.** A test that has never failed has not
 shown it can. Each guard in this repository was given a positive control — a

@@ -28,7 +28,7 @@ changed?"**
 | Largest table | **141 462 rows** |
 | Tables | **31** in the database, **17** in the Power BI model |
 | Relationships in the Power BI model | **17** one-to-many, **1** of them bidirectional |
-| Automated tests | **461** — 321 dbt, 140 pytest |
+| Automated tests | **495** — 321 dbt, 174 pytest |
 | Refresh | **weekly and unattended**, about 3 minutes |
 | Report | **4 pages**, **3 maps** |
 
@@ -131,6 +131,69 @@ limitation says so rather than guessing why.
 
 ---
 
+## The report
+
+Four pages in Power BI Desktop, reading the marts in Import mode. Each page was
+accepted card by card against `scripts/report_oracle.py`, which recomputes from
+the database what every visual must display — a visual can have the right shape
+and the wrong number, and several of them did.
+
+Screenshots taken on **2026-09-17**, all four on 2026 Q2, condominium. The
+market figures on screen are **Source : APCIQ par le système Centris**, shown
+here for a non-commercial project; this repository never redistributes them as
+data, and no APCIQ figure appears in any of its text files.
+
+### Market — what the market did
+
+![Report page 1, Market](docs/img/report-1-market.png)
+
+Sales, median price, days on market and months of inventory, each compared with
+**the same quarter one year earlier**: a quarter-on-quarter badge would have
+measured a season rather than the market on three of those four metrics. Months
+of inventory uses APCIQ's own definition — inventory over the average sales of
+the past 12 months — and APCIQ's own thresholds, not the North American
+convention. The bar chart shows each sector's price **relative to the island
+median**, so its axis does not move from one quarter to the next, and carries the
+sector's rank because a re-sorted order shows position but hides movement. The
+map draws 36 shapes cut to land; several of them share one published sector, and
+the note on the page says so.
+
+### Affordability — can the people living there buy there?
+
+![Report page 2, Affordability](docs/img/report-2-affordability.png)
+
+The share of the island's 541 census tracts where the median household of the
+selected profile clears the lending test for the median property of its sector.
+The income on screen is **theoretical**: the 2020 census median restated into the
+dollars of the quarter by the Montréal CPI. It is a calculated figure, it carries
+its own column, and the page says so permanently. The map colours each tract by
+the **shortfall in dollars**, diverging at zero, rather than by a price-to-income
+ratio — for the reason in finding 3 above: the ratio contains no interest rate.
+
+### First-time buyer — what can you buy, and where?
+
+![Report page 3, First-time buyer](docs/img/report-3-first-time-buyer.png)
+
+Two what-if parameters, income and down payment, drive the whole page. The
+mortgage chain is recomputed in DAX at the entered down payment — legal minimum,
+insurance premium, qualifying rate, payment, required income — and reproduces the
+mart to the cent on every priced row, with zero divergence. A down payment below
+the legal minimum for that price is **refused**, never computed: testing legality
+before looking up the premium band removes the branch instead of guarding it.
+
+### Rates — the rhythm of the market
+
+![Report page 4, Rates](docs/img/report-4-rates.png)
+
+The three Bank of Canada series the project carries, and what each one is: the
+policy rate, the rate lenders advertise, and the rate actually contracted on a
+high-ratio loan — the one the model prices with. The gap between the last two is
+a column to subtract, not a caveat to remember. The commentary says
+**association**, over a window that contains a pandemic and one full rate cycle;
+the report claims no cause.
+
+---
+
 ## How it works
 
 ![The pipeline, end to end](docs/img/pipeline-overview.png)
@@ -159,28 +222,11 @@ two published lending-rule tables the down-payment measures look up.*
 
 ### Five gates, at five different moments
 
-```mermaid
-flowchart LR
-  CHANGE(["I change a parser,<br/>a model or a report"])
-  DATA(["Monday 10:00<br/>new data arrives"])
+![The five gates, on the two paths they guard](docs/img/quality-gates.png)
 
-  G1{{"pytest — 140 tests<br/>parsers on real files, loaders<br/>in a rolled-back transaction"}}
-  G2{{"check-secrets.sh — 8 sections<br/>secrets, public IPs, APCIQ figures,<br/>the git history included"}}
-  G3{{"check_powerbi_project.py<br/>a number shaped like a price<br/>in a report definition"}}
-  G4{{"dbt build — 321 tests<br/>288 generic + 33 singular:<br/>every published cell, every polygon"}}
-  G5{{"report_oracle.py<br/>what every card must display,<br/>computed from the marts"}}
-
-  GH[("GitHub")]
-  MART[("marts")]
-  REPORT(["the report<br/>a human reads"])
-
-  CHANGE --> G1 --> G2 --> GH
-  CHANGE -. "a report definition" .-> G3 --> GH
-  DATA --> G4 --> MART --> G5 --> REPORT
-
-  classDef gate fill:#FFF4CE,stroke:#8A6D00,stroke-width:2px,color:#3B2E00
-  class G1,G2,G3,G4,G5 gate
-```
+<sub>Diagram laid out with AI from the gate table in
+[`docs/architecture.md`](docs/architecture.md) section 7, which also keeps the
+same five gates as a mermaid source. Counts are those of 2026-09-17.</sub>
 
 Nothing reaches GitHub or the report without passing a gate, and the two paths
 are guarded differently because they fail differently: a change can leak a
@@ -386,7 +432,7 @@ bash scripts/dbt.sh build
 
 Expect `PASS=353 ERROR=0`: 25 models, 7 seeds and 321 tests.
 
-The Python suite runs separately — 140 tests, some of them against the real
+The Python suite runs separately — 174 tests, some of them against the real
 tables inside a transaction that is always rolled back, so it leaves nothing
 behind:
 
@@ -414,7 +460,8 @@ connection unchecked**, marts only, and one dimension split in two.
 and every DAX measure.
 
 The report file itself is not in the repository: it holds APCIQ figures. See
-[`docs/limitations.md`](docs/limitations.md) section 4.
+[`docs/limitations.md`](docs/limitations.md) section 4. The four pages it builds
+are shown under [The report](#the-report).
 
 ---
 

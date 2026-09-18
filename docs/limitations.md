@@ -587,7 +587,7 @@ Written down so they are not rediscovered as surprises:
 
 Everything not listed above is guarded by something that fails loudly: **321
 dbt tests** — the `PASS=353` of a build also counts its 25 models and 7 seeds —
-and **140 pytest tests**, of which a set run against the real
+and **174 pytest tests**, of which a set run against the real
 database inside a transaction that is always rolled back.
 
 Positive controls are run on the guards themselves rather than assumed — and
