@@ -6689,8 +6689,21 @@ points can be entirely tracts entering or leaving the base. Dropping the number
 off the page without putting it anywhere would leave a percentage whose
 denominator nobody can see.
 
-`Tracts evaluated change` becomes unused, and is commented as superseded rather
-than deleted.
+`Tracts evaluated change` and `Tracts evaluated colour` become unused, as do
+`Listings change` and `Listings change colour` from 16.4.
+
+⚠️ **The four are deleted FROM THE MODEL and kept in THIS FILE**, and the
+distinction matters in both directions. In the model, a measure no visual reads
+and that still calls `QuarterBadge` blocks the deletion of the old functions —
+Desktop refuses, for a reason unrelated to anything still being in use. In this
+file, 14.7 keeps `Listings change` written out in full because it is the
+report's only worked example of a corroboration guard, and the 3.2 index marks
+all four SUPERSEDED with what replaced them.
+
+**The document keeps the memory; the model stays clean.** A live definition
+nobody reads is a measure waiting to be dropped onto the wrong card — which is
+exactly what happened on 2026-09-12 with two stale definitions found in this
+very file.
 
 ## 16.7 What does not change, and it is worth stating
 

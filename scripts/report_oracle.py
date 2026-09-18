@@ -549,7 +549,28 @@ def _badge_page2_sql() -> str:
     twenty-nine quarters and a badge on it would report the CPI and nothing else.
     """
     return """
-        with q as (
+        with per_tract as (
+            -- One row per DISTINCT tract, because MEDIANX iterates
+            -- VALUES ( Census_Tract[...] ). The shared tract carries two rows
+            -- in the fact: taking the median over rows would disagree with the
+            -- card by a false margin, the same class as rank() against
+            -- RANKX ( .., DENSE ).
+            select quarter_start_date, ct_uid,
+                   max(household_income_indexed) as income_indexed,
+                   max(household_income)         as income_2020
+            from marts.fact_affordability
+            where property_type_code = %s and household_profile_code = %s
+            group by 1, 2
+        ),
+        incomes as (
+            select quarter_start_date,
+                   percentile_cont(0.5) within group (
+                       order by income_indexed)                      as median_tract_income,
+                   percentile_cont(0.5) within group (
+                       order by income_2020)                         as median_tract_income_2020
+            from per_tract group by 1
+        ),
+        base as (
             select quarter_start_date,
                    100.0 * count(distinct ct_uid) filter (
                        where meets_income_requirement_indexed)
@@ -559,14 +580,14 @@ def _badge_page2_sql() -> str:
                    count(distinct ct_uid) filter (
                        where meets_income_requirement_indexed is not null)
                                                                      as evaluated,
-                   avg(income_required_lower_bound)                  as required,
-                   percentile_cont(0.5) within group (
-                       order by household_income_indexed)            as median_tract_income,
-                   percentile_cont(0.5) within group (
-                       order by household_income)                    as median_tract_income_2020
+                   avg(income_required_lower_bound)                  as required
             from marts.fact_affordability
             where property_type_code = %s and household_profile_code = %s
             group by 1
+        ),
+        q as (
+            select b.*, i.median_tract_income, i.median_tract_income_2020
+            from base b join incomes i using (quarter_start_date)
         ),
         w as (
             select c.*,
@@ -1361,7 +1382,7 @@ def main() -> int:
             "else. A badge there would be an inflation gauge in a row of market\n"
             "indicators.",
             _badge_page2_sql(),
-            ("condo", "couple", quarter_start),
+            ("condo", "couple", "condo", "couple", quarter_start),
         )
 
         print(f"\n{'=' * 78}")
