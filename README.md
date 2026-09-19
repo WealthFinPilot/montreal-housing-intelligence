@@ -140,6 +140,10 @@ limitation says so rather than guessing why.
 
 ## The report
 
+**[→ Open the interactive version](https://montreal-housing.sebastienoger.ca)** —
+the screenshots below are stills of it. Slicers, tooltips and the down-payment
+slider only do their work in the live one.
+
 Four pages in Power BI Desktop, reading the marts in Import mode. Each page was
 accepted card by card against `scripts/report_oracle.py`, which recomputes from
 the database what every visual must display — a visual can have the right shape
