@@ -1,5 +1,12 @@
 # Montreal Housing Intelligence
 
+### → [Explore the live report](https://montreal-housing.sebastienoger.ca)
+
+Four interactive pages, running on the figures this repository ingests, tests
+and rebuilds every week. No install, no credentials — open it and click.
+
+---
+
 Analytics platform on the residential real-estate market of the **Island of
 Montreal**: nine public datasets from four publishers, with incompatible grains, brought into one
 PostgreSQL/PostGIS model, transformed and tested with dbt, scheduled with n8n,
