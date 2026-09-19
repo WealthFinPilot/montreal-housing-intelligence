@@ -563,9 +563,11 @@ publishers wrote them.
 
 ## Licence and attribution
 
-The code in this repository belongs to its author. **The data does not**: each
-source keeps its own licence, quoted with its URL in
-[`docs/data-sources.md`](docs/data-sources.md).
+The code in this repository — Python, SQL, dbt models, DAX, shell scripts — is
+released under the MIT licence, in [`LICENSE`](LICENSE). **The data is not
+covered by it**: each source keeps its own licence, quoted with its URL in
+[`docs/data-sources.md`](docs/data-sources.md), and nothing here grants a right
+the publisher did not grant.
 
 * Bank of Canada data is reproduced under the terms at
   <https://www.bankofcanada.ca/terms/>. The Bank of Canada is not responsible
