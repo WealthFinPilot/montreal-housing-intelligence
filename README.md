@@ -1,6 +1,6 @@
 # Montreal Housing Intelligence
 
-### → [Explore the live report](https://montreal-housing.sebastienoger.ca)
+### → [sebastienoger.ca/projets/montreal-housing](https://sebastienoger.ca/projets/montreal-housing/)
 
 Four interactive pages, running on the figures this repository ingests, tests
 and rebuilds every week. No install, no credentials — open it and click.
@@ -140,7 +140,7 @@ limitation says so rather than guessing why.
 
 ## The report
 
-**[→ Open the interactive version](https://montreal-housing.sebastienoger.ca)** —
+**[→ sebastienoger.ca/projets/montreal-housing](https://sebastienoger.ca/projets/montreal-housing/)** —
 the screenshots below are stills of it. Slicers, tooltips and the down-payment
 slider only do their work in the live one.
 
