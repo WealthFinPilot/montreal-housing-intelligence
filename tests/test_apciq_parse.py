@@ -146,6 +146,83 @@ def test_the_url_follows_the_pattern_that_was_probed():
     assert edition.url == "https://com.apciq.ca/sam/pdf/bar/2026/202602-bar-mtl.pdf"
 
 
+def test_both_spellings_are_tried_plain_first():
+    assert Edition(2026, 3).urls == (
+        "https://com.apciq.ca/sam/pdf/bar/2026/202603-bar-mtl.pdf",
+        "https://com.apciq.ca/sam/pdf/bar/2026/202603-bar-mtl-fr.pdf",
+    )
+
+
+class _FakeResponse:
+    def __init__(self, status: int, body: bytes):
+        self.status_code, self._body = status, body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(self.status_code)
+
+    def iter_content(self, _size):
+        yield self._body
+
+
+class _FakeSession:
+    """Answers each URL from a table, and remembers what was asked."""
+
+    def __init__(self, answers: dict[str, tuple[int, bytes]]):
+        self.answers, self.asked = answers, []
+
+    def get(self, url, **_kwargs):
+        self.asked.append(url)
+        return _FakeResponse(*self.answers.get(url, (404, b"")))
+
+
+_PDF = b"%PDF-1.6" + b"\0" * download.MIN_PLAUSIBLE_BYTES
+_CDN_PAGE = b"<!DOCTYPE html><title>One moment, please...</title>"
+
+
+def test_an_edition_served_only_under_fr_is_archived(tmp_path):
+    # Regression. 2026 Q3 answers its plain URL with a CDN page carrying a
+    # 200 and lives under -fr only. Trying the plain spelling alone failed
+    # the run of 2026-10-05.
+    edition = Edition(2026, 3)
+    session = _FakeSession({edition.urls[0]: (200, _CDN_PAGE),
+                            edition.urls[1]: (200, _PDF)})
+    target = tmp_path / edition.filename
+    size, url = download.fetch_edition(edition, target, session=session)
+    assert url == edition.urls[1]
+    assert size == len(_PDF) and target.read_bytes() == _PDF
+    assert not target.with_suffix(".pdf.part").exists()
+
+
+def test_the_plain_spelling_wins_when_it_delivers(tmp_path):
+    edition = Edition(2026, 2)
+    session = _FakeSession({edition.urls[0]: (200, _PDF)})
+    _, url = download.fetch_edition(edition, tmp_path / edition.filename, session=session)
+    assert url == edition.urls[0]
+    assert session.asked == [edition.urls[0]]
+
+
+def test_only_404s_mean_not_published(tmp_path):
+    with pytest.raises(download.EditionNotPublished):
+        download.fetch_edition(Edition(2026, 4), tmp_path / "x.pdf", session=_FakeSession({}))
+
+
+def test_a_cdn_page_with_no_pdf_anywhere_is_not_filed_as_unpublished(tmp_path):
+    # A 200 that is not the file might be a publication behind a CDN page.
+    # Filing it as "not published yet" would hide a new quarter in silence.
+    edition = Edition(2026, 3)
+    session = _FakeSession({edition.urls[0]: (200, _CDN_PAGE)})
+    with pytest.raises(download.SuspiciousDownload, match="no spelling delivered"):
+        download.fetch_edition(edition, tmp_path / edition.filename, session=session)
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_a_quarter_outside_one_to_four_is_refused():
     with pytest.raises(ValueError):
         Edition(2026, 5)

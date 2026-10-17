@@ -117,20 +117,13 @@ def _read(entry: download.ArchiveEntry) -> parse.EditionReading:
     return reading
 
 
-def main(argv=None) -> int:
-    args = _parse_args(argv)
-    chosen = _selected_editions(args.only, date.today())
-
-    print(f"Source   : {editions.BASE_URL}")
-    print(f"Licence  : reproduction forbidden without written consent "
-          f"-- {editions.LICENCE_URL}")
-    print(f"Editions : {len(chosen)} candidates, {chosen[0]} to {chosen[-1]}")
+def _archive_and_read(chosen: list[editions.Edition], *, force: bool):
+    """Fetch what is missing, read every edition, print the control summary."""
     print("\nArchive:")
-    entries = [e for e in _archive(chosen, force=args.force) if e.path is not None]
+    entries = [e for e in _archive(chosen, force=force) if e.path is not None]
 
     print("\nRead and control:")
     parsed = [(entry, _read(entry)) for entry in entries]
-    total_rows = sum(len(reading.observations) for _, reading in parsed)
     total_controls = sum(len(reading.controls) for _, reading in parsed)
     off = [(entry.edition, control)
            for entry, reading in parsed
@@ -141,22 +134,42 @@ def main(argv=None) -> int:
           + (f" -- on {len({e for e, _ in off})} edition(s): "
              f"{', '.join(str(e) for e in sorted({e for e, _ in off}))}"
              if off else ""))
+    return parsed, off
+
+
+def main(argv=None) -> int:
+    args = _parse_args(argv)
+    chosen = _selected_editions(args.only, date.today())
+
+    print(f"Source   : {editions.BASE_URL}")
+    print(f"Licence  : reproduction forbidden without written consent "
+          f"-- {editions.LICENCE_URL}")
+    print(f"Editions : {len(chosen)} candidates, {chosen[0]} to {chosen[-1]}")
 
     if args.dry_run:
+        parsed, _ = _archive_and_read(chosen, force=args.force)
+        total_rows = sum(len(reading.observations) for _, reading in parsed)
+        total_controls = sum(len(reading.controls) for _, reading in parsed)
         print(f"\nDRY RUN -- nothing written. Would load {total_rows} figures "
               f"and {total_controls} control results from {len(parsed)} editions.")
         return 0
 
-    print(f"\nTarget   : {db.describe_target()}")
+    print(f"Target   : {db.describe_target()}")
     started = time.monotonic()
     result = load.LoadResult(0, 0)
     controls = load.LoadResult(0, 0)
 
     with db.connect() as conn:
+        # Opened before the first download and committed on its own, so a
+        # run that dies while fetching or reading still leaves a 'failed' row.
+        # On 2026-10-05 the 2026 Q3 download failed before this line existed
+        # here, and the run left no trace at all.
         run_id = pipeline_log.start_run(conn, PIPELINE_NAME)
-        # Committed on its own so a crash later still leaves evidence.
         conn.commit()
         try:
+            parsed, off = _archive_and_read(chosen, force=args.force)
+            total_rows = sum(len(reading.observations) for _, reading in parsed)
+            total_controls = sum(len(reading.controls) for _, reading in parsed)
             for entry, reading in parsed:
                 # The figures and the verdict on the figures, in one
                 # transaction. Either both are in the database or neither is.

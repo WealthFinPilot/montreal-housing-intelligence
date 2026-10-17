@@ -53,37 +53,28 @@ class ArchiveEntry:
     path: Path | None
     status: str          # 'cached' | 'downloaded' | 'not-published'
     size_bytes: int = 0
+    url: str | None = None   # the spelling that delivered it, when downloaded
 
     def __str__(self) -> str:
         if self.path is None:
             return f"{self.edition}  not published"
-        return f"{self.edition}  {self.status:<10} {self.size_bytes / 1e6:5.1f} MB"
+        line = f"{self.edition}  {self.status:<10} {self.size_bytes / 1e6:5.1f} MB"
+        return line + (f"  from {self.url.rsplit('/', 1)[-1]}" if self.url else "")
 
 
 def archive_path(edition: Edition, archive_dir: Path) -> Path:
     return archive_dir / edition.filename
 
 
-def fetch_edition(
-    edition: Edition,
-    destination: Path,
-    *,
-    session: requests.Session | None = None,
-) -> int:
-    """Download one edition to `destination`. Returns the byte count.
+def _fetch_one(url: str, partial: Path, http: requests.Session) -> int:
+    """Download one URL to `partial` and check it is a Baromètre PDF.
 
     Raises EditionNotPublished on 404, SuspiciousDownload if what came back is
-    too small or is not a PDF.
+    too small or is not a PDF. Leaves no `.part` file behind on failure.
     """
-    http = session or requests.Session()
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    partial = destination.with_suffix(destination.suffix + ".part")
-
-    with http.get(
-        edition.url, stream=True, allow_redirects=True, timeout=REQUEST_TIMEOUT
-    ) as response:
+    with http.get(url, stream=True, allow_redirects=True, timeout=REQUEST_TIMEOUT) as response:
         if response.status_code == 404:
-            raise EditionNotPublished(f"{edition}: 404 at {edition.url}")
+            raise EditionNotPublished(f"404 at {url}")
         response.raise_for_status()
 
         written = 0
@@ -95,19 +86,56 @@ def fetch_edition(
     try:
         if written < MIN_PLAUSIBLE_BYTES:
             raise SuspiciousDownload(
-                f"{edition}: {written} bytes is too small to be a Baromètre "
-                f"(smallest seen: 5.7 MB). The URL probably answered with an "
-                f"error page carrying a 200."
+                f"{written} bytes at {url} is too small to be a Baromètre "
+                f"(smallest seen: 5.7 MB) -- an error or CDN page carrying a 200"
             )
         with partial.open("rb") as handle:
             if handle.read(5) != b"%PDF-":
-                raise SuspiciousDownload(f"{edition}: response is not a PDF")
+                raise SuspiciousDownload(f"response at {url} is not a PDF")
     except Exception:
         partial.unlink(missing_ok=True)
         raise
-
-    os.replace(partial, destination)
     return written
+
+
+def fetch_edition(
+    edition: Edition,
+    destination: Path,
+    *,
+    session: requests.Session | None = None,
+) -> tuple[int, str]:
+    """Download one edition to `destination`. Returns (byte count, URL used).
+
+    Tries every spelling in `edition.urls`, in order, and keeps the first that
+    delivers a PDF. Raises EditionNotPublished only when every spelling
+    answered 404. If one of them answered something that is not a PDF and
+    none delivered, raises SuspiciousDownload: a 200 that is not the file
+    might be a publication behind a CDN page, and must not be filed as "not
+    published yet".
+    """
+    http = session or requests.Session()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    partial = destination.with_suffix(destination.suffix + ".part")
+
+    refusals: list[str] = []
+    suspicious = False
+    for url in edition.urls:
+        try:
+            written = _fetch_one(url, partial, http)
+        except EditionNotPublished as exc:
+            refusals.append(str(exc))
+            continue
+        except SuspiciousDownload as exc:
+            refusals.append(str(exc))
+            suspicious = True
+            continue
+        os.replace(partial, destination)
+        return written, url
+
+    reasons = "; ".join(refusals)
+    if suspicious:
+        raise SuspiciousDownload(f"{edition}: no spelling delivered a PDF -- {reasons}")
+    raise EditionNotPublished(f"{edition}: {reasons}")
 
 
 def ensure_archived(
@@ -131,8 +159,8 @@ def ensure_archived(
             entry = ArchiveEntry(edition, target, "cached", target.stat().st_size)
         else:
             try:
-                size = fetch_edition(edition, target, session=http)
-                entry = ArchiveEntry(edition, target, "downloaded", size)
+                size, url = fetch_edition(edition, target, session=http)
+                entry = ArchiveEntry(edition, target, "downloaded", size, url)
             except EditionNotPublished:
                 entry = ArchiveEntry(edition, None, "not-published")
         entries.append(entry)

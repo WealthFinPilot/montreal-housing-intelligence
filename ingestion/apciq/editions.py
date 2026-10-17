@@ -10,19 +10,32 @@ WHAT WAS PROBED, AND WHAT CAME BACK
 
     2019 Q1              404      the archive starts after this
     2019 Q2 .. 2026 Q2   206      29 consecutive quarters, no gap
-    2026 Q3, 2026 Q4     404      not published yet
+    2026 Q3, 2026 Q4     404      not published yet (on 2026-08-23)
+    2026 Q3              200      on 2026-10-17, under -fr only -- see below
 
 HEAD is useless on this host: it answers 302 to everything, including URLs
 that do not exist. Only a GET that follows redirects tells the truth, which is
 why every probe below is a ranged GET.
 
-THE -fr ALIAS IS NOT NEEDED
----------------------------
+THE -fr SPELLING IS A SECOND PATTERN, NOT AN ALIAS
+-------------------------------------------------
 2025 Q3 and 2025 Q4 also answer on `-bar-mtl-fr.pdf`. Both spellings return a
 file of exactly the same length (9 438 479 bytes for 2025 Q4), a few hours
-apart in Last-Modified. It is the same document published twice, so the plain
-spelling covers all 29 quarters and the code needs no second pattern. Recorded
-here because the alias will look like a missing case to whoever reads this.
+apart in Last-Modified. Until 2026 Q2 the plain spelling covered every
+quarter, and the code tried nothing else.
+
+2026 Q3 broke that, probed on 2026-10-17:
+
+    202603-bar-mtl.pdf      200, text/html, 11 915 bytes -- a CDN page
+                            titled "One moment, please...", whatever the
+                            User-Agent
+    202603-bar-mtl-fr.pdf   200, application/pdf, 8 563 499 bytes
+    202601/202602-bar-mtl-fr.pdf   404 -- the -fr spelling is not universal
+
+So each quarter lives under one spelling or the other, or both, and nothing
+says which in advance. `urls` lists both, plain first; the downloader takes
+the first one that delivers a PDF. The archive keeps the plain filename
+either way, so `source_pdf` stays one name per quarter.
 
 LICENCE -- READ BEFORE PUBLISHING ANYTHING BUILT ON THIS
 --------------------------------------------------------
@@ -80,6 +93,11 @@ class Edition:
     @property
     def url(self) -> str:
         return f"{BASE_URL}/{self.year}/{self.filename}"
+
+    @property
+    def urls(self) -> tuple[str, ...]:
+        """Every spelling the edition may be served under, in the order to try."""
+        return (self.url, f"{BASE_URL}/{self.year}/{self.code}-bar-mtl-fr.pdf")
 
     def __str__(self) -> str:
         return f"{self.year} Q{self.quarter}"
