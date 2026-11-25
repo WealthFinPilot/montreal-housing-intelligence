@@ -259,7 +259,7 @@ gates and the security model.
 | Tool | What it does here |
 |---|---|
 | **Python 3.14** | four ingestion packages: a REST client, a CKAN client, a Statistics Canada Web Data Service client, and a positional parser for PDFs that contain no table objects |
-| **PostgreSQL 17 + PostGIS 3.5** | the raw, staging and marts layers; polygons for 541 tracts, 18 sectors and 36 map places |
+| **PostgreSQL 18 + PostGIS 3.7** | the raw, staging and marts layers; polygons for 541 tracts, 18 sectors and 36 map places |
 | **dbt Core** | 25 models, 7 seeds, 321 tests — 33 of them written for this data |
 | **Docker Compose** | the database and a pipeline runner, from one file |
 | **n8n** | the weekly schedule, a verdict carried by exit code, an alert on failure |

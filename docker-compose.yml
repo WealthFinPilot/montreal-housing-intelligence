@@ -24,12 +24,23 @@ name: mhi
 services:
   postgres:
     # PostGIS ships PostgreSQL with the spatial extension already compiled in.
-    # Pinned to an exact version on purpose: "latest" would silently upgrade the
-    # database engine under our feet on some future `docker compose pull`.
-    # 17-3.5 rather than 18-3.6 because Power BI's PostgreSQL connector ships
-    # Npgsql 4.0.17, an old client driver -- no reason to pair it with a
-    # brand-new server.
-    image: postgis/postgis:17-3.5
+    #
+    # Pinned by DIGEST, not just by tag. "18-3.7" is itself a moving tag: it is
+    # rebuilt every week with the latest 18.x minor, so a `docker compose pull`
+    # would change the engine under our feet. The digest freezes the exact image
+    # (PostgreSQL 18.7, PostGIS 3.7.0, Debian 13); moving it is a deliberate,
+    # committed change.
+    #
+    # Why we left 17-3.5 (2026-11-24): that tag stopped being rebuilt on
+    # 2026-08-31, when PostGIS 3.6 came out, so it was stuck on PostgreSQL 17.5
+    # and would never receive the security fixes of 2026-11-12. A frozen tag
+    # looks pinned and is in fact abandoned.
+    #
+    # Moving from 17 to 18 was a dump and restore into a NEW volume, rehearsed
+    # first on a throwaway container (same row counts, dbt build PASS=353,
+    # 179 pytest). Power BI's connector ships Npgsql 4.0.17, an old driver:
+    # it is the one thing checked only after the switch.
+    image: postgis/postgis:18-3.7@sha256:57e61cca60b05756e56da5979c23f8360c13d3eb18d1cfbd9e44c467c5926c87
 
     # Explicit name so it never gets confused with the n8n stack already
     # running on this host (root-n8n-1, n8n-postgres, redis, root-traefik-1).
@@ -64,7 +75,13 @@ services:
     volumes:
       # Named volume: the data survives `docker compose down` and container
       # recreation. It is destroyed only by `docker compose down -v`.
-      - pgdata:/var/lib/postgresql/data
+      #
+      # Mounted on /var/lib/postgresql, NOT /var/lib/postgresql/data: from 18
+      # on, the official image keeps its data in /var/lib/postgresql/18/docker
+      # and refuses to start if something is mounted on the old path. The
+      # version in the path is what lets a future 19 sit next to 18 in the
+      # same volume during an upgrade.
+      - pgdata:/var/lib/postgresql
 
       # Everything in this folder runs ONCE, in filename order, the first time
       # the database is created (i.e. while the volume is still empty).
@@ -170,4 +187,8 @@ services:
 
 volumes:
   pgdata:
-    name: mhi_pgdata
+    # mhi_pgdata18, not mhi_pgdata: the PostgreSQL 17 volume is kept untouched
+    # beside it as the way back, until it is deliberately retired. Reusing the
+    # old name would have meant restoring into the very volume we might need
+    # to return to.
+    name: mhi_pgdata18

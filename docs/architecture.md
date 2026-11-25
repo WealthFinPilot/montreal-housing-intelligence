@@ -96,7 +96,7 @@ about those contracts:
         │                            │                      │ network mhi_default
         │                            ▼                      ▼
         │                     ┌─ mhi-postgres ────────────────────────────────────┐
-        └────────────────────►│  PostgreSQL 17.5 + PostGIS 3.5                    │
+        └────────────────────►│  PostgreSQL 18.7 + PostGIS 3.7                    │
                               │  published on 127.0.0.1:5432 of the server ONLY   │
                               └───────────────────────────────────────────────────┘
 ```
